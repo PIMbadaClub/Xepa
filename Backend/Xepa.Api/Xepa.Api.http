@@ -1,0 +1,19 @@
+@Xepa.Api_HostAddress = http://localhost:5000
+
+### Ofertas disponíveis
+GET {{Xepa.Api_HostAddress}}/api/ofertas
+Accept: application/json
+
+### Busca sem acento + categoria
+GET {{Xepa.Api_HostAddress}}/api/ofertas?busca=pao&categoria=Padaria
+Accept: application/json
+
+### Mais próximas primeiro, num raio de 1 km (Av. Paulista)
+GET {{Xepa.Api_HostAddress}}/api/ofertas?latitude=-23.5614&longitude=-46.6559&raioKm=1
+Accept: application/json
+
+### Detalhe de uma oferta
+GET {{Xepa.Api_HostAddress}}/api/ofertas/1?latitude=-23.5614&longitude=-46.6559
+Accept: application/json
+
+###
