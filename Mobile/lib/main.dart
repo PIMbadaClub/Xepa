@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'screens/home_shell.dart';
+import 'screens/login_screen.dart';
 import 'theme.dart';
 
 void main() {
@@ -16,7 +16,9 @@ class XepaApp extends StatelessWidget {
       title: 'Xepa',
       debugShowCheckedModeBanner: false,
       theme: xepaTema(),
-      home: const HomeShell(),
+      // Depois que o JWT estiver integrado, troque por uma tela que decide:
+      // token válido -> HomeShell, sem token -> LoginScreen.
+      home: const LoginScreen(),
     );
   }
 }
