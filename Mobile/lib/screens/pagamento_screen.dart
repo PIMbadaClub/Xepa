@@ -7,8 +7,11 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../api/api.dart';
 import '../api/tempo_real.dart';
+import '../models/oferta.dart';
 import '../models/pedido.dart';
 import '../theme.dart';
+import '../widgets/oferta_widgets.dart';
+import '../widgets/xepa_logo.dart';
 import 'acompanhamento_screen.dart';
 
 /// Pagamento do pedido: Pix (QR Code e copia e cola) ou cartão no checkout do Mercado Pago.
@@ -126,58 +129,100 @@ class _PagamentoScreenState extends State<PagamentoScreen> {
   Widget build(BuildContext context) {
     final pg = _pagamento;
     return Scaffold(
-      appBar: AppBar(title: Text('Pagamento · pedido #${_pedido.id}'), backgroundColor: XepaCores.fundo),
+      appBar: AppBar(title: const Text('Pagamento')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text('${_pedido.quantidade}x ${_pedido.oferta}\n${_pedido.loja}',
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(formatarPreco(_pedido.valorTotal),
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: XepaCores.verde)),
-                  if (_pedido.taxaEntrega > 0)
-                    Text('inclui entrega de ${formatarPreco(_pedido.taxaEntrega)}',
-                        style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 12)),
-                ],
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(XepaRaios.cartao),
+              border: Border.all(color: XepaCores.borda),
+              boxShadow: sombraCartao,
+            ),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox.square(
+                    dimension: 52,
+                    child: FotoOferta(url: _pedido.fotoUrl, categoria: Categoria.padaria, tamanhoIcone: 24),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('${_pedido.quantidade}x ${_pedido.oferta}', style: const TextStyle(fontWeight: FontWeight.w800)),
+                      Text(_pedido.loja, style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 13)),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(formatarPreco(_pedido.valorTotal),
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: XepaCores.tomate)),
+                    if (_pedido.taxaEntrega > 0)
+                      Text('com entrega de ${formatarPreco(_pedido.taxaEntrega)}',
+                          style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 11.5)),
+                  ],
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 16),
-          SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment(value: true, icon: Icon(Icons.pix), label: Text('Pix')),
-              ButtonSegment(value: false, icon: Icon(Icons.credit_card), label: Text('Cartão')),
-            ],
-            selected: {_pix},
-            onSelectionChanged: (s) {
-              setState(() => _pix = s.first);
+          const SizedBox(height: 18),
+          _AlternarMetodo(
+            pix: _pix,
+            onChanged: (pix) {
+              if (pix == _pix) return;
+              setState(() => _pix = pix);
               _gerar();
             },
           ),
           const SizedBox(height: 20),
           if (_carregando)
-            const Center(child: Padding(padding: EdgeInsets.all(40), child: CircularProgressIndicator()))
+            const Padding(
+              padding: EdgeInsets.all(40),
+              child: TomateCarregando(texto: 'Gerando a cobrança...'),
+            )
           else if (pg != null && pg.pix && pg.qrCodePix != null) ...[
             Center(
               child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(color: XepaCores.borda),
+                  boxShadow: sombraCartao,
+                ),
                 child: QrImageView(
                   data: pg.qrCodePix!,
-                  size: 220,
+                  size: 210,
+                  eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: XepaCores.texto),
+                  dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: XepaCores.texto),
                   semanticsLabel: 'QR Code do Pix de ${formatarPreco(pg.valor)}',
                 ),
               ),
             ),
-            const SizedBox(height: 8),
-            Center(child: Text(_tempoRestante, style: const TextStyle(fontWeight: FontWeight.w700))),
             const SizedBox(height: 12),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(color: XepaCores.tomateClaro, borderRadius: BorderRadius.circular(XepaRaios.pilula)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.timer_outlined, size: 16, color: XepaCores.tomateEscuro),
+                    const SizedBox(width: 4),
+                    Text(_tempoRestante, style: const TextStyle(fontWeight: FontWeight.w800, color: XepaCores.tomateEscuro)),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
             OutlinedButton.icon(
               onPressed: _copiar,
               icon: const Icon(Icons.copy_rounded),
@@ -201,7 +246,6 @@ class _PagamentoScreenState extends State<PagamentoScreen> {
                   : () => launchUrl(Uri.parse(pg.urlCheckout!), mode: LaunchMode.externalApplication),
               icon: const Icon(Icons.open_in_new),
               label: const Text('Pagar com cartão'),
-              style: FilledButton.styleFrom(backgroundColor: XepaCores.tomate, minimumSize: const Size.fromHeight(48)),
             ),
             if (pg.urlCheckout == null)
               const Padding(
@@ -228,6 +272,60 @@ class _PagamentoScreenState extends State<PagamentoScreen> {
             style: TextButton.styleFrom(foregroundColor: XepaCores.textoSecundario),
             child: const Text('Cancelar pedido'),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Pix ou cartão, em pílulas.
+class _AlternarMetodo extends StatelessWidget {
+  const _AlternarMetodo({required this.pix, required this.onChanged});
+
+  final bool pix;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    Widget opcao(bool valor, IconData icone, String rotulo) {
+      final ativo = pix == valor;
+      return Expanded(
+        child: GestureDetector(
+          onTap: () => onChanged(valor),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            height: 44,
+            decoration: BoxDecoration(
+              color: ativo ? XepaCores.tomate : Colors.transparent,
+              borderRadius: BorderRadius.circular(XepaRaios.pilula),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(icone, size: 18, color: ativo ? Colors.white : XepaCores.textoSecundario),
+                const SizedBox(width: 6),
+                Text(
+                  rotulo,
+                  style: TextStyle(fontWeight: FontWeight.w800, color: ativo ? Colors.white : XepaCores.textoSecundario),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(XepaRaios.pilula),
+        border: Border.all(color: XepaCores.borda),
+      ),
+      child: Row(
+        children: [
+          opcao(true, Icons.pix, 'Pix'),
+          opcao(false, Icons.credit_card_rounded, 'Cartão'),
         ],
       ),
     );

@@ -9,6 +9,8 @@ import '../api/tempo_real.dart';
 import '../models/auth.dart';
 import '../theme.dart';
 import '../widgets/mapa_entrega.dart';
+import '../widgets/oferta_widgets.dart';
+import '../widgets/xepa_logo.dart';
 import 'login_screen.dart';
 
 class _Entrega {
@@ -95,41 +97,68 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
     final entregas = _entregas;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: XepaCores.fundo,
-        title: const Text('Entregas do dia'),
+        title: const XepaMarca(tamanho: 22),
         actions: [IconButton(onPressed: _sair, icon: const Icon(Icons.logout_rounded), tooltip: 'Sair')],
       ),
       body: RefreshIndicator(
+        color: XepaCores.tomate,
         onRefresh: _carregar,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
           children: [
-            Text('Olá, ${AuthService.instance.usuario?.primeiroNome ?? ''}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 12),
+            Text('Olá, ${AuthService.instance.usuario?.primeiroNome ?? ''}',
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+            const Text('Suas entregas de hoje', style: TextStyle(color: XepaCores.textoSecundario)),
+            const SizedBox(height: 16),
             if (_erro != null) Text(_erro!, style: const TextStyle(color: XepaCores.tomateEscuro)),
             if (entregas == null)
-              const Center(child: CircularProgressIndicator())
+              const Padding(padding: EdgeInsets.all(40), child: TomateCarregando())
             else if (entregas.isEmpty)
-              const Padding(
-                padding: EdgeInsets.all(32),
-                child: Text('Nenhuma entrega em preparo agora. A lista atualiza sozinha.',
-                    textAlign: TextAlign.center, style: TextStyle(color: XepaCores.textoSecundario)),
+              const EstadoVazio(
+                titulo: 'Nenhuma entrega agora',
+                texto: 'Quando a loja colocar um pedido em preparo, ele aparece aqui sozinho.',
               )
             else
               for (final e in entregas)
-                Card(
-                  elevation: 0,
-                  color: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: const BorderSide(color: XepaCores.borda)),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(XepaRaios.cartao),
+                    border: Border.all(color: e.emRota ? XepaCores.tomate : XepaCores.borda, width: e.emRota ? 1.5 : 1),
+                    boxShadow: sombraCartao,
+                  ),
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Text('#${e.pedidoId} · ${e.oferta}', style: const TextStyle(fontWeight: FontWeight.w800)),
-                        Text('${e.loja} · para ${e.cliente}'),
-                        Text(e.endereco, style: const TextStyle(color: XepaCores.textoSecundario)),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text('#${e.pedidoId} · ${e.oferta}',
+                                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                            ),
+                            if (e.emRota)
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(color: XepaCores.tomateClaro, borderRadius: BorderRadius.circular(XepaRaios.pilula)),
+                                child: const Text('Em rota', style: TextStyle(color: XepaCores.tomateEscuro, fontSize: 11.5, fontWeight: FontWeight.w800)),
+                              ),
+                          ],
+                        ),
                         const SizedBox(height: 8),
+                        Row(children: [
+                          const Icon(Icons.storefront_outlined, size: 16, color: XepaCores.textoSecundario),
+                          const SizedBox(width: 6),
+                          Expanded(child: Text(e.loja)),
+                        ]),
+                        const SizedBox(height: 4),
+                        Row(children: [
+                          const Icon(Icons.home_outlined, size: 16, color: XepaCores.textoSecundario),
+                          const SizedBox(width: 6),
+                          Expanded(child: Text('${e.cliente} · ${e.endereco}', style: const TextStyle(color: XepaCores.textoSecundario))),
+                        ]),
+                        const SizedBox(height: 12),
                         FilledButton.icon(
                           onPressed: () => e.emRota
                               ? Navigator.of(context)
@@ -138,10 +167,8 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
                               : _iniciar(e),
                           icon: Icon(e.emRota ? Icons.map_outlined : Icons.delivery_dining),
                           label: Text(e.emRota ? 'Continuar entrega' : 'Sair para entrega'),
-                          style: FilledButton.styleFrom(backgroundColor: XepaCores.tomate),
                         ),
                       ],
-                    ),
                   ),
                 ),
           ],
@@ -232,12 +259,16 @@ class _EntregaEmCursoState extends State<_EntregaEmCurso> {
   Widget build(BuildContext context) {
     final e = widget.entrega;
     return Scaffold(
-      appBar: AppBar(title: Text('Entrega #${e.pedidoId}'), backgroundColor: XepaCores.fundo),
+      appBar: AppBar(title: Text('Entrega #${e.pedidoId}')),
       body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
         children: [
-          MapaEntrega(loja: e.origem, destino: e.destino, entregador: _posicao, altura: 320),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(XepaRaios.cartao),
+            child: MapaEntrega(loja: e.origem, destino: e.destino, entregador: _posicao, altura: 300),
+          ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.only(top: 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -265,7 +296,7 @@ class _EntregaEmCursoState extends State<_EntregaEmCurso> {
                   onPressed: _concluir,
                   icon: const Icon(Icons.check_circle_outline),
                   label: const Text('Confirmar entrega'),
-                  style: FilledButton.styleFrom(backgroundColor: XepaCores.verde, minimumSize: const Size.fromHeight(52)),
+                  style: FilledButton.styleFrom(backgroundColor: XepaCores.verde),
                 ),
               ],
             ),

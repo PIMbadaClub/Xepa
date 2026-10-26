@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="g" cx="0.32" cy="0.3" r="0.75">
+      <stop offset="0" stop-color="#F0473C"/>
+      <stop offset="0.6" stop-color="#D7261E"/>
+      <stop offset="1" stop-color="#A81A14"/>
+    </radialGradient>
+  </defs>
+  <path fill="url(#g)" d="M50 26C62 20 80 22 90 36C100 52 96 76 80 88C66 98 34 98 20 88C4 76 0 52 10 36C20 22 38 20 50 26Z"/>
+  <ellipse cx="30" cy="45" rx="9" ry="4.5" fill="#fff" fill-opacity=".43" transform="rotate(-34 30 45)"/>
+  <g fill="#2E8B57" transform="translate(50 25)">
+    <path d="M0-2.5Q10-1.9 19 0Q10 1.9 0 2.5Z" transform="rotate(-54)"/>
+    <path d="M0-2.5Q10-1.9 19 0Q10 1.9 0 2.5Z" transform="rotate(18)"/>
+    <path d="M0-2.5Q10-1.9 19 0Q10 1.9 0 2.5Z" transform="rotate(90)"/>
+    <path d="M0-2.5Q10-1.9 19 0Q10 1.9 0 2.5Z" transform="rotate(162)"/>
+    <path d="M0-2.5Q10-1.9 19 0Q10 1.9 0 2.5Z" transform="rotate(234)"/>
+    <circle r="5"/>
+  </g>
+  <path d="M50 24L53 11" stroke="#1F7A4D" stroke-width="4" stroke-linecap="round"/>
+  <text x="50" y="76" text-anchor="middle" font-family="Fredoka, 'Segoe UI', sans-serif" font-weight="600" font-size="40" fill="#fff">x</text>
+</svg>

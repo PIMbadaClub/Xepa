@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../models/auth.dart';
 import '../theme.dart';
+import 'xepa_logo.dart';
 
 /// Estrutura comum das telas de autenticação: rolagem, largura máxima
 /// (tablet/web) e fechamento do teclado ao arrastar.
@@ -38,7 +39,7 @@ class AuthPagina extends StatelessWidget {
   }
 }
 
-/// Marca do Xepa (selo + nome). Se preferir, troque pelo `XepaLogo` do projeto.
+/// Marca do Xepa: o tomatinho com o nome. Sobre o vermelho, o tomate ganha um selo branco.
 class AuthMarca extends StatelessWidget {
   const AuthMarca({super.key, this.sobreFundoVermelho = false});
 
@@ -46,40 +47,19 @@ class AuthMarca extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!sobreFundoVermelho) return const XepaMarca(tamanho: 30);
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: sobreFundoVermelho ? Colors.white : XepaCores.tomateClaro,
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Center(
-            child: Container(
-              width: 26,
-              height: 26,
-              decoration: const BoxDecoration(
-                color: XepaCores.tomate,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.close_rounded,
-                size: 16,
-                color: Colors.white,
-              ),
-            ),
-          ),
+          width: 48,
+          height: 48,
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+          child: const XepaLogo(tamanho: 36),
         ),
         const SizedBox(width: 10),
-        Text(
-          'xepa',
-          style: fonteMarca(
-            tamanho: 28,
-            cor: sobreFundoVermelho ? Colors.white : XepaCores.tomateEscuro,
-          ),
-        ),
+        Text('xepa', style: fonteMarca(tamanho: 30, cor: Colors.white)),
       ],
     );
   }
@@ -238,9 +218,7 @@ class AuthBotaoPrimario extends StatelessWidget {
           foregroundColor: Colors.white,
           disabledBackgroundColor: XepaCores.tomate,
           disabledForegroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
+          shape: const StadiumBorder(),
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
         ),
         child: carregando
@@ -282,9 +260,7 @@ class AuthBotaoSocial extends StatelessWidget {
           backgroundColor: Colors.white,
           foregroundColor: XepaCores.texto,
           side: const BorderSide(color: XepaCores.borda),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
+          shape: const StadiumBorder(),
           textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
         ),
         child: Row(

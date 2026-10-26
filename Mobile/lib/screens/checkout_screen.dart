@@ -5,6 +5,7 @@ import '../api/localizacao.dart';
 import '../models/oferta.dart';
 import '../models/pedido.dart';
 import '../theme.dart';
+import '../widgets/oferta_widgets.dart';
 import 'pagamento_screen.dart';
 
 /// Escolha entre retirar na loja ou receber em casa, endereço e confirmação do pedido.
@@ -102,14 +103,20 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   Widget build(BuildContext context) {
     final o = widget.oferta;
     return Scaffold(
-      appBar: AppBar(title: const Text('Finalizar pedido'), backgroundColor: XepaCores.fundo),
+      appBar: AppBar(title: const Text('Finalizar pedido')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
         children: [
           _Cartao(
             child: Row(
               children: [
-                Icon(o.categoria.icone, color: o.categoria.cor, size: 36),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: SizedBox.square(
+                    dimension: 60,
+                    child: FotoOferta(url: o.fotoUrl, categoria: o.categoria, tamanhoIcone: 26),
+                  ),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -121,25 +128,36 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     ],
                   ),
                 ),
-                Text(formatarPreco(_subtotal), style: const TextStyle(fontWeight: FontWeight.w800, color: XepaCores.verde)),
+                Text(formatarPreco(_subtotal), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: XepaCores.tomate)),
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          const Text('Como você quer receber?', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-          const SizedBox(height: 8),
-          SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment(value: false, icon: Icon(Icons.storefront_outlined), label: Text('Retirar na loja')),
-              ButtonSegment(value: true, icon: Icon(Icons.delivery_dining_outlined), label: Text('Entrega')),
+          const _Titulo('Como você quer receber?'),
+          Row(
+            children: [
+              Expanded(
+                child: _Opcao(
+                  icone: Icons.storefront_rounded,
+                  titulo: 'Retirar na loja',
+                  detalhe: 'Grátis',
+                  selecionada: !_entrega,
+                  onTap: () => setState(() => _entrega = false),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _Opcao(
+                  icone: Icons.delivery_dining_rounded,
+                  titulo: 'Receber em casa',
+                  detalhe: 'Até 5 km · taxa pela rota',
+                  selecionada: _entrega,
+                  onTap: () => setState(() => _entrega = true),
+                ),
+              ),
             ],
-            selected: {_entrega},
-            onSelectionChanged: (s) => setState(() => _entrega = s.first),
           ),
           if (_entrega) ...[
-            const SizedBox(height: 16),
-            const Text('Entregar em', style: TextStyle(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 6),
+            const _Titulo('Entregar em'),
             if (_enderecos == null)
               const LinearProgressIndicator()
             else ...[
@@ -165,11 +183,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               style: TextStyle(color: XepaCores.textoSecundario, fontSize: 13),
             ),
           ],
-          const SizedBox(height: 16),
+          const _Titulo('Alguma observação?'),
           TextField(
             controller: _observacao,
             maxLength: 500,
-            decoration: const InputDecoration(labelText: 'Observação para a loja (opcional)', border: OutlineInputBorder()),
+            maxLines: 2,
+            decoration: const InputDecoration(hintText: 'Ex.: sem glúten, se possível (opcional)'),
           ),
           if (_erro != null) ...[
             const SizedBox(height: 8),
@@ -177,19 +196,89 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
           ],
         ],
       ),
-      bottomNavigationBar: SafeArea(
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: XepaCores.borda)),
+        ),
+        child: SafeArea(
+          minimum: const EdgeInsets.fromLTRB(20, 12, 20, 14),
+          child: Row(
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_entrega ? 'Subtotal (+ entrega)' : 'Total', style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 12)),
+                  Text(formatarPreco(_subtotal), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+                ],
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: FilledButton(
+                  onPressed: _enviando ? null : _confirmar,
+                  child: _enviando
+                      ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('Pagar'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Titulo extends StatelessWidget {
+  const _Titulo(this.texto);
+
+  final String texto;
+
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.only(top: 22, bottom: 10),
+        child: Text(texto, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+      );
+}
+
+class _Opcao extends StatelessWidget {
+  const _Opcao({
+    required this.icone,
+    required this.titulo,
+    required this.detalhe,
+    required this.selecionada,
+    required this.onTap,
+  });
+
+  final IconData icone;
+  final String titulo;
+  final String detalhe;
+  final bool selecionada;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: selecionada ? XepaCores.tomateClaro : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: selecionada ? XepaCores.tomate : XepaCores.borda, width: selecionada ? 1.6 : 1),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: FilledButton(
-            onPressed: _enviando ? null : _confirmar,
-            style: FilledButton.styleFrom(
-              backgroundColor: XepaCores.tomate,
-              minimumSize: const Size.fromHeight(52),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-            ),
-            child: _enviando
-                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Text('Confirmar e pagar', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icone, color: selecionada ? XepaCores.tomate : XepaCores.textoSecundario),
+              const SizedBox(height: 8),
+              Text(titulo, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+              const SizedBox(height: 2),
+              Text(detalhe, style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 12)),
+            ],
           ),
         ),
       ),
@@ -207,8 +296,9 @@ class _Cartao extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(XepaRaios.cartao),
           border: Border.all(color: XepaCores.borda),
+          boxShadow: sombraCartao,
         ),
         child: child,
       );
@@ -284,7 +374,7 @@ class _FormEnderecoState extends State<_FormEndereco> {
           controller: _c[chave],
           keyboardType: teclado,
           maxLength: max,
-          decoration: InputDecoration(labelText: rotulo, border: const OutlineInputBorder(), counterText: ''),
+          decoration: InputDecoration(labelText: rotulo, counterText: ''),
           validator: (v) => obrigatorio && (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
         ),
       );
@@ -324,7 +414,6 @@ class _FormEnderecoState extends State<_FormEndereco> {
               const SizedBox(height: 8),
               FilledButton(
                 onPressed: _salvando ? null : _salvar,
-                style: FilledButton.styleFrom(backgroundColor: XepaCores.tomate, minimumSize: const Size.fromHeight(48)),
                 child: const Text('Salvar endereço'),
               ),
             ],

@@ -1,10 +1,14 @@
-@model EntrarForm
+﻿@model EntrarForm
 @{
     ViewData["Title"] = "Entrar";
 }
 <section class="cartao login" aria-labelledby="titulo-login">
-    <div class="marca" aria-hidden="true">xepa</div>
-    <h1 id="titulo-login" class="sub">Portal do estabelecimento</h1>
+    <div class="login-topo">
+        <img src="~/img/tomate.svg" alt="" class="tomate-fundo" />
+        <div class="marca" aria-hidden="true"><span class="selo-marca"><img src="~/img/tomate.svg" alt="" /></span>xepa</div>
+        <h1 id="titulo-login">Portal do estabelecimento</h1>
+        <p>Publique o que sobrou, acompanhe os pedidos e salve comida do lixo.</p>
+    </div>
     <form asp-action="Entrar" method="post" novalidate>
         <div asp-validation-summary="ModelOnly"></div>
         <input type="hidden" asp-for="ReturnUrl" />
