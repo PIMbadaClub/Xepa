@@ -12,6 +12,8 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
         builder.Property(u => u.Email).HasMaxLength(254);
         builder.Property(u => u.SenhaHash).HasMaxLength(200);
         builder.Property(u => u.Telefone).HasMaxLength(20);
+        builder.Property(u => u.Placa).HasMaxLength(8);
+        builder.Property(u => u.ModeloMoto).HasMaxLength(60);
 
         builder.HasIndex(u => u.Email).IsUnique();
     }

@@ -171,7 +171,7 @@ class _CartaoPedido extends StatelessWidget {
                           children: [
                             Icon(p.status.icone, size: 13, color: p.status.cor),
                             const SizedBox(width: 4),
-                            Text(p.status.rotulo,
+                            Text(p.status.rotuloPara(entrega: p.entrega),
                                 style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: p.status.cor)),
                           ],
                         ),

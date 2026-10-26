@@ -18,7 +18,7 @@ public class AuthController(ContaService contas) : ControllerBase
     /// <summary>Cadastro de cliente pelo app; já devolve a sessão aberta.</summary>
     [HttpPost("registrar")]
     public async Task<ActionResult<SessaoDto>> Registrar(RegistrarRequest request, CancellationToken ct) =>
-        StatusCode(StatusCodes.Status201Created, await contas.RegistrarClienteAsync(request, ct));
+        StatusCode(StatusCodes.Status201Created, await contas.RegistrarAsync(request, ct));
 
     [HttpPost("login")]
     public Task<SessaoDto> Login(LoginRequest request, CancellationToken ct) => contas.LoginAsync(request, ct);

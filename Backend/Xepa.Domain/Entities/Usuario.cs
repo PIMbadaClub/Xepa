@@ -11,6 +11,18 @@ public class Usuario : Entidade
     /// <summary>Conta suspensa pela equipe da XEPA (ex.: denúncia procedente); não consegue entrar.</summary>
     public bool Bloqueado { get; set; }
 
+    /// <summary>Placa da moto do entregador parceiro (aparece para a loja e o cliente).</summary>
+    public string? Placa { get; set; }
+
+    /// <summary>Modelo da moto do entregador (ex.: Honda CG 160), só para exibição.</summary>
+    public string? ModeloMoto { get; set; }
+
+    /// <summary>Entregador online recebe corridas; offline, só termina a que já aceitou.</summary>
+    public bool Online { get; set; }
+
+    /// <summary>Distância máxima até a loja para o entregador ver a corrida.</summary>
+    public int RaioCorridasKm { get; set; } = 8;
+
     /// <summary>Até quando o usuário já viu as notificações do app (as mais novas aparecem como não lidas).</summary>
     public DateTimeOffset? NotificacoesLidasAte { get; set; }
 

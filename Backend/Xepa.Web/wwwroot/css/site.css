@@ -44,16 +44,13 @@ a { color: var(--tomate-escuro); }
     padding: 22px 14px; display: flex; flex-direction: column; gap: 4px; position: relative; overflow: hidden;
 }
 .app-admin .lateral { background: var(--texto); color: #f3e9da; border-right: 0; }
-.app-admin .lateral .marca { color: #fff; }
 .app-admin .lateral .contexto { color: #d9c9b6; }
 .app-admin .lateral a { color: #f3e9da; }
 .app-admin .lateral a.ativo { background: #4a3527; color: #fff; }
 
-.marca {
-    font-family: Fredoka, Manrope, sans-serif; font-weight: 600; font-size: 30px; color: var(--tomate);
-    letter-spacing: -.3px; display: flex; align-items: center; gap: 8px; padding: 0 6px;
-}
-.marca .tomate { width: 36px; height: 36px; transition: transform .4s; }
+.marca { display: flex; align-items: flex-end; gap: 10px; padding: 0 6px; }
+.marca .tomate { width: 40px; height: 40px; transition: transform .4s; }
+.marca .nome { height: 34px; width: auto; display: block; }
 .marca:hover .tomate { transform: rotate(-14deg); }
 .contexto { font-size: 12.5px; color: var(--texto-2); margin: 2px 6px 20px; line-height: 1.4; }
 .lateral a, .lateral .em-breve {
@@ -95,7 +92,8 @@ h1 { font-size: 28px; font-weight: 800; letter-spacing: -.6px; margin: 0 0 6px; 
 .login { width: 100%; max-width: 420px; padding: 0; overflow: hidden; }
 .login form { padding: 22px 24px 26px; }
 .login-topo { position: relative; overflow: hidden; background: var(--tomate); color: #fff; padding: 24px 24px 26px; }
-.login-topo .marca { color: #fff; padding: 0; font-size: 32px; }
+.login-topo .marca { padding: 0; align-items: center; gap: 12px; }
+.login-topo .marca .nome { height: 40px; }
 .login-topo h1 { font-size: 24px; margin: 22px 0 6px; }
 .login-topo p { margin: 0; opacity: .9; line-height: 1.45; max-width: 290px; }
 .selo-marca { width: 48px; height: 48px; background: #fff; border-radius: 16px; display: grid; place-items: center; }
@@ -122,7 +120,7 @@ th { background: var(--bege); text-align: left; padding: 12px 14px; font-size: 1
 td { padding: 12px 14px; border-top: 1px solid var(--borda); vertical-align: middle; }
 tbody tr:hover td { background: #FFFDFB; }
 td img { width: 64px; height: 48px; object-fit: cover; border-radius: 10px; display: block; }
-.miniatura-vazia { width: 64px; height: 48px; border-radius: 10px; background: var(--bege) url("../img/tomate.svg") center / 26px no-repeat; opacity: .8; }
+.miniatura-vazia { width: 64px; height: 48px; border-radius: 10px; background: var(--bege) url("../img/tomate.svg?v=2") center / 26px no-repeat; opacity: .8; }
 .preco { color: var(--tomate); font-weight: 800; white-space: nowrap; }
 .riscado { text-decoration: line-through; color: var(--texto-2); font-size: 13px; }
 .selo { display: inline-block; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 99px; }
@@ -132,7 +130,7 @@ td img { width: 64px; height: 48px; object-fit: cover; border-radius: 10px; disp
 .acoes { display: flex; gap: 6px; flex-wrap: wrap; }
 .acoes form { margin: 0; }
 .vazio { padding: 40px 32px 36px; text-align: center; color: var(--texto-2); }
-.vazio::before { content: ""; display: block; width: 56px; height: 56px; margin: 0 auto 12px; background: url("../img/tomate.svg") center / contain no-repeat; transform: rotate(-12deg); }
+.vazio::before { content: ""; display: block; width: 56px; height: 56px; margin: 0 auto 12px; background: url("../img/tomate.svg?v=2") center / contain no-repeat; transform: rotate(-12deg); }
 
 @media (max-width: 760px) {
     .app { flex-direction: column; }
@@ -178,7 +176,7 @@ a.indicador:hover { border-color: var(--tomate); }
 .indicador.verde { background: var(--verde-claro); border-color: transparent; }
 .indicador.verde strong { color: var(--verde-texto); }
 .indicador.destaque { position: relative; overflow: hidden; }
-.indicador.destaque::after { content: ""; position: absolute; right: -18px; bottom: -22px; width: 90px; height: 90px; background: url("../img/tomate.svg") center / contain no-repeat; opacity: .12; transform: rotate(-16deg); }
+.indicador.destaque::after { content: ""; position: absolute; right: -18px; bottom: -22px; width: 90px; height: 90px; background: url("../img/tomate.svg?v=2") center / contain no-repeat; opacity: .12; transform: rotate(-16deg); }
 
 .filtros { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 16px; }
 .filtros a { padding: 7px 14px; border-radius: 99px; border: 1px solid var(--borda); background: #fff; color: var(--texto); text-decoration: none; font-weight: 700; font-size: 13.5px; }

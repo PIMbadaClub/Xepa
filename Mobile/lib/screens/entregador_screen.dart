@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:latlong2/latlong.dart' hide Path;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../api/api.dart';
@@ -15,6 +15,9 @@ import '../widgets/mapa_entrega.dart';
 import '../widgets/oferta_widgets.dart';
 import '../widgets/xepa_logo.dart';
 import 'login_screen.dart';
+import 'perfil_screen.dart';
+
+part 'entregador_conta.dart';
 
 LatLng? _ponto(Object? j) =>
     j is Map && j['latitude'] != null ? LatLng((j['latitude'] as num).toDouble(), (j['longitude'] as num).toDouble()) : null;
@@ -56,11 +59,11 @@ class Corrida {
   final int minutos;
   final bool minha, coletada;
 
-  /// A loja ainda não começou a preparar: o entregador pode ir indo, mas só coleta depois.
-  bool get lojaPreparando => status == 'EmPreparo';
+  /// A loja marcou o pedido como pronto: só então dá para coletar.
+  bool get pronto => status == 'ProntoParaRetirada';
 }
 
-/// Modo entregador, no estilo dos apps de delivery: ganhos do dia, corridas perto com valor e km, aceitar.
+/// Modo entregador, no estilo dos apps de delivery: mapa, botão para ficar online, ganhos reais e perfil com a nota.
 class EntregadorScreen extends StatefulWidget {
   const EntregadorScreen({super.key});
 
@@ -69,11 +72,55 @@ class EntregadorScreen extends StatefulWidget {
 }
 
 class _EntregadorScreenState extends State<EntregadorScreen> {
+  var _aba = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(
+        index: _aba,
+        children: [
+          _InicioEntregador(onVerGanhos: () => setState(() => _aba = 1)),
+          _GanhosEntregador(ativo: _aba == 1),
+          _PerfilEntregador(ativo: _aba == 2),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _aba,
+        onDestinationSelected: (i) => setState(() => _aba = i),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.map_outlined), selectedIcon: Icon(Icons.map_rounded), label: 'Início'),
+          NavigationDestination(icon: Icon(Icons.payments_outlined), selectedIcon: Icon(Icons.payments_rounded), label: 'Ganhos'),
+          NavigationDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: 'Perfil'),
+        ],
+      ),
+    );
+  }
+}
+
+/// Centro de Limeira, para quando o aparelho não libera o GPS.
+const _centroPadrao = LatLng(-22.5647, -47.4017);
+
+class _InicioEntregador extends StatefulWidget {
+  const _InicioEntregador({required this.onVerGanhos});
+
+  final VoidCallback onVerGanhos;
+
+  @override
+  State<_InicioEntregador> createState() => _InicioEntregadorState();
+}
+
+class _InicioEntregadorState extends State<_InicioEntregador> {
+  final _mapa = MapController();
+  ConfigMapa? _config;
+  LatLng? _eu;
+  bool? _online;
+  bool _trocandoOnline = false;
   List<Corrida>? _corridas;
   Map<String, dynamic>? _ganhos;
   String? _erro;
-  bool _disponivel = true;
   final _recusadas = <int>{};
+  Set<int>? _conhecidas;
   int? _aceitando;
   StreamSubscription<Map<String, dynamic>>? _avisos;
   Timer? _timer;
@@ -81,6 +128,9 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
   @override
   void initState() {
     super.initState();
+    ConfigMapa.obter().then((c) {
+      if (mounted) setState(() => _config = c);
+    });
     TempoReal.instance.conectar();
     _avisos = TempoReal.instance.pedidoAlterado.listen((_) => _carregar());
     // A posição muda enquanto o entregador anda: recalcula as distâncias de tempos em tempos.
@@ -98,19 +148,63 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
   Future<void> _carregar() async {
     final gps = await Localizacao.atual();
     try {
+      _online ??= (await Api.instance.get<Map<String, dynamic>>('/api/entregador/perfil'))['online'] as bool;
       final lista = await Api.instance.get<List<dynamic>>('/api/entregador/corridas', query: {
         if (gps != null) 'latitude': gps.latitude,
         if (gps != null) 'longitude': gps.longitude,
       });
       final ganhos = await Api.instance.get<Map<String, dynamic>>('/api/entregador/ganhos');
       if (!mounted) return;
+      final corridas = lista.map((j) => Corrida.fromJson(j as Map<String, dynamic>)).toList();
+      final primeiraPosicao = _eu == null && gps != null;
       setState(() {
-        _corridas = lista.map((j) => Corrida.fromJson(j as Map<String, dynamic>)).toList();
+        _corridas = corridas;
         _ganhos = ganhos;
+        if (gps != null) _eu = LatLng(gps.latitude, gps.longitude);
         _erro = null;
       });
+      if (primeiraPosicao && _config != null) _mapa.move(_eu!, 14);
+      _avisarNovas(corridas);
     } on ApiException catch (e) {
       if (mounted) setState(() => _erro = e.mensagem);
+    }
+  }
+
+  /// Corrida nova perto enquanto está online: vibra e avisa, como nos apps de delivery.
+  void _avisarNovas(List<Corrida> corridas) {
+    final ids = corridas.where((c) => !c.minha).map((c) => c.pedidoId).toSet();
+    final antes = _conhecidas;
+    _conhecidas = ids;
+    if (antes == null || _online != true) return;
+    final novas = corridas.where((c) => !c.minha && !antes.contains(c.pedidoId)).toList();
+    if (novas.isEmpty) return;
+    HapticFeedback.heavyImpact();
+    final c = novas.first;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+        content: Text('Nova corrida: ${formatarPreco(c.valor)} · ${_km(c.totalKm)}'),
+        action: SnackBarAction(label: 'Ver', textColor: XepaCores.tomateClaro, onPressed: () => _detalhes(c)),
+      ));
+  }
+
+  Future<void> _alternarOnline() async {
+    final novo = !(_online ?? false);
+    setState(() => _trocandoOnline = true);
+    try {
+      await Api.instance.put<Map<String, dynamic>>('/api/entregador/online', {'online': novo});
+      HapticFeedback.mediumImpact();
+      if (!mounted) return;
+      setState(() {
+        _online = novo;
+        _conhecidas = null;
+        _recusadas.clear();
+      });
+      await _carregar();
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.mensagem)));
+    } finally {
+      if (mounted) setState(() => _trocandoOnline = false);
     }
   }
 
@@ -134,11 +228,42 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
     _carregar();
   }
 
-  Future<void> _sair() async {
-    await AuthService.instance.sair();
-    if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+  /// Toque no preço do mapa: mostra a corrida com os botões de aceitar e recusar.
+  void _detalhes(Corrida c) {
+    final ocupado = _corridas?.any((x) => x.minha) ?? false;
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      isScrollControlled: true,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+          child: _CartaoCorrida(
+            corrida: c,
+            bloqueada: ocupado,
+            onAceitar: () {
+              Navigator.pop(ctx);
+              _aceitar(c);
+            },
+            onRecusar: () {
+              Navigator.pop(ctx);
+              setState(() => _recusadas.add(c.pedidoId));
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _centralizar() {
+    final alvo = _eu;
+    if (alvo == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Libere a localização do aparelho para ver onde você está.')),
+      );
+      return;
     }
+    _mapa.move(alvo, 15);
   }
 
   @override
@@ -146,68 +271,413 @@ class _EntregadorScreenState extends State<EntregadorScreen> {
     final corridas = _corridas;
     final minha = corridas?.where((c) => c.minha).firstOrNull;
     final ofertas = corridas?.where((c) => !c.minha && !_recusadas.contains(c.pedidoId)).toList() ?? [];
+    final online = _online ?? false;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const XepaMarca(tamanho: 22),
-        actions: [IconButton(onPressed: _sair, icon: const Icon(Icons.logout_rounded), tooltip: 'Sair')],
-      ),
-      body: RefreshIndicator(
-        color: XepaCores.tomate,
-        onRefresh: _carregar,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-          children: [
-            Row(
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: _config == null ? const ColoredBox(color: XepaCores.bege) : _mapaInicio(_config!, minha, online ? ofertas : []),
+        ),
+        SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+            child: Row(
               children: [
-                Expanded(
-                  child: Text('Olá, ${AuthService.instance.usuario?.primeiroNome ?? ''}',
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
-                ),
-                _Disponibilidade(
-                  disponivel: _disponivel,
-                  onChanged: (v) => setState(() => _disponivel = v),
-                ),
+                _PilulaGanhos(ganhos: _ganhos, onTap: widget.onVerGanhos),
+                const Spacer(),
+                _BotaoMapa(icone: Icons.my_location_rounded, dica: 'Minha posição', onTap: _centralizar),
               ],
             ),
-            const SizedBox(height: 14),
-            _CartaoGanhos(ganhos: _ganhos),
-            if (_erro != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Text(_erro!, style: const TextStyle(color: XepaCores.tomateEscuro)),
+          ),
+        ),
+        if (_online == null)
+          const Align(
+            alignment: Alignment.bottomCenter,
+            child: Padding(padding: EdgeInsets.all(28), child: TomateCarregando(texto: 'Carregando...')),
+          )
+        else if (online)
+          _PainelOnline(
+            ofertas: ofertas,
+            minha: minha,
+            carregando: corridas == null,
+            erro: _erro,
+            aceitando: _aceitando,
+            trocando: _trocandoOnline,
+            onOffline: _alternarOnline,
+            onAbrir: _abrir,
+            onAceitar: _aceitar,
+            onRecusar: (c) => setState(() => _recusadas.add(c.pedidoId)),
+            onAtualizar: _carregar,
+          )
+        else
+          _PainelOffline(minha: minha, trocando: _trocandoOnline, erro: _erro, onOnline: _alternarOnline, onAbrir: _abrir),
+      ],
+    );
+  }
+
+  Widget _mapaInicio(ConfigMapa config, Corrida? minha, List<Corrida> ofertas) {
+    return FlutterMap(
+      mapController: _mapa,
+      options: MapOptions(initialCenter: _eu ?? _centroPadrao, initialZoom: 14),
+      children: [
+        TileLayer(urlTemplate: config.urlTiles, userAgentPackageName: 'app.xepa'),
+        MarkerLayer(markers: [
+          for (final c in ofertas)
+            if (c.coleta != null)
+              Marker(
+                point: c.coleta!,
+                width: 96,
+                height: 40,
+                alignment: Alignment.topCenter,
+                child: GestureDetector(onTap: () => _detalhes(c), child: _PrecoNoMapa(valor: c.valor)),
               ),
-            if (minha != null) ...[
-              const _Titulo('Corrida em andamento'),
-              _CartaoCorrida(corrida: minha, onTap: () => _abrir(minha.pedidoId)),
-            ],
-            _Titulo(minha != null ? 'Próximas corridas' : 'Corridas perto de você'),
-            if (corridas == null)
-              const Padding(padding: EdgeInsets.all(32), child: TomateCarregando(texto: 'Procurando corridas...'))
-            else if (!_disponivel)
-              const EstadoVazio(
-                titulo: 'Você está pausado',
-                texto: 'Fique disponível para receber corridas das lojas perto de você.',
-              )
-            else if (ofertas.isEmpty)
-              const EstadoVazio(
-                titulo: 'Nenhuma corrida agora',
-                texto: 'Quando uma loja aceitar um pedido com entrega perto de você, ele aparece aqui na hora.',
-              )
-            else
-              for (final c in ofertas)
-                _CartaoCorrida(
-                  corrida: c,
-                  aceitando: _aceitando == c.pedidoId,
-                  bloqueada: minha != null,
-                  onAceitar: () => _aceitar(c),
-                  onRecusar: () => setState(() => _recusadas.add(c.pedidoId)),
+          if (minha?.coleta != null && !minha!.coletada) _pino(minha.coleta!, Icons.storefront_rounded, XepaCores.paoEscuro),
+          if (minha?.destino != null) _pino(minha!.destino!, Icons.home_rounded, XepaCores.verde),
+          if (_eu != null)
+            Marker(
+              point: _eu!,
+              width: 44,
+              height: 44,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: (_online ?? false) ? XepaCores.verde : XepaCores.textoSecundario,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 3),
+                  boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 10, spreadRadius: 2)],
                 ),
+                child: const Icon(Icons.two_wheeler_rounded, color: Colors.white, size: 22),
+              ),
+            ),
+        ]),
+        RichAttributionWidget(attributions: [TextSourceAttribution(config.atribuicao)]),
+      ],
+    );
+  }
+
+  Marker _pino(LatLng p, IconData icone, Color cor) => Marker(
+        point: p,
+        width: 38,
+        height: 38,
+        child: Container(
+          decoration: BoxDecoration(color: cor, shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 3)),
+          child: Icon(icone, color: Colors.white, size: 18),
+        ),
+      );
+}
+
+/// Valor da corrida em cima da loja, no mapa (como o balão de preço dos apps de delivery).
+class _PrecoNoMapa extends StatelessWidget {
+  const _PrecoNoMapa({required this.valor});
+
+  final double valor;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: XepaCores.tomate,
+              borderRadius: BorderRadius.circular(XepaRaios.pilula),
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 8, offset: Offset(0, 2))],
+            ),
+            child: Text(formatarPreco(valor),
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13)),
+          ),
+          CustomPaint(size: const Size(12, 7), painter: _Ponta()),
+        ],
+      );
+}
+
+class _Ponta extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width, 0)
+      ..lineTo(size.width / 2, size.height)
+      ..close();
+    canvas.drawPath(p, Paint()..color = XepaCores.tomate);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _BotaoMapa extends StatelessWidget {
+  const _BotaoMapa({required this.icone, required this.dica, required this.onTap});
+
+  final IconData icone;
+  final String dica;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: Colors.white,
+        shape: const CircleBorder(),
+        elevation: 3,
+        shadowColor: const Color(0x33000000),
+        child: IconButton(onPressed: onTap, tooltip: dica, icon: Icon(icone, color: XepaCores.texto)),
+      );
+}
+
+/// Ganhos de hoje no topo do mapa; toque leva à aba Ganhos.
+class _PilulaGanhos extends StatelessWidget {
+  const _PilulaGanhos({required this.ganhos, required this.onTap});
+
+  final Map<String, dynamic>? ganhos;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final valor = (ganhos?['ganhosHoje'] as num?)?.toDouble() ?? 0;
+    final corridas = ganhos?['corridasHoje'] as int? ?? 0;
+    return Material(
+      color: XepaCores.texto,
+      borderRadius: BorderRadius.circular(XepaRaios.pilula),
+      elevation: 3,
+      shadowColor: const Color(0x33000000),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(XepaRaios.pilula),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 9, 12, 9),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Hoje', style: TextStyle(color: Colors.white.withAlpha(170), fontSize: 11, fontWeight: FontWeight.w700)),
+                  Text(formatarPreco(valor),
+                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800, height: 1.1)),
+                ],
+              ),
+              const SizedBox(width: 12),
+              Text('$corridas ${corridas == 1 ? 'corrida' : 'corridas'}',
+                  style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 12, fontWeight: FontWeight.w700)),
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right_rounded, color: Colors.white.withAlpha(200), size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Offline: o mapa fica livre e um botão grande liga o recebimento de corridas.
+class _PainelOffline extends StatelessWidget {
+  const _PainelOffline({required this.minha, required this.trocando, required this.erro, required this.onOnline, required this.onAbrir});
+
+  final Corrida? minha;
+  final bool trocando;
+  final String? erro;
+  final VoidCallback onOnline;
+  final ValueChanged<int> onAbrir;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [BoxShadow(color: Color(0x22000000), blurRadius: 16, offset: Offset(0, -2))],
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (minha != null) ...[
+              _CartaoCorrida(corrida: minha!, onTap: () => onAbrir(minha!.pedidoId)),
+            ],
+            const Row(
+              children: [
+                Icon(Icons.nightlight_round, color: XepaCores.textoSecundario, size: 20),
+                SizedBox(width: 8),
+                Text('Você está offline', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text('Fique online para receber corridas das lojas perto de você.',
+                style: TextStyle(color: XepaCores.textoSecundario)),
+            if (erro != null) ...[
+              const SizedBox(height: 8),
+              Text(erro!, style: const TextStyle(color: XepaCores.tomateEscuro, fontSize: 13)),
+            ],
+            const SizedBox(height: 14),
+            FilledButton.icon(
+              onPressed: trocando ? null : onOnline,
+              style: FilledButton.styleFrom(backgroundColor: XepaCores.verde, minimumSize: const Size(0, 56)),
+              icon: trocando
+                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.power_settings_new_rounded),
+              label: const Text('Ficar online', style: TextStyle(fontSize: 17)),
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+/// Online: painel arrastável com a corrida em andamento e as corridas perto (também marcadas no mapa).
+class _PainelOnline extends StatelessWidget {
+  const _PainelOnline({
+    required this.ofertas,
+    required this.minha,
+    required this.carregando,
+    required this.erro,
+    required this.aceitando,
+    required this.trocando,
+    required this.onOffline,
+    required this.onAbrir,
+    required this.onAceitar,
+    required this.onRecusar,
+    required this.onAtualizar,
+  });
+
+  final List<Corrida> ofertas;
+  final Corrida? minha;
+  final bool carregando;
+  final String? erro;
+  final int? aceitando;
+  final bool trocando;
+  final VoidCallback onOffline;
+  final ValueChanged<int> onAbrir;
+  final ValueChanged<Corrida> onAceitar;
+  final ValueChanged<Corrida> onRecusar;
+  final Future<void> Function() onAtualizar;
+
+  @override
+  Widget build(BuildContext context) {
+    final texto = minha != null
+        ? 'Corrida em andamento'
+        : ofertas.isEmpty
+            ? 'Procurando corridas perto de você'
+            : '${ofertas.length} ${ofertas.length == 1 ? 'corrida disponível' : 'corridas disponíveis'}';
+    return DraggableScrollableSheet(
+      initialChildSize: minha != null || ofertas.isNotEmpty ? 0.42 : 0.2,
+      minChildSize: 0.16,
+      maxChildSize: 0.88,
+      snap: true,
+      builder: (context, rolagem) => Container(
+        decoration: const BoxDecoration(
+          color: XepaCores.fundo,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [BoxShadow(color: Color(0x22000000), blurRadius: 16, offset: Offset(0, -2))],
+        ),
+        child: RefreshIndicator(
+          color: XepaCores.tomate,
+          onRefresh: onAtualizar,
+          child: ListView(
+            controller: rolagem,
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(color: XepaCores.borda, borderRadius: BorderRadius.circular(4)),
+                ),
+              ),
+              Row(
+                children: [
+                  const _PontoOnline(),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Você está online', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+                        Text(texto, style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                  OutlinedButton(
+                    onPressed: trocando ? null : onOffline,
+                    style: OutlinedButton.styleFrom(minimumSize: const Size(0, 40), padding: const EdgeInsets.symmetric(horizontal: 14)),
+                    child: const Text('Ficar offline'),
+                  ),
+                ],
+              ),
+              if (erro != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Text(erro!, style: const TextStyle(color: XepaCores.tomateEscuro, fontSize: 13)),
+                ),
+              if (minha != null) ...[
+                const _Titulo('Corrida em andamento'),
+                _CartaoCorrida(corrida: minha!, onTap: () => onAbrir(minha!.pedidoId)),
+              ],
+              if (carregando)
+                const Padding(padding: EdgeInsets.all(24), child: TomateCarregando(texto: 'Procurando corridas...'))
+              else if (ofertas.isEmpty && minha == null)
+                const EstadoVazio(
+                  titulo: 'Nenhuma corrida agora',
+                  texto: 'Quando uma loja aceitar um pedido com entrega perto de você, ele aparece aqui e no mapa na hora.',
+                )
+              else if (ofertas.isNotEmpty) ...[
+                _Titulo(minha != null ? 'Próximas corridas' : 'Corridas perto de você'),
+                for (final c in ofertas)
+                  _CartaoCorrida(
+                    corrida: c,
+                    aceitando: aceitando == c.pedidoId,
+                    bloqueada: minha != null,
+                    onAceitar: () => onAceitar(c),
+                    onRecusar: () => onRecusar(c),
+                  ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bolinha verde pulsando enquanto está online.
+class _PontoOnline extends StatefulWidget {
+  const _PontoOnline();
+
+  @override
+  State<_PontoOnline> createState() => _PontoOnlineState();
+}
+
+class _PontoOnlineState extends State<_PontoOnline> with SingleTickerProviderStateMixin {
+  late final _pulso = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat();
+
+  @override
+  void dispose() {
+    _pulso.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => SizedBox.square(
+        dimension: 26,
+        child: AnimatedBuilder(
+          animation: _pulso,
+          builder: (_, __) => Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 12 + 14 * _pulso.value,
+                height: 12 + 14 * _pulso.value,
+                decoration: BoxDecoration(color: XepaCores.verde.withValues(alpha: 0.35 * (1 - _pulso.value)), shape: BoxShape.circle),
+              ),
+              Container(width: 12, height: 12, decoration: const BoxDecoration(color: XepaCores.verde, shape: BoxShape.circle)),
+            ],
+          ),
+        ),
+      );
 }
 
 class _Titulo extends StatelessWidget {
@@ -219,116 +689,6 @@ class _Titulo extends StatelessWidget {
   Widget build(BuildContext context) => Padding(
         padding: const EdgeInsets.only(top: 22, bottom: 10),
         child: Text(texto, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-      );
-}
-
-class _Disponibilidade extends StatelessWidget {
-  const _Disponibilidade({required this.disponivel, required this.onChanged});
-
-  final bool disponivel;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) => GestureDetector(
-        onTap: () => onChanged(!disponivel),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: disponivel ? XepaCores.verdeClaro : XepaCores.bege,
-            borderRadius: BorderRadius.circular(XepaRaios.pilula),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 9,
-                height: 9,
-                decoration: BoxDecoration(
-                  color: disponivel ? XepaCores.verde : XepaCores.textoSecundario,
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                disponivel ? 'Disponível' : 'Pausado',
-                style: TextStyle(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 13,
-                  color: disponivel ? XepaCores.verdeTexto : XepaCores.textoSecundario,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-}
-
-class _CartaoGanhos extends StatelessWidget {
-  const _CartaoGanhos({required this.ganhos});
-
-  final Map<String, dynamic>? ganhos;
-
-  @override
-  Widget build(BuildContext context) {
-    final g = ganhos;
-    final hoje = (g?['ganhosHoje'] as num?)?.toDouble() ?? 0;
-    final corridas = g?['corridasHoje'] as int? ?? 0;
-    final km = (g?['kmHoje'] as num?)?.toDouble() ?? 0;
-    final semana = (g?['ganhosSemana'] as num?)?.toDouble() ?? 0;
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(XepaRaios.cartao),
-      child: Container(
-        color: XepaCores.texto,
-        child: Stack(
-          children: [
-            const Positioned(
-              right: -24,
-              bottom: -30,
-              child: TomateMarcaDagua(tamanho: 130, opacidade: 0.12, angulo: -0.3, cor: Colors.white),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Ganhos de hoje', style: TextStyle(color: Colors.white.withAlpha(190), fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 2),
-                  Text(formatarPreco(hoje),
-                      style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: -1)),
-                  const SizedBox(height: 10),
-                  Row(
-                    children: [
-                      _Numero(valor: '$corridas', rotulo: corridas == 1 ? 'corrida' : 'corridas'),
-                      _Numero(valor: _km(km), rotulo: 'rodados'),
-                      _Numero(valor: formatarPreco(semana), rotulo: 'na semana'),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Numero extends StatelessWidget {
-  const _Numero({required this.valor, required this.rotulo});
-
-  final String valor;
-  final String rotulo;
-
-  @override
-  Widget build(BuildContext context) => Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(valor, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
-            Text(rotulo, style: TextStyle(color: Colors.white.withAlpha(170), fontSize: 12)),
-          ],
-        ),
       );
 }
 
@@ -387,7 +747,10 @@ class _CartaoCorrida extends StatelessWidget {
                       ),
                     ),
                     if (c.minha)
-                      _Etiqueta(texto: c.coletada ? 'Levando ao cliente' : 'Indo até a loja', cor: XepaCores.tomate),
+                      _Etiqueta(
+                        texto: c.coletada ? 'Levando ao cliente' : (c.pronto ? 'Pronto para coletar' : 'Indo até a loja'),
+                        cor: c.pronto && !c.coletada ? XepaCores.verde : XepaCores.tomate,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -540,11 +903,16 @@ class _CorridaScreenState extends State<CorridaScreen> {
     });
     _carregar();
     _timer = Timer.periodic(_intervaloGps, (_) => _enviarGps());
+    // A loja marca "pronto" pelo portal: o aviso chega em tempo real e libera o botão de coleta.
+    _avisos = TempoReal.instance.pedidoAlterado.where((e) => e['pedidoId'] == widget.pedidoId).listen((_) => _carregar());
   }
+
+  StreamSubscription<Map<String, dynamic>>? _avisos;
 
   @override
   void dispose() {
     _timer?.cancel();
+    _avisos?.cancel();
     super.dispose();
   }
 
@@ -864,11 +1232,26 @@ class _CorridaScreenState extends State<CorridaScreen> {
                 const SizedBox(height: 8),
                 Text('Obs.: ${c.observacao}', style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 13)),
               ],
-              if (indoNaLoja && !c.lojaPreparando)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: Text('A loja ainda vai começar o preparo. Pode ir indo!',
-                      style: TextStyle(color: XepaCores.paoEscuro, fontWeight: FontWeight.w700, fontSize: 13)),
+              if (indoNaLoja)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      Icon(c.pronto ? Icons.check_circle_rounded : Icons.hourglass_top_rounded,
+                          size: 16, color: c.pronto ? XepaCores.verde : XepaCores.paoEscuro),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          c.pronto ? 'Pedido pronto na loja. Pode coletar!' : 'A loja ainda está preparando. Pode ir indo!',
+                          style: TextStyle(
+                            color: c.pronto ? XepaCores.verdeTexto : XepaCores.paoEscuro,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               const SizedBox(height: 12),
               Row(
@@ -888,9 +1271,9 @@ class _CorridaScreenState extends State<CorridaScreen> {
                   Expanded(
                     flex: 2,
                     child: FilledButton(
-                      onPressed: _ocupado ? null : (indoNaLoja ? _coletar : _finalizar),
+                      onPressed: _ocupado || (indoNaLoja && !c.pronto) ? null : (indoNaLoja ? _coletar : _finalizar),
                       style: indoNaLoja ? null : FilledButton.styleFrom(backgroundColor: XepaCores.verde),
-                      child: Text(indoNaLoja ? 'Coletei o pedido' : 'Finalizar entrega'),
+                      child: Text(indoNaLoja ? (c.pronto ? 'Coletei o pedido' : 'Aguardando a loja') : 'Finalizar entrega'),
                     ),
                   ),
                 ],

@@ -21,6 +21,10 @@ enum StatusPedido {
 
   bool get emAndamento => this != entregue && this != cancelado;
 
+  /// Rótulo do status do ponto de vista do cliente; na entrega, "pronto" é pronto para o entregador buscar.
+  String rotuloPara({required bool entrega}) =>
+      entrega && this == prontoParaRetirada ? 'Pronto · aguardando o entregador' : rotulo;
+
   /// Cliente só cancela antes de a loja confirmar (RN05).
   bool get cancelavel => this == aguardandoPagamento || this == pendente;
 
@@ -33,12 +37,13 @@ enum StatusPedido {
 }
 
 class EnderecoPedido {
-  const EnderecoPedido({required this.logradouro, required this.numero, required this.bairro, this.latitude, this.longitude});
+  const EnderecoPedido({required this.logradouro, required this.numero, required this.bairro, this.cidade, this.latitude, this.longitude});
 
   factory EnderecoPedido.fromJson(Map<String, dynamic> j) => EnderecoPedido(
         logradouro: j['logradouro'] as String,
         numero: j['numero'] as String,
         bairro: j['bairro'] as String,
+        cidade: j['cidade'] as String?,
         latitude: (j['latitude'] as num?)?.toDouble(),
         longitude: (j['longitude'] as num?)?.toDouble(),
       );
@@ -46,6 +51,7 @@ class EnderecoPedido {
   final String logradouro;
   final String numero;
   final String bairro;
+  final String? cidade;
   final double? latitude;
   final double? longitude;
 
@@ -68,6 +74,8 @@ class Pedido {
     required this.retiradaFim,
     this.endereco,
     this.fotoUrl,
+    this.nomeEntregador,
+    this.notaEntregador,
   });
 
   factory Pedido.fromJson(Map<String, dynamic> j) {
@@ -87,6 +95,8 @@ class Pedido {
       retiradaFim: DateTime.parse(o['retiradaFim'] as String).toLocal(),
       endereco: j['enderecoEntrega'] == null ? null : EnderecoPedido.fromJson(j['enderecoEntrega'] as Map<String, dynamic>),
       fotoUrl: o['fotoUrl'] as String?,
+      nomeEntregador: (j['nomeEntregador'] as String?)?.split(' ').first,
+      notaEntregador: j['notaEntregador'] as int?,
     );
   }
 
@@ -104,6 +114,10 @@ class Pedido {
   final DateTime retiradaFim;
   final EnderecoPedido? endereco;
   final String? fotoUrl;
+
+  /// Primeiro nome do entregador parceiro e a nota (1 a 5) que o cliente deu a ele.
+  final String? nomeEntregador;
+  final int? notaEntregador;
 }
 
 class Pagamento {

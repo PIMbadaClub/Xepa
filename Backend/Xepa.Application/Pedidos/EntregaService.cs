@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
 using Xepa.Application.Pagamentos;
 using Xepa.Domain;
@@ -14,7 +15,42 @@ public record CorridaDto(int PedidoId, StatusPedido Status, decimal Valor, strin
     double DistanciaEntregaKm, double DistanciaTotalKm, int MinutosEstimados, int Quantidade, string Oferta, string? Observacao,
     bool Minha, bool Coletada);
 
-public record GanhosDto(int CorridasHoje, decimal GanhosHoje, double KmHoje, int CorridasSemana, decimal GanhosSemana);
+public record GanhosDto(int CorridasHoje, decimal GanhosHoje, double KmHoje, int CorridasSemana, decimal GanhosSemana,
+    double KmSemana, int CorridasMes, decimal GanhosMes, double KmMes, int CorridasTotal, decimal GanhosTotal,
+    IReadOnlyList<GanhoDiaDto> UltimosDias, IReadOnlyList<CorridaFeitaDto> Corridas);
+
+/// <summary>Ganho de um dia (horário de Brasília), para o gráfico dos últimos 7 dias.</summary>
+public record GanhoDiaDto(DateOnly Dia, decimal Valor, int Corridas);
+
+/// <summary>Corrida já entregue, com a nota que o cliente deu (se deu).</summary>
+public record CorridaFeitaDto(int PedidoId, DateTimeOffset EntregueEm, string Loja, string Bairro, decimal Valor, double Km,
+    int? Nota, string? Comentario);
+
+public record AvaliacaoEntregadorDto(int Nota, string? Comentario, string Cliente, DateTimeOffset Em);
+
+/// <summary>Perfil do entregador parceiro: dados da moto, preferências e a reputação dada pelos clientes.</summary>
+public record PerfilEntregadorDto(string Nome, string Email, string? Telefone, string? Placa, string? ModeloMoto, bool Online,
+    int RaioCorridasKm, double? Nota, int Avaliacoes, IReadOnlyList<int> Estrelas, int CorridasTotal, DateTimeOffset MembroDesde,
+    IReadOnlyList<AvaliacaoEntregadorDto> UltimasAvaliacoes);
+
+public class AtualizarPerfilEntregadorRequest
+{
+    [Required(ErrorMessage = "Informe seu nome."), MaxLength(120)]
+    public required string Nome { get; init; }
+
+    [Required(ErrorMessage = "Informe o telefone."), Phone(ErrorMessage = "Telefone inválido."), MaxLength(20)]
+    public required string Telefone { get; init; }
+
+    [Required(ErrorMessage = "Informe a placa da moto."),
+     RegularExpression(@"^[A-Za-z]{3}-?\d[A-Za-z\d]\d{2}$", ErrorMessage = "Placa inválida (ex.: ABC1D23).")]
+    public required string Placa { get; init; }
+
+    [MaxLength(60)]
+    public string? ModeloMoto { get; init; }
+
+    [Range(1, EntregaService.RaioOfertaKm, ErrorMessage = "O raio vai de 1 a 15 km.")]
+    public int RaioCorridasKm { get; init; } = 8;
+}
 
 /// <summary>Traçados para o mapa do entregador: até a loja (antes de coletar) e da loja ao cliente.</summary>
 public record RotaCorridaDto(IReadOnlyList<Coordenada>? AteColeta, IReadOnlyList<Coordenada>? Entrega, double? DistanciaAteColetaKm,
@@ -26,19 +62,26 @@ public record RotaCorridaDto(IReadOnlyList<Coordenada>? AteColeta, IReadOnlyList
 /// </summary>
 public class EntregaService(IXepaDb db, IServicoMapas mapas, INotificadorPedidos notificador)
 {
-    /// <summary>Corridas disponíveis num raio de até 15 km do entregador (pela loja de coleta).</summary>
-    public const double RaioOfertaKm = 15;
+    /// <summary>Raio máximo que o entregador pode escolher para ver corridas (pela loja de coleta).</summary>
+    public const int RaioOfertaKm = 15;
 
     /// <summary>Velocidade média de moto na cidade, para estimar o tempo quando não há rota calculada.</summary>
     private const double VelocidadeMotoKmH = 25;
 
-    private static readonly StatusPedido[] StatusDisponivel = [StatusPedido.Confirmado, StatusPedido.EmPreparo];
+    /// <summary>A corrida pode ser aceita desde que a loja aceita o pedido até ela marcar pronto.</summary>
+    private static readonly StatusPedido[] StatusDisponivel = [StatusPedido.Confirmado, StatusPedido.EmPreparo, StatusPedido.ProntoParaRetirada];
 
+    /// <summary>
+    /// Corridas disponíveis dentro do raio escolhido pelo entregador, mais a que já está com ele. Offline, ele só vê a dele.
+    /// </summary>
     public async Task<IReadOnlyList<CorridaDto>> ListarAsync(int entregadorId, Coordenada? posicao, CancellationToken ct)
     {
+        var eu = await db.Usuarios.AsNoTracking().Where(u => u.Id == entregadorId)
+            .Select(u => new { u.Online, u.RaioCorridasKm }).FirstAsync(ct);
+
         var pedidos = await db.Pedidos.AsNoTracking()
             .Where(p => p.TipoEntrega == TipoEntrega.Entrega
-                        && ((p.EntregadorId == null && StatusDisponivel.Contains(p.Status))
+                        && ((eu.Online && p.EntregadorId == null && StatusDisponivel.Contains(p.Status))
                             || (p.EntregadorId == entregadorId
                                 && (StatusDisponivel.Contains(p.Status) || p.Status == StatusPedido.SaiuParaEntrega))))
             .OrderBy(p => p.CriadoEm)
@@ -70,7 +113,7 @@ public class EntregaService(IXepaDb db, IServicoMapas mapas, INotificadorPedidos
                     Math.Max(5, (int)Math.Ceiling(total / VelocidadeMotoKmH * 60)),
                     p.Quantidade, p.Oferta, minha ? p.Observacao : null, minha, coletada);
             })
-            .Where(c => c.Minha || c.DistanciaAteColetaKm is null || c.DistanciaAteColetaKm <= RaioOfertaKm)
+            .Where(c => c.Minha || c.DistanciaAteColetaKm is null || c.DistanciaAteColetaKm <= eu.RaioCorridasKm)
             .OrderByDescending(c => c.Minha)
             .ThenBy(c => c.DistanciaAteColetaKm ?? double.MaxValue)
             .ToList();
@@ -104,6 +147,8 @@ public class EntregaService(IXepaDb db, IServicoMapas mapas, INotificadorPedidos
     /// <summary>Aceita a corrida. Só um entregador consegue: a troca é atômica no banco.</summary>
     public async Task AceitarAsync(int entregadorId, int pedidoId, CancellationToken ct)
     {
+        if (!await db.Usuarios.AnyAsync(u => u.Id == entregadorId && u.Online, ct))
+            throw new RegraDeNegocioException("Fique online para aceitar corridas.");
         if (await db.Pedidos.AnyAsync(p => p.EntregadorId == entregadorId && StatusDisponivel.Contains(p.Status)
                                            || p.EntregadorId == entregadorId && p.Status == StatusPedido.SaiuParaEntrega, ct))
             throw new RegraDeNegocioException("Termine a corrida atual antes de aceitar outra.");
@@ -133,8 +178,8 @@ public class EntregaService(IXepaDb db, IServicoMapas mapas, INotificadorPedidos
     public async Task ColetarAsync(int entregadorId, int pedidoId, CancellationToken ct)
     {
         var pedido = await MinhaAsync(entregadorId, pedidoId, ct);
-        if (pedido.Status == StatusPedido.Confirmado)
-            throw new RegraDeNegocioException("A loja ainda não começou a preparar o pedido. Aguarde na loja.");
+        if (pedido.Status != StatusPedido.ProntoParaRetirada)
+            throw new RegraDeNegocioException("A loja ainda está preparando o pedido. Dá para coletar quando ela marcar como pronto.");
         pedido.AvancarStatus(StatusPedido.SaiuParaEntrega);
         await db.SaveChangesAsync(ct);
         await notificador.PedidoAlteradoAsync(pedido.Id, ct);
@@ -163,28 +208,94 @@ public class EntregaService(IXepaDb db, IServicoMapas mapas, INotificadorPedidos
         await notificador.PedidoAlteradoAsync(pedido.Id, ct);
     }
 
-    /// <summary>Ganhos do entregador (horário de Brasília): taxas das corridas entregues.</summary>
+    /// <summary>Liga ou desliga o recebimento de corridas. A corrida em andamento continua com ele.</summary>
+    public async Task<bool> DefinirOnlineAsync(int entregadorId, bool online, CancellationToken ct)
+    {
+        await db.Usuarios.Where(u => u.Id == entregadorId).ExecuteUpdateAsync(s => s.SetProperty(u => u.Online, online), ct);
+        return online;
+    }
+
+    /// <summary>Ganhos reais do entregador (horário de Brasília): taxas das corridas que ele entregou.</summary>
     public async Task<GanhosDto> GanhosAsync(int entregadorId, CancellationToken ct)
     {
         var fuso = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
         var agoraLocal = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, fuso);
         var inicioHoje = new DateTimeOffset(agoraLocal.Date, agoraLocal.Offset);
         var inicioSemana = inicioHoje.AddDays(-(((int)agoraLocal.DayOfWeek + 6) % 7)); // segunda-feira
+        var inicioMes = new DateTimeOffset(new DateTime(agoraLocal.Year, agoraLocal.Month, 1), agoraLocal.Offset);
 
-        var entregues = await db.Pedidos.AsNoTracking()
-            .Where(p => p.EntregadorId == entregadorId && p.Status == StatusPedido.Entregue
-                        && p.Historico.Any(h => h.StatusNovo == StatusPedido.Entregue && h.AlteradoEm >= inicioSemana))
-            .Select(p => new
+        var entregues = (await db.Pedidos.AsNoTracking()
+                .Where(p => p.EntregadorId == entregadorId && p.Status == StatusPedido.Entregue)
+                .Select(p => new
+                {
+                    p.Id, p.TaxaEntrega, Km = p.DistanciaEntregaKm ?? 0, Loja = p.Oferta.Estabelecimento.Nome,
+                    Bairro = p.EnderecoEntrega != null ? p.EnderecoEntrega.Bairro : "", p.NotaEntregador, p.ComentarioEntregador,
+                    p.CriadoEm,
+                    Entregue = p.Historico.Where(h => h.StatusNovo == StatusPedido.Entregue).Max(h => (DateTimeOffset?)h.AlteradoEm)
+                })
+                .ToListAsync(ct))
+            .Select(e => new
             {
-                p.TaxaEntrega,
-                Km = p.DistanciaEntregaKm ?? 0,
-                Em = p.Historico.Where(h => h.StatusNovo == StatusPedido.Entregue).Max(h => h.AlteradoEm)
+                e.Id, e.TaxaEntrega, e.Km, e.Loja, e.Bairro, e.NotaEntregador, e.ComentarioEntregador,
+                Em = TimeZoneInfo.ConvertTime(e.Entregue ?? e.CriadoEm, fuso)
             })
-            .ToListAsync(ct);
+            .OrderByDescending(e => e.Em)
+            .ToList();
 
         var hoje = entregues.Where(e => e.Em >= inicioHoje).ToList();
-        return new GanhosDto(hoje.Count, hoje.Sum(e => e.TaxaEntrega), Math.Round(hoje.Sum(e => e.Km), 1),
-            entregues.Count, entregues.Sum(e => e.TaxaEntrega));
+        var semana = entregues.Where(e => e.Em >= inicioSemana).ToList();
+        var mes = entregues.Where(e => e.Em >= inicioMes).ToList();
+
+        var dias = Enumerable.Range(0, 7)
+            .Select(i => DateOnly.FromDateTime(agoraLocal.Date.AddDays(i - 6)))
+            .Select(d =>
+            {
+                var doDia = entregues.Where(e => DateOnly.FromDateTime(e.Em.Date) == d).ToList();
+                return new GanhoDiaDto(d, doDia.Sum(e => e.TaxaEntrega), doDia.Count);
+            })
+            .ToList();
+
+        return new GanhosDto(hoje.Count, hoje.Sum(e => e.TaxaEntrega), Km(hoje.Sum(e => e.Km)),
+            semana.Count, semana.Sum(e => e.TaxaEntrega), Km(semana.Sum(e => e.Km)),
+            mes.Count, mes.Sum(e => e.TaxaEntrega), Km(mes.Sum(e => e.Km)),
+            entregues.Count, entregues.Sum(e => e.TaxaEntrega), dias,
+            entregues.Take(30)
+                .Select(e => new CorridaFeitaDto(e.Id, e.Em, e.Loja, e.Bairro, e.TaxaEntrega, Km(e.Km), e.NotaEntregador, e.ComentarioEntregador))
+                .ToList());
+
+        static double Km(double km) => Math.Round(km, 1);
+    }
+
+    public async Task<PerfilEntregadorDto> PerfilAsync(int entregadorId, CancellationToken ct)
+    {
+        var u = await db.Usuarios.AsNoTracking().FirstOrDefaultAsync(x => x.Id == entregadorId, ct)
+                ?? throw new NaoEncontradoException("Entregador não encontrado.");
+
+        var corridas = await db.Pedidos.CountAsync(p => p.EntregadorId == entregadorId && p.Status == StatusPedido.Entregue, ct);
+        var notas = await db.Pedidos.AsNoTracking()
+            .Where(p => p.EntregadorId == entregadorId && p.NotaEntregador != null)
+            .OrderByDescending(p => p.EntregadorAvaliadoEm)
+            .Select(p => new { Nota = p.NotaEntregador!.Value, p.ComentarioEntregador, Cliente = p.Cliente.Nome, Em = p.EntregadorAvaliadoEm!.Value })
+            .ToListAsync(ct);
+
+        return new PerfilEntregadorDto(u.Nome, u.Email, u.Telefone, u.Placa, u.ModeloMoto, u.Online, u.RaioCorridasKm,
+            notas.Count == 0 ? null : Math.Round(notas.Average(n => n.Nota), 2), notas.Count,
+            Enumerable.Range(1, 5).Reverse().Select(e => notas.Count(n => n.Nota == e)).ToList(),
+            corridas, u.CriadoEm,
+            notas.Take(10).Select(n => new AvaliacaoEntregadorDto(n.Nota, n.ComentarioEntregador, n.Cliente.Split(' ')[0], n.Em)).ToList());
+    }
+
+    public async Task<PerfilEntregadorDto> AtualizarPerfilAsync(int entregadorId, AtualizarPerfilEntregadorRequest request, CancellationToken ct)
+    {
+        var u = await db.Usuarios.FirstOrDefaultAsync(x => x.Id == entregadorId, ct)
+                ?? throw new NaoEncontradoException("Entregador não encontrado.");
+        u.Nome = request.Nome.Trim();
+        u.Telefone = request.Telefone.Trim();
+        u.Placa = request.Placa.Replace("-", "").Trim().ToUpperInvariant();
+        u.ModeloMoto = string.IsNullOrWhiteSpace(request.ModeloMoto) ? null : request.ModeloMoto.Trim();
+        u.RaioCorridasKm = request.RaioCorridasKm;
+        await db.SaveChangesAsync(ct);
+        return await PerfilAsync(entregadorId, ct);
     }
 
     private async Task<Pedido> MinhaAsync(int entregadorId, int pedidoId, CancellationToken ct) =>

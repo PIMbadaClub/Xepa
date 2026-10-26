@@ -15,10 +15,10 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] · XEPA</title>
-    <link rel="icon" type="image/svg+xml" href="~/img/tomate.svg" />
+    <link rel="icon" type="image/svg+xml" href="~/img/tomate.svg" asp-append-version="true" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600&family=Manrope:wght@400;500;600;700;800&display=swap" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
@@ -27,7 +27,7 @@
     {
         <div class="app @(admin ? "app-admin" : "")">
             <nav class="lateral" aria-label="Menu principal">
-                <div class="marca"><img src="~/img/tomate.svg" alt="" class="tomate" />xepa</div>
+                <div class="marca"><img src="~/img/tomate.svg" asp-append-version="true" alt="" class="tomate" /><img src="@Url.Content(admin ? "~/img/xepa-nome-branco.svg" : "~/img/xepa-nome.svg")" alt="Xepa" class="nome" /></div>
                 <div class="contexto">@(admin ? "Administração da plataforma" : $"Portal do estabelecimento{(loja is null ? "" : " · " + loja)}")</div>
                 @if (admin)
                 {
@@ -43,7 +43,7 @@
                     <a asp-controller="Ofertas" asp-action="Index" class="@Ativo("Ofertas")" aria-current="@Atual("Ofertas")">Ofertas</a>
                     <a asp-controller="Impacto" asp-action="Index" class="@Ativo("Impacto")" aria-current="@Atual("Impacto")">Impacto e vendas</a>
                 }
-                <img src="~/img/tomate.svg" alt="" class="tomate-escondido" />
+                <img src="~/img/tomate.svg" asp-append-version="true" alt="" class="tomate-escondido" />
                 <form asp-controller="Conta" asp-action="Sair" method="post" class="sair">
                     <button type="submit">Sair · @User.Identity!.Name</button>
                 </form>

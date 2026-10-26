@@ -28,6 +28,13 @@ public class OfertaConsultaService(IXepaDb db)
         if (filtro.Categoria is { } categoria)
             ofertas = ofertas.Where(o => o.Estabelecimento.Categoria == categoria);
 
+        // A collation do banco ignora maiúsculas e acentos: "limeira" encontra "Limeira".
+        if (!string.IsNullOrWhiteSpace(filtro.Cidade))
+        {
+            var cidade = filtro.Cidade.Trim();
+            ofertas = ofertas.Where(o => o.Estabelecimento.Endereco.Cidade == cidade);
+        }
+
         if (filtro.EstabelecimentoId is { } estabelecimentoId)
             ofertas = ofertas.Where(o => o.EstabelecimentoId == estabelecimentoId);
 

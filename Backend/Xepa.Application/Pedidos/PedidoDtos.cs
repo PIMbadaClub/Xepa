@@ -40,12 +40,26 @@ public class PedidoDto
     public string? CodigoRetirada { get; init; }
 
     public DateTimeOffset CriadoEm { get; init; }
+
+    /// <summary>Primeiro nome do entregador parceiro (pedidos com entrega) e a nota que o cliente deu a ele.</summary>
+    public string? NomeEntregador { get; init; }
+    public int? NotaEntregador { get; init; }
+
     public required PedidoOfertaDto Oferta { get; init; }
     public Endereco? EnderecoEntrega { get; init; }
 }
 
 public record PedidoOfertaDto(int Id, string Titulo, string? FotoUrl, int EstabelecimentoId, string Estabelecimento,
     DateTimeOffset RetiradaInicio, DateTimeOffset RetiradaFim);
+
+public class AvaliarEntregadorRequest
+{
+    [Range(1, 5, ErrorMessage = "A nota vai de 1 a 5.")]
+    public int Nota { get; init; }
+
+    [MaxLength(300, ErrorMessage = "O comentário pode ter até 300 caracteres.")]
+    public string? Comentario { get; init; }
+}
 
 public class EnderecoRequest
 {
@@ -87,4 +101,5 @@ public record EnderecoDto(int Id, string Apelido, bool Principal, Endereco Ender
 
 /// <summary>Posições para o mapa do cliente; <c>Rota</c> é o traçado real loja → destino pelas ruas.</summary>
 public record RastreioDto(StatusPedido Status, Coordenada? Loja, Coordenada? Destino, Coordenada? Entregador,
-    DateTimeOffset? AtualizadoEm, IReadOnlyList<Coordenada>? Rota = null, string? NomeEntregador = null);
+    DateTimeOffset? AtualizadoEm, IReadOnlyList<Coordenada>? Rota = null, string? NomeEntregador = null,
+    string? PlacaEntregador = null);

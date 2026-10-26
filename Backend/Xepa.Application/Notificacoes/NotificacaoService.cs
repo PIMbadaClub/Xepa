@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Xepa.Domain.Entities;
 
 namespace Xepa.Application.Notificacoes;
@@ -99,6 +99,8 @@ public class NotificacaoService(IXepaDb db)
             StatusPedido.Pendente => ("Pagamento confirmado", $"Seu pedido foi enviado para a {loja}. Agora é só aguardar o aceite."),
             StatusPedido.Confirmado => ("Pedido aceito!", $"A {loja} aceitou seu pedido."),
             StatusPedido.EmPreparo => ("Separando sua sacola", $"A {loja} está preparando seu pedido."),
+            StatusPedido.ProntoParaRetirada when tipo == TipoEntrega.Entrega =>
+                ("Pedido pronto", $"A {loja} terminou de preparar. O entregador vai buscar."),
             StatusPedido.ProntoParaRetirada => ("Pronto para retirada", $"Passe na {loja} e mostre o código {codigo}."),
             StatusPedido.SaiuParaEntrega => ("Saiu para entrega", "Seu pedido está a caminho. Acompanhe pelo mapa."),
             StatusPedido.Entregue => (tipo == TipoEntrega.Entrega ? "Pedido entregue" : "Retirada confirmada",

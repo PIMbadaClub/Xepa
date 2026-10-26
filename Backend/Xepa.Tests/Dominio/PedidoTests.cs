@@ -83,13 +83,17 @@ public class PedidoTests
     }
 
     [Fact]
-    public void Pedido_de_entrega_nao_fica_pronto_para_retirada()
+    public void Entrega_so_sai_depois_de_a_loja_marcar_pronto()
     {
         var pedido = NovoPedido(TipoEntrega.Entrega, StatusPedido.EmPreparo);
 
-        Assert.Throws<RegraDeNegocioException>(() => pedido.AvancarStatus(StatusPedido.ProntoParaRetirada));
+        Assert.Throws<RegraDeNegocioException>(() => pedido.AvancarStatus(StatusPedido.SaiuParaEntrega));
+        pedido.AvancarStatus(StatusPedido.ProntoParaRetirada);
+        Assert.Throws<RegraDeNegocioException>(() => pedido.AvancarStatus(StatusPedido.Entregue));
+        Assert.Throws<RegraDeNegocioException>(() => pedido.ConfirmarRetirada("4821"));
         pedido.AvancarStatus(StatusPedido.SaiuParaEntrega);
-        Assert.Equal(StatusPedido.SaiuParaEntrega, pedido.Status);
+        pedido.AvancarStatus(StatusPedido.Entregue);
+        Assert.Equal(StatusPedido.Entregue, pedido.Status);
     }
 
     [Fact]
@@ -98,5 +102,50 @@ public class PedidoTests
         var pedido = NovoPedido(status: StatusPedido.Pendente);
 
         Assert.Throws<RegraDeNegocioException>(() => pedido.AvancarStatus(StatusPedido.Entregue));
+    }
+
+    [Fact]
+    public void Cliente_avalia_o_entregador_depois_da_entrega()
+    {
+        var pedido = NovoPedido(TipoEntrega.Entrega, StatusPedido.Entregue);
+        pedido.EntregadorId = 7;
+
+        pedido.AvaliarEntregador(5, "  Rápido e educado ");
+
+        Assert.Equal(5, pedido.NotaEntregador);
+        Assert.Equal("Rápido e educado", pedido.ComentarioEntregador);
+        Assert.NotNull(pedido.EntregadorAvaliadoEm);
+    }
+
+    [Fact]
+    public void Entregador_so_e_avaliado_uma_vez_e_depois_de_entregue()
+    {
+        var aCaminho = NovoPedido(TipoEntrega.Entrega, StatusPedido.SaiuParaEntrega);
+        aCaminho.EntregadorId = 7;
+        Assert.Throws<RegraDeNegocioException>(() => aCaminho.AvaliarEntregador(5, null));
+
+        var entregue = NovoPedido(TipoEntrega.Entrega, StatusPedido.Entregue);
+        entregue.EntregadorId = 7;
+        entregue.AvaliarEntregador(4, null);
+        Assert.Throws<RegraDeNegocioException>(() => entregue.AvaliarEntregador(5, null));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(6)]
+    public void Nota_do_entregador_vai_de_1_a_5(int nota)
+    {
+        var pedido = NovoPedido(TipoEntrega.Entrega, StatusPedido.Entregue);
+        pedido.EntregadorId = 7;
+
+        Assert.Throws<RegraDeNegocioException>(() => pedido.AvaliarEntregador(nota, null));
+    }
+
+    [Fact]
+    public void Retirada_na_loja_nao_tem_entregador_para_avaliar()
+    {
+        var pedido = NovoPedido(TipoEntrega.Retirada, StatusPedido.Entregue);
+
+        Assert.Throws<RegraDeNegocioException>(() => pedido.AvaliarEntregador(5, null));
     }
 }

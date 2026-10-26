@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/api.dart';
+import '../api/cidade.dart';
 import '../models/oferta.dart';
 import '../models/pedido.dart';
 import '../theme.dart';
@@ -63,6 +64,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       builder: (_) => const FormEndereco(),
     );
     if (criado != null) {
+      CidadeCliente.instance.limpar();
       setState(() => _enderecoId = criado.id);
       await _carregarEnderecos();
     }

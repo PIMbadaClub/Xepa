@@ -44,6 +44,14 @@ public class PedidosController(PedidoService pedidos, PagamentoService pagamento
     [HttpGet("{id:int}/rastreio")]
     public Task<RastreioDto> Rastreio(int id, CancellationToken ct) => pedidos.ObterRastreioAsync(User.UsuarioId(), id, ct);
 
+    /// <summary>Nota de 1 a 5 (e comentário opcional) para o entregador, depois de receber o pedido.</summary>
+    [HttpPost("{id:int}/avaliar-entregador")]
+    public async Task<IActionResult> AvaliarEntregador(int id, AvaliarEntregadorRequest request, CancellationToken ct)
+    {
+        await pedidos.AvaliarEntregadorAsync(User.UsuarioId(), id, request, ct);
+        return NoContent();
+    }
+
     /// <summary>Canal de denúncia do pedido; tratado pela equipe da XEPA no portal administrativo.</summary>
     /// <remarks>Formulário multipart: motivo, descricao e, opcionalmente, uma foto como prova (até 5 MB).</remarks>
     [HttpPost("{id:int}/denuncias")]
