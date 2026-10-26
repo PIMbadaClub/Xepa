@@ -1,0 +1,53 @@
+@model IReadOnlyList<OfertaLojaDto>
+@{
+    ViewData["Title"] = "Ofertas";
+    var br = System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
+    string Hora(DateTimeOffset d) => TimeZoneInfo.ConvertTime(d, OfertaGestaoService.FusoBrasilia).ToString("dd/MM HH:mm", br);
+}
+<div class="cabecalho">
+    <div>
+        <h1>Ofertas</h1>
+        <p class="sub">O que sobrou hoje, com preço e horário de retirada. Só ofertas ativas e no horário aparecem no app.</p>
+    </div>
+    <a class="botao" asp-action="Nova">Nova oferta</a>
+</div>
+
+@if (Model.Count == 0)
+{
+    <div class="cartao vazio">Nenhuma oferta cadastrada ainda. Publique a primeira para ela aparecer no app.</div>
+}
+else
+{
+    <table>
+        <caption class="sub" style="text-align:left;padding:10px 12px">@Model.Count(o => o.Ativa) ativas de @Model.Count</caption>
+        <thead>
+            <tr><th scope="col"><span class="pular">Foto</span></th><th scope="col">Oferta</th><th scope="col">Preço</th><th scope="col">Restantes</th><th scope="col">Retirada</th><th scope="col">Situação</th><th scope="col">Ações</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var o in Model)
+            {
+                <tr>
+                    <td>@if (o.FotoUrl is null) { <div class="miniatura-vazia"></div> } else { <img src="@o.FotoUrl" alt="" /> }</td>
+                    <td>
+                        <strong>@o.Titulo</strong>
+                        @if (o.Tipo == TipoOferta.SacolaSurpresa) { <span class="selo sacola">Sacola surpresa</span> }
+                        <div class="sub" style="margin:0;font-size:13px">@o.Pedidos pedido(s)</div>
+                    </td>
+                    <td><span class="riscado">@o.PrecoOriginal.ToString("C", br)</span><br /><span class="preco">@o.Preco.ToString("C", br)</span></td>
+                    <td>@o.QuantidadeDisponivel</td>
+                    <td>@Hora(o.RetiradaInicio) – @Hora(o.RetiradaFim)</td>
+                    <td><span class="selo @(o.Ativa ? "ativa" : "inativa")">@(o.Ativa ? "No ar" : "Fora do ar")</span></td>
+                    <td>
+                        <div class="acoes">
+                            <a class="botao secundario pequeno" asp-action="Editar" asp-route-id="@o.Id" aria-label="Editar @o.Titulo">Editar</a>
+                            <form asp-action="AlterarAtiva" asp-route-id="@o.Id" method="post">
+                                <input type="hidden" name="ativa" value="@(!o.Ativa)" />
+                                <button class="botao secundario pequeno" type="submit">@(o.Ativa ? "Tirar do ar" : "Reativar")</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

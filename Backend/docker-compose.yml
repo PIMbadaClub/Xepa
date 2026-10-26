@@ -1,0 +1,42 @@
+# Ambiente local completo: SQL Server, API (http://localhost:5000) e portal (http://localhost:5080).
+#   docker compose up --build
+# Na primeira vez, aplique as migrations (dados de demonstração incluídos):
+#   dotnet ef database update --project Xepa.Infrastructure --startup-project Xepa.Api \
+#     --connection "Server=localhost,1433;Database=Xepa;User Id=sa;Password=Xepa@Local2026;TrustServerCertificate=True"
+services:
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Xepa@Local2026"   # só para desenvolvimento local
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqldata:/var/opt/mssql
+
+  api:
+    build:
+      context: .
+      dockerfile: Xepa.Api/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Xepa: "Server=sql;Database=Xepa;User Id=sa;Password=Xepa@Local2026;TrustServerCertificate=True"
+    ports:
+      - "5000:8080"
+    depends_on:
+      - sql
+
+  web:
+    build:
+      context: .
+      dockerfile: Xepa.Web/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Xepa: "Server=sql;Database=Xepa;User Id=sa;Password=Xepa@Local2026;TrustServerCertificate=True"
+    ports:
+      - "5080:8080"
+    depends_on:
+      - sql
+
+volumes:
+  sqldata:

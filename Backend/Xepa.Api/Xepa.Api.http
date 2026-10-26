@@ -17,3 +17,39 @@ GET {{Xepa.Api_HostAddress}}/api/ofertas/1?latitude=-23.5614&longitude=-46.6559
 Accept: application/json
 
 ###
+
+### Login do cliente de demonstração (senha dos dados de exemplo em Xepa.Infrastructure/Data/DadosIniciais.cs)
+# @name login
+POST {{Xepa.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{ "email": "cliente@xepa.test", "senha": "Xepa@2026" }
+
+### Quem sou eu
+GET {{Xepa.Api_HostAddress}}/api/usuarios/me
+Authorization: Bearer {{login.response.body.$.tokenAcesso}}
+
+### Pedido para retirada (reserva o estoque; fica AguardandoPagamento por 15 min)
+# @name pedido
+POST {{Xepa.Api_HostAddress}}/api/pedidos
+Authorization: Bearer {{login.response.body.$.tokenAcesso}}
+Content-Type: application/json
+
+{ "ofertaId": 1, "quantidade": 1, "tipoEntrega": "Retirada" }
+
+### Só em desenvolvimento: aprova o pagamento sem o gateway
+POST {{Xepa.Api_HostAddress}}/api/pedidos/{{pedido.response.body.$.id}}/pagamento-simulado
+Authorization: Bearer {{login.response.body.$.tokenAcesso}}
+
+### Cancelar (o trigger devolve o estoque)
+POST {{Xepa.Api_HostAddress}}/api/pedidos/{{pedido.response.body.$.id}}/cancelar
+Authorization: Bearer {{login.response.body.$.tokenAcesso}}
+
+### Renovar a sessão
+POST {{Xepa.Api_HostAddress}}/api/auth/renovar
+Content-Type: application/json
+
+{ "tokenRenovacao": "{{login.response.body.$.tokenRenovacao}}" }
+
+### Saúde da API e do banco
+GET {{Xepa.Api_HostAddress}}/health

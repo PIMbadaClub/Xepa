@@ -480,3 +480,6 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# Fotos enviadas pelo portal em desenvolvimento
+**/wwwroot/uploads/

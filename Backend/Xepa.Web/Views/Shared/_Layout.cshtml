@@ -1,0 +1,52 @@
+﻿@{
+    var logado = User.Identity?.IsAuthenticated == true;
+    var admin = User.IsInRole(nameof(TipoUsuario.Administrador));
+    var loja = User.FindFirst(ContaController.ClaimEstabelecimentoNome)?.Value;
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · XEPA</title>
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <a class="pular" href="#conteudo">Pular para o conteúdo</a>
+    @if (logado)
+    {
+        <div class="app @(admin ? "app-admin" : "")">
+            <nav class="lateral" aria-label="Menu principal">
+                <div class="marca">xepa</div>
+                <div class="contexto">@(admin ? "Administração da plataforma" : $"Portal do estabelecimento{(loja is null ? "" : " · " + loja)}")</div>
+                @if (admin)
+                {
+                    <a asp-controller="Inicio" asp-action="Administracao" aria-current="page" class="ativo">Painel</a>
+                }
+                else
+                {
+                    <a asp-controller="Ofertas" asp-action="Index" class="@(controller == "Ofertas" ? "ativo" : "")"
+                       aria-current="@(controller == "Ofertas" ? "page" : null)">Ofertas</a>
+                    <span class="em-breve" title="Sprint 2">Pedidos</span>
+                    <span class="em-breve" title="Sprint 3">Impacto e relatórios</span>
+                }
+                <form asp-controller="Conta" asp-action="Sair" method="post" class="sair">
+                    <button type="submit">Sair · @User.Identity!.Name</button>
+                </form>
+            </nav>
+            <main id="conteudo" class="conteudo">
+                @if (TempData["Mensagem"] is string mensagem)
+                {
+                    <p class="aviso" role="status">@mensagem</p>
+                }
+                @RenderBody()
+            </main>
+        </div>
+    }
+    else
+    {
+        <main id="conteudo" class="centro">@RenderBody()</main>
+    }
+</body>
+</html>
