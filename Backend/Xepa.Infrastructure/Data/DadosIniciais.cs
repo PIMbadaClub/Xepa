@@ -46,21 +46,31 @@ public static class DadosIniciais
         var entregador = NovoUsuario("Carlos Entregador", "entregador@xepa.test", TipoUsuario.Entregador);
         padaria.Entregadores.Add(new Entregador { Usuario = entregador });
 
+        // Fotos de banco de imagens (Unsplash) só para a demonstração; as lojas reais enviam as suas pelo portal.
+        padaria.LogoUrl = Foto("1517433670267-08bbd4be890f", 160);
+        cantina.LogoUrl = Foto("1565299624946-b28f40a0ae38", 160);
+        barraca.LogoUrl = Foto("1540420773420-3366772f4999", 160);
+        mercadinho.LogoUrl = Foto("1542838132-92c53300491e", 160);
+
         db.Usuarios.AddRange(cliente, admin, entregador);
         db.Estabelecimentos.AddRange(padaria, cantina, barraca, mercadinho);
         db.Ofertas.AddRange(
             NovaOferta(padaria, TipoOferta.SacolaSurpresa, "Sacola surpresa",
                 "Pães do dia, bolos, salgados e doces que não foram vendidos. O conteúdo muda a cada dia.",
-                precoOriginal: 36m, preco: 12.90m, quantidade: 3, pesoKg: 1.5m, horaInicio: 18, horaFim: 20),
+                precoOriginal: 36m, preco: 12.90m, quantidade: 3, pesoKg: 1.5m, horaInicio: 18, horaFim: 20,
+                foto: "1509440159596-0249088772ff"),
             NovaOferta(cantina, TipoOferta.Prato, "Marmita do dia",
                 "Pratos preparados no dia, como massas, carnes e acompanhamentos, embalados para viagem.",
-                precoOriginal: 42m, preco: 15.90m, quantidade: 1, pesoKg: 1.2m, horaInicio: 21, horaFim: 22),
+                precoOriginal: 42m, preco: 15.90m, quantidade: 1, pesoKg: 1.2m, horaInicio: 21, horaFim: 22,
+                foto: "1621996346565-e3dbc646d9a9"),
             NovaOferta(barraca, TipoOferta.SacolaSurpresa, "Caixote de hortifrúti",
                 "Frutas, verduras e legumes da xepa do fim da feira, ainda frescos e bons para consumo.",
-                precoOriginal: 30m, preco: 9.90m, quantidade: 5, pesoKg: 3.0m, horaInicio: 12, horaFim: 13),
+                precoOriginal: 30m, preco: 9.90m, quantidade: 5, pesoKg: 3.0m, horaInicio: 12, horaFim: 13,
+                foto: "1488459716781-31db52582fe9"),
             NovaOferta(mercadinho, TipoOferta.SacolaSurpresa, "Kit mercado",
                 "Frios, laticínios e outros itens próximos da data de validade, todos dentro do prazo.",
-                precoOriginal: 45m, preco: 17.90m, quantidade: 2, pesoKg: 2.0m, horaInicio: 19, horaFim: 21));
+                precoOriginal: 45m, preco: 17.90m, quantidade: 2, pesoKg: 2.0m, horaInicio: 19, horaFim: 21,
+                foto: "1542838132-92c53300491e"));
 
         await db.SaveChangesAsync(ct);
     }
@@ -95,7 +105,7 @@ public static class DadosIniciais
     };
 
     private static Oferta NovaOferta(Estabelecimento estabelecimento, TipoOferta tipo, string titulo, string descricao,
-        decimal precoOriginal, decimal preco, int quantidade, decimal pesoKg, int horaInicio, int horaFim)
+        decimal precoOriginal, decimal preco, int quantidade, decimal pesoKg, int horaInicio, int horaFim, string foto)
     {
         // Janela de retirada de hoje; se ela já passou, a de amanhã, para a oferta aparecer na listagem.
         var agora = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, FusoSaoPaulo);
@@ -111,10 +121,14 @@ public static class DadosIniciais
             Preco = preco,
             QuantidadeDisponivel = quantidade,
             PesoEstimadoKg = pesoKg,
+            FotoUrl = Foto(foto, 800),
             RetiradaInicio = EmSaoPaulo(dia.AddHours(horaInicio)),
             RetiradaFim = EmSaoPaulo(dia.AddHours(horaFim))
         };
     }
+
+    private static string Foto(string id, int largura) =>
+        $"https://images.unsplash.com/photo-{id}?w={largura}&q=75&auto=format&fit=crop";
 
     private static DateTimeOffset EmSaoPaulo(DateTime horaLocal) =>
         new DateTimeOffset(horaLocal, FusoSaoPaulo.GetUtcOffset(horaLocal)).ToUniversalTime();

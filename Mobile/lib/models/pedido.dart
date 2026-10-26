@@ -67,6 +67,7 @@ class Pedido {
     required this.retiradaInicio,
     required this.retiradaFim,
     this.endereco,
+    this.fotoUrl,
   });
 
   factory Pedido.fromJson(Map<String, dynamic> j) {
@@ -85,6 +86,7 @@ class Pedido {
       retiradaInicio: DateTime.parse(o['retiradaInicio'] as String).toLocal(),
       retiradaFim: DateTime.parse(o['retiradaFim'] as String).toLocal(),
       endereco: j['enderecoEntrega'] == null ? null : EnderecoPedido.fromJson(j['enderecoEntrega'] as Map<String, dynamic>),
+      fotoUrl: o['fotoUrl'] as String?,
     );
   }
 
@@ -101,6 +103,7 @@ class Pedido {
   final DateTime retiradaInicio;
   final DateTime retiradaFim;
   final EnderecoPedido? endereco;
+  final String? fotoUrl;
 }
 
 class Pagamento {

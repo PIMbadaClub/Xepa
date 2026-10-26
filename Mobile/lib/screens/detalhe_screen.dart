@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/oferta.dart';
 import '../theme.dart';
+import '../widgets/oferta_widgets.dart';
 import 'checkout_screen.dart';
 
 class DetalheScreen extends StatefulWidget {
@@ -37,13 +38,26 @@ class _DetalheScreenState extends State<DetalheScreen> {
           children: [
             Stack(
               children: [
-                Container(
-                  height: 220 + topo,
+                SizedBox(
+                  height: 260 + topo,
                   width: double.infinity,
-                  color: o.categoria.fundo,
-                  padding: EdgeInsets.only(top: topo),
-                  alignment: Alignment.center,
-                  child: Icon(o.categoria.icone, size: 90, color: o.categoria.cor),
+                  child: Hero(
+                    tag: 'foto-${o.id}',
+                    child: FotoOferta(url: o.fotoUrl, categoria: o.categoria, tamanhoIcone: 90),
+                  ),
+                ),
+                // Folha creme que sobe por cima da foto.
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: -1,
+                  child: Container(
+                    height: 24,
+                    decoration: const BoxDecoration(
+                      color: XepaCores.fundo,
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                  ),
                 ),
                 Positioned(
                   top: topo + 8,
@@ -65,33 +79,37 @@ class _DetalheScreenState extends State<DetalheScreen> {
               ],
             ),
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    o.titulo,
-                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 4),
                   Row(
                     children: [
-                      Flexible(
-                        child: Text(
-                          [o.loja, if (o.distanciaKm != null) formatarDistancia(o.distanciaKm!)].join(' · '),
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 13),
+                      AvatarLoja(nome: o.loja, categoria: o.categoria, logoUrl: o.logoUrl, tamanho: 40, borda: false),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(o.loja, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14.5)),
+                            Text(
+                              [
+                                o.categoria.singular,
+                                if (o.avaliacao != null) '★ ${formatarDecimal(o.avaliacao!)}',
+                                if (o.distanciaKm != null) formatarDistancia(o.distanciaKm!),
+                              ].join(' · '),
+                              style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 12.5),
+                            ),
+                          ],
                         ),
                       ),
-                      if (o.avaliacao != null) ...[
-                        const Text(' · ', style: TextStyle(color: XepaCores.textoSecundario, fontSize: 13)),
-                        const Icon(Icons.star_rounded, size: 16, color: Color(0xFFF2A900)),
-                        Text(
-                          formatarDecimal(o.avaliacao!),
-                          style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 13),
-                        ),
-                      ],
+                      SeloRestantes(restantes: o.restantes, sobreFoto: false),
                     ],
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    o.titulo,
+                    style: const TextStyle(fontSize: 25, fontWeight: FontWeight.w800, letterSpacing: -0.6, height: 1.15),
                   ),
                   const SizedBox(height: 14),
                   Row(
@@ -100,8 +118,8 @@ class _DetalheScreenState extends State<DetalheScreen> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: _InfoBox(
-                          rotulo: 'Restam',
-                          valor: '${o.restantes} ${o.restantes == 1 ? 'sacola' : 'sacolas'}',
+                          rotulo: 'Você economiza',
+                          valor: formatarPreco((o.precoOriginal - o.preco) * _quantidade),
                         ),
                       ),
                     ],
@@ -168,8 +186,8 @@ class _DetalheScreenState extends State<DetalheScreen> {
                           Text(
                             formatarPreco(o.preco * _quantidade),
                             style: const TextStyle(
-                              color: XepaCores.verde,
-                              fontSize: 20,
+                              color: XepaCores.tomate,
+                              fontSize: 22,
                               fontWeight: FontWeight.w800,
                             ),
                           ),
@@ -189,13 +207,7 @@ class _DetalheScreenState extends State<DetalheScreen> {
           height: 54,
           child: FilledButton(
             onPressed: o.restantes == 0 ? null : _reservar,
-            style: FilledButton.styleFrom(
-              backgroundColor: XepaCores.tomate,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-            ),
-            child: Text('Reservar · ${formatarPreco(o.preco * _quantidade)}'),
+            child: Text(o.restantes == 0 ? 'Esgotado' : 'Reservar · ${formatarPreco(o.preco * _quantidade)}'),
           ),
         ),
       ),
@@ -239,7 +251,8 @@ class _InfoBox extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: XepaCores.borda),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,7 +286,8 @@ class _Quantidade extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(XepaRaios.pilula),
+        border: Border.all(color: XepaCores.borda),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

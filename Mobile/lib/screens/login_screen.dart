@@ -7,6 +7,7 @@ import '../models/auth.dart';
 import '../theme.dart';
 import '../widgets/auth_validadores.dart';
 import '../widgets/auth_widgets.dart';
+import '../widgets/xepa_logo.dart';
 import 'cadastro_screen.dart';
 import 'abertura_screen.dart';
 
@@ -217,14 +218,22 @@ class _LoginHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(22, 22, 22, 26),
-      decoration: BoxDecoration(
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(28),
+      child: Container(
+        width: double.infinity,
         color: XepaCores.tomate,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Column(
+        child: Stack(
+          children: [
+            // Tomatão escondido no canto.
+            const Positioned(
+              right: -40,
+              bottom: -46,
+              child: TomateMarcaDagua(tamanho: 190, opacidade: 0.14, angulo: -0.25, cor: Colors.white),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(22, 22, 22, 28),
+              child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const AuthMarca(sobreFundoVermelho: true),
@@ -248,6 +257,10 @@ class _LoginHero extends StatelessWidget {
             ),
           ),
         ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

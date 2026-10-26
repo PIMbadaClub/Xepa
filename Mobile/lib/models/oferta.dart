@@ -15,6 +15,13 @@ extension CategoriaInfo on Categoria {
         Categoria.feira => 'Feiras',
       };
 
+  String get singular => switch (this) {
+        Categoria.restaurante => 'Restaurante',
+        Categoria.padaria => 'Padaria',
+        Categoria.mercado => 'Mercado',
+        Categoria.feira => 'Feira',
+      };
+
   IconData get icone => switch (this) {
         Categoria.restaurante => Icons.restaurant,
         Categoria.padaria => Icons.bakery_dining_outlined,
@@ -53,6 +60,7 @@ class Oferta {
     required this.categoria,
     this.estabelecimentoId,
     this.fotoUrl,
+    this.logoUrl,
     this.sacolaSurpresa = false,
     this.latitude,
     this.longitude,
@@ -76,6 +84,7 @@ class Oferta {
       categoria: Categoria.values.byName((loja['categoria'] as String).toLowerCase()),
       estabelecimentoId: loja['id'] as int,
       fotoUrl: j['fotoUrl'] as String?,
+      logoUrl: loja['logoUrl'] as String?,
       sacolaSurpresa: j['tipo'] == 'SacolaSurpresa',
       latitude: (loja['latitude'] as num?)?.toDouble(),
       longitude: (loja['longitude'] as num?)?.toDouble(),
@@ -100,6 +109,7 @@ class Oferta {
   final Categoria categoria;
   final int? estabelecimentoId;
   final String? fotoUrl;
+  final String? logoUrl;
   final bool sacolaSurpresa;
   final double? latitude;
   final double? longitude;
