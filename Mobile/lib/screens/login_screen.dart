@@ -8,7 +8,7 @@ import '../theme.dart';
 import '../widgets/auth_validadores.dart';
 import '../widgets/auth_widgets.dart';
 import 'cadastro_screen.dart';
-import 'home_shell.dart';
+import 'abertura_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -48,14 +48,14 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await AuthService.instance.login(
+      final usuario = await AuthService.instance.login(
         email: _emailCtrl.text.trim().toLowerCase(),
         senha: _senhaCtrl.text,
       );
       if (!mounted) return;
       TextInput.finishAutofillContext();
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeShell()),
+        MaterialPageRoute(builder: (_) => telaInicialPara(usuario)),
         (_) => false,
       );
     } on AuthException catch (e) {

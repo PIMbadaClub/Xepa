@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Xepa.Domain.Entities;
 
 namespace Xepa.Application;
@@ -16,6 +17,9 @@ public interface IXepaDb
     DbSet<TokenRenovacao> TokensRenovacao { get; }
 
     Task<int> SaveChangesAsync(CancellationToken ct = default);
+
+    /// <summary>Usado para recarregar entidades alteradas por procedures.</summary>
+    EntityEntry<TEntity> Entry<TEntity>(TEntity entity) where TEntity : class;
 }
 
 /// <summary>Criação do pedido com reserva de estoque atômica (procedure sp_CriarPedido).</summary>
@@ -46,6 +50,25 @@ public record Rota(double DistanciaKm, int MinutosEstimados);
 public interface IServicoMapas
 {
     Task<Rota> CalcularRotaAsync(Coordenada origem, Coordenada destino, CancellationToken ct);
+
+    /// <summary>Converte o endereço em coordenadas; null quando não encontra (ou sem Azure Maps).</summary>
+    Task<Coordenada?> GeocodificarAsync(Endereco endereco, CancellationToken ct);
+}
+
+public static class Geo
+{
+    private const double RaioTerraKm = 6371;
+
+    /// <summary>Distância em linha reta pela fórmula de Haversine.</summary>
+    public static double DistanciaKm(Coordenada a, Coordenada b)
+    {
+        static double Rad(double g) => g * Math.PI / 180;
+        var dLat = Rad(b.Latitude - a.Latitude);
+        var dLng = Rad(b.Longitude - a.Longitude);
+        var h = Math.Pow(Math.Sin(dLat / 2), 2)
+                + Math.Cos(Rad(a.Latitude)) * Math.Cos(Rad(b.Latitude)) * Math.Pow(Math.Sin(dLng / 2), 2);
+        return 2 * RaioTerraKm * Math.Asin(Math.Sqrt(h));
+    }
 }
 
 /// <summary>Fotos de ofertas e logotipos: Blob Storage em produção, disco local em desenvolvimento.</summary>

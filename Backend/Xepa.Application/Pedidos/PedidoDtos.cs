@@ -84,3 +84,6 @@ public class EnderecoRequest
 }
 
 public record EnderecoDto(int Id, string Apelido, bool Principal, Endereco Endereco);
+
+public record RastreioDto(StatusPedido Status, Coordenada? Loja, Coordenada? Destino, Coordenada? Entregador,
+    DateTimeOffset? AtualizadoEm);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/oferta.dart';
 import '../theme.dart';
+import 'checkout_screen.dart';
 
 class DetalheScreen extends StatefulWidget {
   const DetalheScreen({super.key, required this.oferta});
@@ -19,14 +20,8 @@ class _DetalheScreenState extends State<DetalheScreen> {
   Oferta get _oferta => widget.oferta;
 
   void _reservar() {
-    final texto = _quantidade == 1
-        ? 'Sacola reservada'
-        : '$_quantidade sacolas reservadas';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        backgroundColor: XepaCores.verde,
-        content: Text('$texto. Retirada: ${_oferta.retirada}.'),
-      ),
+    Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => CheckoutScreen(oferta: _oferta, quantidade: _quantidade)),
     );
   }
 
@@ -83,16 +78,19 @@ class _DetalheScreenState extends State<DetalheScreen> {
                     children: [
                       Flexible(
                         child: Text(
-                          '${o.loja} · ${formatarDistancia(o.distanciaKm)} · ',
+                          [o.loja, if (o.distanciaKm != null) formatarDistancia(o.distanciaKm!)].join(' · '),
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 13),
                         ),
                       ),
-                      const Icon(Icons.star_rounded, size: 16, color: Color(0xFFF2A900)),
-                      Text(
-                        formatarDecimal(o.avaliacao),
-                        style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 13),
-                      ),
+                      if (o.avaliacao != null) ...[
+                        const Text(' · ', style: TextStyle(color: XepaCores.textoSecundario, fontSize: 13)),
+                        const Icon(Icons.star_rounded, size: 16, color: Color(0xFFF2A900)),
+                        Text(
+                          formatarDecimal(o.avaliacao!),
+                          style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 13),
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 14),
@@ -108,20 +106,22 @@ class _DetalheScreenState extends State<DetalheScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
-                  const Text(
-                    'O que pode vir',
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    o.descricao,
-                    style: const TextStyle(
-                      color: XepaCores.textoSecundario,
-                      fontSize: 14,
-                      height: 1.5,
+                  if (o.descricao.isNotEmpty) ...[
+                    const SizedBox(height: 18),
+                    Text(
+                      o.sacolaSurpresa ? 'O que pode vir' : 'Descrição',
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
                     ),
-                  ),
+                    const SizedBox(height: 4),
+                    Text(
+                      o.descricao,
+                      style: const TextStyle(
+                        color: XepaCores.textoSecundario,
+                        fontSize: 14,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),

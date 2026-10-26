@@ -5,6 +5,9 @@ import '../theme.dart';
 enum Categoria { restaurante, padaria, mercado, feira }
 
 extension CategoriaInfo on Categoria {
+  /// Nome do enum na API (CategoriaEstabelecimento).
+  String get nomeApi => name[0].toUpperCase() + name.substring(1);
+
   String get rotulo => switch (this) {
         Categoria.restaurante => 'Restaurantes',
         Categoria.padaria => 'Padarias',
@@ -48,83 +51,75 @@ class Oferta {
     required this.avaliacao,
     required this.kgSalvos,
     required this.categoria,
+    this.estabelecimentoId,
+    this.fotoUrl,
+    this.sacolaSurpresa = false,
+    this.latitude,
+    this.longitude,
   });
+
+  /// Oferta como a API devolve em GET /api/ofertas.
+  factory Oferta.fromJson(Map<String, dynamic> j) {
+    final loja = j['estabelecimento'] as Map<String, dynamic>;
+    return Oferta(
+      id: (j['id'] as int).toString(),
+      loja: loja['nome'] as String,
+      titulo: j['titulo'] as String,
+      descricao: (j['descricao'] as String?) ?? '',
+      retirada: formatarJanela(DateTime.parse(j['retiradaInicio'] as String), DateTime.parse(j['retiradaFim'] as String)),
+      distanciaKm: (j['distanciaKm'] as num?)?.toDouble(),
+      precoOriginal: (j['precoOriginal'] as num).toDouble(),
+      preco: (j['preco'] as num).toDouble(),
+      restantes: j['restantes'] as int,
+      avaliacao: null,
+      kgSalvos: (j['kgSalvos'] as num?)?.toDouble() ?? 0,
+      categoria: Categoria.values.byName((loja['categoria'] as String).toLowerCase()),
+      estabelecimentoId: loja['id'] as int,
+      fotoUrl: j['fotoUrl'] as String?,
+      sacolaSurpresa: j['tipo'] == 'SacolaSurpresa',
+      latitude: (loja['latitude'] as num?)?.toDouble(),
+      longitude: (loja['longitude'] as num?)?.toDouble(),
+    );
+  }
 
   final String id;
   final String loja;
   final String titulo;
   final String descricao;
   final String retirada;
-  final double distanciaKm;
+
+  /// Só vem quando o app manda a localização.
+  final double? distanciaKm;
   final double precoOriginal;
   final double preco;
   final int restantes;
-  final double avaliacao;
+
+  /// Avaliações ainda não existem na API (trabalho futuro).
+  final double? avaliacao;
   final double kgSalvos;
   final Categoria categoria;
+  final int? estabelecimentoId;
+  final String? fotoUrl;
+  final bool sacolaSurpresa;
+  final double? latitude;
+  final double? longitude;
+
+  int get idApi => int.parse(id);
 
   int get descontoPercentual => ((1 - preco / precoOriginal) * 100).round();
 }
 
-const ofertasExemplo = <Oferta>[
-  Oferta(
-    id: '1',
-    loja: 'Padaria Pão Dourado',
-    titulo: 'Sacola surpresa',
-    descricao:
-        'Pães do dia, bolos, salgados e doces que não foram vendidos. O conteúdo muda a cada dia.',
-    retirada: 'Hoje, 18h–20h',
-    distanciaKm: 0.4,
-    precoOriginal: 36,
-    preco: 12.90,
-    restantes: 3,
-    avaliacao: 4.8,
-    kgSalvos: 1.5,
-    categoria: Categoria.padaria,
-  ),
-  Oferta(
-    id: '2',
-    loja: 'Cantina da Nona',
-    titulo: 'Marmita do dia',
-    descricao:
-        'Pratos preparados no dia, como massas, carnes e acompanhamentos, embalados para viagem.',
-    retirada: 'Hoje, 21h–22h',
-    distanciaKm: 0.9,
-    precoOriginal: 42,
-    preco: 15.90,
-    restantes: 1,
-    avaliacao: 4.7,
-    kgSalvos: 1.2,
-    categoria: Categoria.restaurante,
-  ),
-  Oferta(
-    id: '3',
-    loja: 'Barraca do Seu Zé',
-    titulo: 'Caixote de hortifrúti',
-    descricao:
-        'Frutas, verduras e legumes da xepa do fim da feira, ainda frescos e bons para consumo.',
-    retirada: 'Hoje, 12h–13h',
-    distanciaKm: 1.2,
-    precoOriginal: 30,
-    preco: 9.90,
-    restantes: 5,
-    avaliacao: 4.9,
-    kgSalvos: 3.0,
-    categoria: Categoria.feira,
-  ),
-  Oferta(
-    id: '4',
-    loja: 'Mercadinho Bom Preço',
-    titulo: 'Kit mercado',
-    descricao:
-        'Frios, laticínios e outros itens próximos da data de validade, todos dentro do prazo.',
-    retirada: 'Hoje, 19h–21h',
-    distanciaKm: 1.6,
-    precoOriginal: 45,
-    preco: 17.90,
-    restantes: 2,
-    avaliacao: 4.6,
-    kgSalvos: 2.0,
-    categoria: Categoria.mercado,
-  ),
-];
+/// "Hoje, 18h–20h", "Amanhã, 12h–13h30" ou "26/10, 18h–20h", no horário do aparelho.
+String formatarJanela(DateTime inicio, DateTime fim) {
+  final i = inicio.toLocal(), f = fim.toLocal();
+  final hoje = DateTime.now();
+  final dia = DateTime(i.year, i.month, i.day);
+  final diferenca = dia.difference(DateTime(hoje.year, hoje.month, hoje.day)).inDays;
+  final rotulo = switch (diferenca) {
+    0 => 'Hoje',
+    1 => 'Amanhã',
+    _ => '${i.day.toString().padLeft(2, '0')}/${i.month.toString().padLeft(2, '0')}',
+  };
+  String hora(DateTime d) => d.minute == 0 ? '${d.hour}h' : '${d.hour}h${d.minute.toString().padLeft(2, '0')}';
+  return '$rotulo, ${hora(i)}–${hora(f)}';
+}

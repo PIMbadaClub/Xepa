@@ -377,6 +377,9 @@ namespace Xepa.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset>("CriadoEm")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<DateTimeOffset?>("ExpiraEm")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("IdExterno")
                         .IsRequired()
                         .HasMaxLength(60)
@@ -405,6 +408,10 @@ namespace Xepa.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("UrlCheckout")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<decimal>("Valor")
                         .HasPrecision(10, 2)

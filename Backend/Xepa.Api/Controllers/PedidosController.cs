@@ -1,14 +1,15 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Xepa.Api.Seguranca;
+using Xepa.Application.Pagamentos;
 using Xepa.Application.Pedidos;
+using Xepa.Infrastructure.Seguranca;
 
 namespace Xepa.Api.Controllers;
 
 [ApiController]
 [Route("api/pedidos")]
 [Authorize(Roles = "Cliente")]
-public class PedidosController(PedidoService pedidos, IWebHostEnvironment env) : ControllerBase
+public class PedidosController(PedidoService pedidos, PagamentoService pagamentos) : ControllerBase
 {
     /// <summary>Cria o pedido reservando o estoque; fica AguardandoPagamento por até 15 minutos.</summary>
     [HttpPost]
@@ -24,17 +25,22 @@ public class PedidosController(PedidoService pedidos, IWebHostEnvironment env) :
     [HttpGet("{id:int}")]
     public Task<PedidoDto> Obter(int id, CancellationToken ct) => pedidos.ObterDoClienteAsync(User.UsuarioId(), id, ct);
 
+    /// <summary>Cancela antes da confirmação da loja; estorna o pagamento se já foi aprovado.</summary>
     [HttpPost("{id:int}/cancelar")]
     public Task<PedidoDto> Cancelar(int id, CancellationToken ct) => pedidos.CancelarAsync(User.UsuarioId(), id, ct);
 
-    /// <summary>Só em desenvolvimento: aprova o pagamento sem passar pelo gateway.</summary>
-    [HttpPost("{id:int}/pagamento-simulado")]
-    public async Task<ActionResult<PedidoDto>> SimularPagamento(int id, CancellationToken ct)
-    {
-        if (!env.IsDevelopment())
-            return NotFound();
-        return await pedidos.SimularPagamentoAsync(User.UsuarioId(), id, ct);
-    }
+    /// <summary>Gera a cobrança: Pix devolve o código copia e cola; cartão devolve a página do checkout.</summary>
+    [HttpPost("{id:int}/pagamento")]
+    public Task<PagamentoDto> Pagar(int id, IniciarPagamentoRequest request, CancellationToken ct) =>
+        pagamentos.IniciarAsync(User.UsuarioId(), id, request.Metodo, ct);
+
+    [HttpGet("{id:int}/pagamentos")]
+    public Task<IReadOnlyList<PagamentoDto>> Pagamentos(int id, CancellationToken ct) =>
+        pagamentos.ListarDoPedidoAsync(User.UsuarioId(), id, ct);
+
+    /// <summary>Posições para o mapa: loja, destino e última posição do entregador.</summary>
+    [HttpGet("{id:int}/rastreio")]
+    public Task<RastreioDto> Rastreio(int id, CancellationToken ct) => pedidos.ObterRastreioAsync(User.UsuarioId(), id, ct);
 }
 
 [ApiController]

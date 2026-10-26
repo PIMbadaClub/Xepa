@@ -55,7 +55,7 @@ public class ReservaPedidosSql(XepaDbContext db) : IReservaPedidos
 
 /// <summary>
 /// Estimativa por distância em linha reta (Haversine) com fator de 1,3 para aproximar o trajeto pelas ruas.
-/// Substituída pelo Azure Maps quando a chave estiver configurada (Sprint 2).
+/// Usada quando a chave do Azure Maps não está configurada.
 /// </summary>
 public class MapasEstimados : IServicoMapas
 {
@@ -64,16 +64,12 @@ public class MapasEstimados : IServicoMapas
 
     public Task<Rota> CalcularRotaAsync(Coordenada origem, Coordenada destino, CancellationToken ct)
     {
-        const double raioTerraKm = 6371;
-        double rad(double g) => g * Math.PI / 180;
-        var dLat = rad(destino.Latitude - origem.Latitude);
-        var dLng = rad(destino.Longitude - origem.Longitude);
-        var a = Math.Pow(Math.Sin(dLat / 2), 2)
-                + Math.Cos(rad(origem.Latitude)) * Math.Cos(rad(destino.Latitude)) * Math.Pow(Math.Sin(dLng / 2), 2);
-        var km = 2 * raioTerraKm * Math.Asin(Math.Sqrt(a)) * FatorRuas;
-
+        var km = Geo.DistanciaKm(origem, destino) * FatorRuas;
         return Task.FromResult(new Rota(Math.Round(km, 2), (int)Math.Ceiling(km / VelocidadeMediaKmH * 60)));
     }
+
+    /// <summary>Sem Azure Maps não há geocodificação: o app envia as coordenadas do GPS.</summary>
+    public Task<Coordenada?> GeocodificarAsync(Endereco endereco, CancellationToken ct) => Task.FromResult<Coordenada?>(null);
 }
 
 /// <summary>

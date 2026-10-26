@@ -3,6 +3,9 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Xepa.Api.Seguranca;
+using Xepa.Api.TempoReal;
+using Xepa.Application.Pagamentos;
+using Xepa.Infrastructure.Seguranca;
 using Xepa.Application;
 using Xepa.Application.Contas;
 using Xepa.Infrastructure;
@@ -10,7 +13,9 @@ using Xepa.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddSingleton<INotificadorPedidos, NotificadorSignalR>();
 builder.Services.AddXepa(builder.Configuration, builder.Environment);
+builder.Services.AddSignalR();
 builder.Services.AddHostedService<ExpiradorPedidos>();
 
 var jwt = builder.Configuration.GetSection(OpcoesJwt.Secao).Get<OpcoesJwt>() ?? new OpcoesJwt();
@@ -33,7 +38,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             NameClaimType = "name",
             ClockSkew = TimeSpan.FromSeconds(30)
         };
+        // WebSocket não envia cabeçalho Authorization: o SignalR manda o token na query string.
+        o.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = ctx =>
+            {
+                if (ctx.HttpContext.Request.Path.StartsWithSegments(PedidosHub.Rota)
+                    && ctx.Request.Query["access_token"] is { Count: > 0 } token)
+                    ctx.Token = token;
+                return Task.CompletedTask;
+            }
+        };
     });
+
+// Portal e app web (Flutter web) chamam a API de outra origem.
+var origens = builder.Configuration.GetSection("Cors:Origens").Get<string[]>() ?? [];
+builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
+    p.WithOrigins(origens).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 builder.Services.AddAuthorization();
 
 // Até 10 tentativas por minuto por IP nas rotas de login e cadastro.
@@ -70,11 +91,13 @@ else
 }
 
 app.UseStaticFiles();
+app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<PedidosHub>(PedidosHub.Rota);
 app.MapHealthChecks("/health");
 
 app.Run();

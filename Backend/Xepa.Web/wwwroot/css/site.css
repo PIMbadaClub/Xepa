@@ -109,3 +109,13 @@ td img { width: 56px; height: 42px; object-fit: cover; border-radius: 6px; displ
     tr { border-top: 1px solid var(--borda); padding: 8px 0; }
     td { border: 0; padding: 4px 12px; }
 }
+
+/* Quadro de pedidos do portal */
+.quadro { display: grid; grid-template-columns: repeat(4, minmax(200px, 1fr)); gap: 12px; align-items: start; }
+.coluna { background: #F5E6CC66; border: 1px solid var(--borda); border-radius: 12px; padding: 10px; min-height: 160px; }
+.coluna h2 { font-size: 15px; margin: 2px 4px 10px; display: flex; justify-content: space-between; }
+.pedido { background: #fff; border: 1px solid var(--borda); border-radius: 10px; padding: 10px; margin-bottom: 8px; font-size: 14px; line-height: 1.5; }
+.pedido .selo { margin: 4px 4px 0 0; }
+.codigo { width: 90px; font: inherit; padding: 5px 8px; border: 1.5px solid var(--borda); border-radius: 8px; }
+@media (max-width: 1000px) { .quadro { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .quadro { grid-template-columns: 1fr; } }

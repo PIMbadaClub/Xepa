@@ -1,10 +1,12 @@
 using Microsoft.EntityFrameworkCore;
+using Xepa.Application.Pagamentos;
 using Xepa.Domain;
 using Xepa.Domain.Entities;
 
 namespace Xepa.Application.Pedidos;
 
-public class PedidoService(IXepaDb db, IReservaPedidos reserva, IServicoMapas mapas)
+public class PedidoService(IXepaDb db, IReservaPedidos reserva, IServicoMapas mapas, PagamentoService pagamentos,
+    INotificadorPedidos notificador)
 {
     /// <summary>
     /// Cria o pedido com o estoque reservado (RN03). Na entrega, calcula a rota e a taxa (RN07) antes de reservar.
@@ -54,43 +56,44 @@ public class PedidoService(IXepaDb db, IReservaPedidos reserva, IServicoMapas ma
         await Projetar(db.Pedidos.Where(p => p.Id == pedidoId && p.ClienteId == clienteId)).FirstOrDefaultAsync(ct)
         ?? throw new NaoEncontradoException("Pedido não encontrado.");
 
-    /// <summary>Cancelamento pelo cliente (RN05). O trigger do banco devolve o estoque à oferta.</summary>
+    /// <summary>Cancelamento pelo cliente (RN05): o trigger devolve o estoque e o pagamento aprovado é estornado.</summary>
     public async Task<PedidoDto> CancelarAsync(int clienteId, int pedidoId, CancellationToken ct)
     {
         var pedido = await db.Pedidos.FirstOrDefaultAsync(p => p.Id == pedidoId && p.ClienteId == clienteId, ct)
                      ?? throw new NaoEncontradoException("Pedido não encontrado.");
 
-        // Estorno no gateway entra com a integração do Mercado Pago (Sprint 2).
         pedido.Cancelar();
         await db.SaveChangesAsync(ct);
+        await pagamentos.EstornarAprovadosAsync(pedido, ct);
+        await notificador.PedidoAlteradoAsync(pedido.Id, ct);
         return await ObterDoClienteAsync(clienteId, pedidoId, ct);
     }
 
-    /// <summary>
-    /// Só em desenvolvimento: aprova o pedido como se o gateway tivesse confirmado o pagamento,
-    /// para testar o app antes da integração com o Mercado Pago.
-    /// </summary>
-    public async Task<PedidoDto> SimularPagamentoAsync(int clienteId, int pedidoId, CancellationToken ct)
+    /// <summary>Última posição do entregador e os pontos de origem e destino, para o mapa do app.</summary>
+    public async Task<RastreioDto> ObterRastreioAsync(int clienteId, int pedidoId, CancellationToken ct)
     {
-        var pedido = await db.Pedidos.FirstOrDefaultAsync(p => p.Id == pedidoId && p.ClienteId == clienteId, ct)
-                     ?? throw new NaoEncontradoException("Pedido não encontrado.");
-        if (pedido.Status != StatusPedido.AguardandoPagamento)
-            throw new RegraDeNegocioException("O pedido não está aguardando pagamento.");
+        var dados = await db.Pedidos.AsNoTracking()
+                        .Where(p => p.Id == pedidoId && p.ClienteId == clienteId)
+                        .Select(p => new
+                        {
+                            p.Status,
+                            Loja = p.Oferta.Estabelecimento.Endereco,
+                            p.EnderecoEntrega,
+                            Ultima = p.Rastreios.OrderByDescending(r => r.RegistradoEm).FirstOrDefault()
+                        })
+                        .FirstOrDefaultAsync(ct)
+                    ?? throw new NaoEncontradoException("Pedido não encontrado.");
 
-        db.Pagamentos.Add(new Pagamento
-        {
-            PedidoId = pedido.Id,
-            Provedor = "Simulado",
-            IdExterno = Guid.NewGuid().ToString("N"),
-            Metodo = MetodoPagamento.Pix,
-            Status = StatusPagamento.Aprovado,
-            Valor = pedido.ValorTotal,
-            PagoEm = DateTimeOffset.UtcNow
-        });
-        pedido.ConfirmarPagamento();
-        await db.SaveChangesAsync(ct);
-        return await ObterDoClienteAsync(clienteId, pedidoId, ct);
+        return new RastreioDto(
+            dados.Status,
+            Ponto(dados.Loja.Latitude, dados.Loja.Longitude),
+            dados.EnderecoEntrega is null ? null : Ponto(dados.EnderecoEntrega.Latitude, dados.EnderecoEntrega.Longitude),
+            dados.Ultima is null ? null : new Coordenada(dados.Ultima.Latitude, dados.Ultima.Longitude),
+            dados.Ultima?.RegistradoEm);
     }
+
+    private static Coordenada? Ponto(double? lat, double? lng) =>
+        lat is { } a && lng is { } b ? new Coordenada(a, b) : null;
 
     private static IQueryable<PedidoDto> Projetar(IQueryable<Pedido> pedidos) =>
         pedidos.Select(p => new PedidoDto

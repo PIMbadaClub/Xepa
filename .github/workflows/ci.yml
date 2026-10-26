@@ -4,9 +4,9 @@ name: CI
 on:
   push:
     branches: [main, "sprint*"]
-    paths: ["Backend/**", ".github/workflows/**"]
+    paths: ["Backend/**", "Mobile/**", ".github/workflows/**"]
   pull_request:
-    paths: ["Backend/**", ".github/workflows/**"]
+    paths: ["Backend/**", "Mobile/**", ".github/workflows/**"]
 
 jobs:
   backend:
@@ -32,3 +32,20 @@ jobs:
         env:
           ConnectionStrings__Xepa: "Server=nao-usado;Database=Xepa"
           Jwt__Chave: "chave-somente-para-o-ci-com-mais-de-32-caracteres"
+
+  mobile:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test

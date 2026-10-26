@@ -5,7 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Xepa.Application;
 using Xepa.Domain.Entities;
 
-namespace Xepa.Api.Seguranca;
+namespace Xepa.Infrastructure.Seguranca;
 
 public class OpcoesJwt
 {

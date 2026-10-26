@@ -67,17 +67,36 @@ Para mudar o banco: altere as entidades, gere uma migration
 (`dotnet ef migrations add Nome --project Xepa.Infrastructure --startup-project Xepa.Api --output-dir Data/Migrations`)
 e nunca edite o banco à mão. Procedures e triggers também vão por migration.
 
+### Integrações (Sprint 2)
+
+Sem chaves, tudo funciona em modo de teste: o pagamento usa um **gateway simulado** (o app mostra o botão
+"Simular pagamento aprovado") e o mapa usa estimativa de rota e imagens do OpenStreetMap.
+Para usar os serviços reais, configure (de preferência com `dotnet user-secrets` ou no App Service):
+
+| Chave | Para quê |
+|---|---|
+| `MercadoPago:AccessToken` | Credencial de teste ou produção do Mercado Pago (Pix e Checkout Pro) |
+| `MercadoPago:SegredoWebhook` | Assinatura secreta do webhook (valida o cabeçalho `x-signature`) |
+| `MercadoPago:UrlNotificacao` | URL pública de `POST /api/pagamentos/webhook` |
+| `Mapas:AzureMapsChave` | Chave do Azure Maps (rotas, geocodificação e imagens do mapa) |
+| `Cors:Origens` | Endereços do portal e do app web que podem chamar a API |
+| `Api:UrlBase` e `Jwt:Chave` (portal) | O portal chama a API para os pedidos e assina o token com a mesma chave |
+
+Tempo real: hub SignalR em `/hubs/pedidos` (status do pedido e posição do entregador).
+
+### Configurando o App Mobile
+
+1. `cd Mobile` e `flutter pub get`
+2. Rodar apontando para a API: `flutter run --dart-define=API_URL=http://10.0.2.2:5000` (emulador Android)
+   ou `flutter run -d chrome --dart-define=API_URL=http://localhost:5000` (navegador)
+3. Testes: `flutter analyze` e `flutter test`
+
+Perfis: cliente (compra, paga e acompanha) e entregador (`entregador@xepa.test`: entregas do dia, posição a cada 15 s).
+
 ### Deploy
 
 O GitHub Actions compila e testa a cada push (`ci.yml`). A publicação no Azure (`cd.yml`) roda na `main`
 quando a variável `AZURE_DEPLOY` do repositório está `true`; os secrets e variáveis necessários estão no início do arquivo.
-
-### Configurando o App Mobile
-
-1. Navegue até a pasta: `cd Mobile`
-2. Instale as dependências: `flutter pub get`
-3. Configure a URL base da API no projeto (em emulador Android, use `http://10.0.2.2:5000`)
-4. Execute o app: `flutter run`
 
 ## 📝 Requisitos Funcionais
 

@@ -32,6 +32,8 @@ services:
       dockerfile: Xepa.Web/Dockerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      Api__UrlBase: "http://api:8080/"          # chamadas do servidor do portal
+      Api__UrlPublica: "http://localhost:5000"  # SignalR no navegador
       ConnectionStrings__Xepa: "Server=sql;Database=Xepa;User Id=sa;Password=Xepa@Local2026;TrustServerCertificate=True"
     ports:
       - "5080:8080"

@@ -1,4 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+
+import '../api/api.dart';
+import '../api/localizacao.dart';
 
 import '../models/oferta.dart';
 import '../theme.dart';
@@ -16,69 +21,139 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   Categoria? _categoria;
   String _busca = '';
+  Timer? _atrasoBusca;
+  Posicao? _posicao;
+  List<Oferta>? _ofertas;
+  String? _erro;
 
-  List<Oferta> get _ofertasFiltradas {
-    final termo = _busca.trim().toLowerCase();
-    return ofertasExemplo.where((o) {
-      final categoriaOk = _categoria == null || o.categoria == _categoria;
-      final buscaOk = termo.isEmpty ||
-          o.loja.toLowerCase().contains(termo) ||
-          o.titulo.toLowerCase().contains(termo);
-      return categoriaOk && buscaOk;
-    }).toList();
+  @override
+  void initState() {
+    super.initState();
+    _iniciar();
+  }
+
+  @override
+  void dispose() {
+    _atrasoBusca?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _iniciar() async {
+    _posicao = await Localizacao.atual();
+    await _carregar();
+  }
+
+  /// Busca e categoria são filtradas na API; com localização, a lista vem da mais próxima para a mais distante.
+  Future<void> _carregar() async {
+    try {
+      final pagina = await Api.instance.get<Map<String, dynamic>>('/api/ofertas', query: {
+        if (_busca.trim().isNotEmpty) 'busca': _busca.trim(),
+        if (_categoria != null) 'categoria': _categoria!.nomeApi,
+        if (_posicao != null) 'latitude': _posicao!.latitude,
+        if (_posicao != null) 'longitude': _posicao!.longitude,
+        'tamanhoPagina': 50,
+      });
+      if (!mounted) return;
+      setState(() {
+        _ofertas = (pagina['itens'] as List).map((j) => Oferta.fromJson(j as Map<String, dynamic>)).toList();
+        _erro = null;
+      });
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _erro = e.mensagem);
+    }
+  }
+
+  void _buscar(String valor) {
+    _busca = valor;
+    _atrasoBusca?.cancel();
+    _atrasoBusca = Timer(const Duration(milliseconds: 400), _carregar);
+  }
+
+  void _filtrar(Categoria? categoria) {
+    setState(() => _categoria = categoria);
+    _carregar();
   }
 
   void _abrirDetalhe(Oferta oferta) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => DetalheScreen(oferta: oferta)),
-    );
+    ).then((_) => _carregar());
   }
 
   @override
   Widget build(BuildContext context) {
-    final ofertas = _ofertasFiltradas;
+    final ofertas = _ofertas;
 
     return SafeArea(
       bottom: false,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        children: [
-          const _Cabecalho(),
-          const SizedBox(height: 10),
-          const _Endereco(),
-          const SizedBox(height: 12),
-          _CampoBusca(onChanged: (valor) => setState(() => _busca = valor)),
-          const SizedBox(height: 14),
-          HoraDaXepaBanner(onVerOfertas: () => setState(() => _categoria = null)),
-          const SizedBox(height: 16),
-          _Categorias(
-            selecionada: _categoria,
-            onSelecionar: (c) => setState(() => _categoria = _categoria == c ? null : c),
-          ),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              const Text(
-                'Perto de você',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-              ),
-              const Spacer(),
-              TextButton(
-                onPressed: () => setState(() => _categoria = null),
-                style: TextButton.styleFrom(foregroundColor: XepaCores.tomateEscuro),
-                child: const Text('Ver todos'),
-              ),
-            ],
-          ),
-          if (ofertas.isEmpty)
-            const _ListaVazia()
-          else
-            ...ofertas.map(
-              (o) => Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: OfertaCard(oferta: o, onTap: () => _abrirDetalhe(o)),
-              ),
+      child: RefreshIndicator(
+        onRefresh: _carregar,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+          children: [
+            const _Cabecalho(),
+            const SizedBox(height: 10),
+            _Endereco(comLocalizacao: _posicao != null),
+            const SizedBox(height: 12),
+            _CampoBusca(onChanged: _buscar),
+            const SizedBox(height: 14),
+            HoraDaXepaBanner(onVerOfertas: () => _filtrar(null)),
+            const SizedBox(height: 16),
+            _Categorias(
+              selecionada: _categoria,
+              onSelecionar: (c) => _filtrar(_categoria == c ? null : c),
             ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Text(
+                  _posicao == null ? 'Ofertas de hoje' : 'Perto de você',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () => _filtrar(null),
+                  style: TextButton.styleFrom(foregroundColor: XepaCores.tomateEscuro),
+                  child: const Text('Ver todos'),
+                ),
+              ],
+            ),
+            if (_erro != null)
+              _Falha(mensagem: _erro!, onTentar: _carregar)
+            else if (ofertas == null)
+              const Padding(padding: EdgeInsets.all(32), child: Center(child: CircularProgressIndicator()))
+            else if (ofertas.isEmpty)
+              const _ListaVazia()
+            else
+              ...ofertas.map(
+                (o) => Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: OfertaCard(oferta: o, onTap: () => _abrirDetalhe(o)),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Falha extends StatelessWidget {
+  const _Falha({required this.mensagem, required this.onTentar});
+
+  final String mensagem;
+  final VoidCallback onTentar;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 24),
+      child: Column(
+        children: [
+          const Icon(Icons.wifi_off_rounded, size: 40, color: XepaCores.textoSecundario),
+          const SizedBox(height: 8),
+          Text(mensagem, textAlign: TextAlign.center, style: const TextStyle(color: XepaCores.textoSecundario)),
+          TextButton(onPressed: onTentar, child: const Text('Tentar de novo')),
         ],
       ),
     );
@@ -109,19 +184,21 @@ class _Cabecalho extends StatelessWidget {
 }
 
 class _Endereco extends StatelessWidget {
-  const _Endereco();
+  const _Endereco({required this.comLocalizacao});
+
+  final bool comLocalizacao;
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    return Row(
       children: [
-        Icon(Icons.location_on_outlined, size: 16, color: XepaCores.tomateEscuro),
-        SizedBox(width: 4),
+        Icon(comLocalizacao ? Icons.my_location_rounded : Icons.location_off_outlined,
+            size: 16, color: XepaCores.tomateEscuro),
+        const SizedBox(width: 4),
         Text(
-          'Rua das Flores, 120 · Centro',
-          style: TextStyle(fontSize: 13, color: XepaCores.textoSecundario),
+          comLocalizacao ? 'Usando sua localização' : 'Localização desligada · mostrando todas',
+          style: const TextStyle(fontSize: 13, color: XepaCores.textoSecundario),
         ),
-        Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: XepaCores.textoSecundario),
       ],
     );
   }

@@ -1,0 +1,119 @@
+@using Xepa.Application.Pedidos
+@model IReadOnlyList<PedidoLojaDto>
+@{
+    ViewData["Title"] = "Pedidos";
+    var br = System.Globalization.CultureInfo.GetCultureInfo("pt-BR");
+    string Hora(DateTimeOffset d) => TimeZoneInfo.ConvertTime(d, OfertaGestaoService.FusoBrasilia).ToString("HH:mm", br);
+
+    var colunas = new (string Titulo, StatusPedido[] Status)[]
+    {
+        ("Novos (pagos)", [StatusPedido.Pendente]),
+        ("Em preparo", [StatusPedido.Confirmado, StatusPedido.EmPreparo]),
+        ("Prontos / em rota", [StatusPedido.ProntoParaRetirada, StatusPedido.SaiuParaEntrega]),
+        ("Concluídos hoje", [StatusPedido.Entregue, StatusPedido.Cancelado]),
+    };
+
+    string Rotulo(StatusPedido s) => s switch
+    {
+        StatusPedido.Pendente => "Aguardando aceite",
+        StatusPedido.Confirmado => "Aceito",
+        StatusPedido.EmPreparo => "Em preparo",
+        StatusPedido.ProntoParaRetirada => "Aguardando retirada",
+        StatusPedido.SaiuParaEntrega => "Em rota",
+        StatusPedido.Entregue => "Entregue",
+        _ => "Cancelado"
+    };
+}
+<div class="cabecalho">
+    <div>
+        <h1>Pedidos</h1>
+        <p class="sub">Pedidos pagos aparecem aqui na hora. <span id="tempo-real" class="selo inativa">conectando…</span></p>
+    </div>
+</div>
+
+@if (TempData["Erro"] is string erro)
+{
+    <div class="validation-summary-errors" role="alert"><ul><li>@erro</li></ul></div>
+}
+
+<div class="quadro" aria-live="polite">
+    @foreach (var (titulo, status) in colunas)
+    {
+        var itens = Model.Where(p => status.Contains(p.Status)).ToList();
+        <section class="coluna" aria-label="@titulo">
+            <h2>@titulo <span>@itens.Count</span></h2>
+            @foreach (var p in itens)
+            {
+                <article class="pedido">
+                    <header><strong>#@p.Id · @p.Oferta</strong></header>
+                    <div>@p.Cliente · @p.Quantidade un. · @p.ValorTotal.ToString("C", br)</div>
+                    <div class="sub" style="margin:0;font-size:13px">feito às @Hora(p.CriadoEm)</div>
+                    @if (p.TipoEntrega == TipoEntrega.Entrega)
+                    {
+                        <span class="selo sacola">Entrega@(p.DistanciaKm is { } km ? $" · {km.ToString("0.0", br)} km" : "")@(p.Bairro is null ? "" : $" · {p.Bairro}")</span>
+                    }
+                    else
+                    {
+                        <span class="selo ativa">Retirada até @Hora(p.RetiradaFim)</span>
+                    }
+                    <span class="selo @(p.Status == StatusPedido.Cancelado ? "inativa" : "")">@Rotulo(p.Status)</span>
+                    @if (p.Entregador is not null) { <div class="sub" style="margin:4px 0 0;font-size:13px">Entregador: @p.Entregador</div> }
+                    @if (p.Observacao is not null) { <div class="sub" style="margin:4px 0 0;font-size:13px">Obs.: @p.Observacao</div> }
+
+                    <div class="acoes" style="margin-top:8px">
+                        @switch (p.Status)
+                        {
+                            case StatusPedido.Pendente:
+                                <form method="post" asp-action="AlterarStatus" asp-route-id="@p.Id"><input type="hidden" name="status" value="Confirmado" /><button class="botao pequeno">Aceitar</button></form>
+                                <form method="post" asp-action="AlterarStatus" asp-route-id="@p.Id" onsubmit="return confirm('Recusar o pedido #@p.Id? O cliente recebe o estorno.')"><input type="hidden" name="status" value="Cancelado" /><button class="botao secundario pequeno">Recusar</button></form>
+                                break;
+                            case StatusPedido.Confirmado:
+                                <form method="post" asp-action="AlterarStatus" asp-route-id="@p.Id"><input type="hidden" name="status" value="EmPreparo" /><button class="botao pequeno">Iniciar preparo</button></form>
+                                break;
+                            case StatusPedido.EmPreparo when p.TipoEntrega == TipoEntrega.Retirada:
+                                <form method="post" asp-action="AlterarStatus" asp-route-id="@p.Id"><input type="hidden" name="status" value="ProntoParaRetirada" /><button class="botao pequeno">Pronto</button></form>
+                                break;
+                            case StatusPedido.EmPreparo:
+                                <span class="sub" style="margin:0;font-size:13px">Aguardando o entregador sair</span>
+                                break;
+                            case StatusPedido.ProntoParaRetirada:
+                                <form method="post" asp-action="ConfirmarRetirada" asp-route-id="@p.Id" class="acoes">
+                                    <label class="pular" for="codigo-@p.Id">Código do cliente</label>
+                                    <input id="codigo-@p.Id" name="codigo" inputmode="numeric" pattern="\d{4}" maxlength="4" placeholder="Código" required class="codigo" />
+                                    <button class="botao pequeno">Confirmar retirada</button>
+                                </form>
+                                break;
+                        }
+                    </div>
+                </article>
+            }
+        </section>
+    }
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@8.0.7/dist/browser/signalr.min.js"></script>
+<script>
+    // Recebe os avisos da API e recarrega a lista. O token é renovado pelo portal a cada conexão.
+    (function () {
+        const selo = document.getElementById('tempo-real');
+        const marcar = (texto, classe) => { selo.textContent = texto; selo.className = 'selo ' + classe; };
+        if (!window.signalR) { marcar('sem tempo real', 'inativa'); return; }
+
+        const conexao = new signalR.HubConnectionBuilder()
+            .withUrl('@ViewData["UrlApi"]/hubs/pedidos', {
+                accessTokenFactory: () => fetch('@Url.Action("Token")').then(r => r.json()).then(j => j.token)
+            })
+            .withAutomaticReconnect()
+            .build();
+
+        let recarga;
+        conexao.on('PedidoAlterado', () => {
+            clearTimeout(recarga);
+            // Não interrompe quem está digitando um código de retirada.
+            recarga = setTimeout(() => { if (!document.activeElement?.classList.contains('codigo')) location.reload(); }, 600);
+        });
+        conexao.onreconnecting(() => marcar('reconectando…', 'inativa'));
+        conexao.onreconnected(() => marcar('ao vivo', 'ativa'));
+        conexao.start().then(() => marcar('ao vivo', 'ativa')).catch(() => marcar('sem tempo real', 'inativa'));
+    })();
+</script>
