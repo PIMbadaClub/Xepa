@@ -5,7 +5,7 @@ import '../models/auth.dart';
 import '../theme.dart';
 import '../widgets/auth_validadores.dart';
 import '../widgets/auth_widgets.dart';
-import 'home_shell.dart';
+import 'abertura_screen.dart';
 
 class CadastroScreen extends StatefulWidget {
   const CadastroScreen({super.key});
@@ -67,11 +67,11 @@ class _CadastroScreenState extends State<CadastroScreen> {
     );
 
     try {
-      await AuthService.instance.cadastrar(dados);
+      final usuario = await AuthService.instance.cadastrar(dados);
       if (!mounted) return;
       TextInput.finishAutofillContext();
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomeShell()),
+        MaterialPageRoute(builder: (_) => telaInicialPara(usuario)),
         (_) => false,
       );
     } on AuthException catch (e) {

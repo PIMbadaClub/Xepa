@@ -5,6 +5,10 @@
 #              SQL_CONNECTION_STRING (usada só para aplicar as migrations)
 #   Variáveis: ACR_NAME (ex.: xepaacr), WEBAPP_API (ex.: xepa-api), WEBAPP_WEB (ex.: xepa-web),
 #              RESOURCE_GROUP (ex.: rg-xepa)
+# Configurações dos App Services (referências ao Key Vault):
+#   API:    ConnectionStrings__Xepa, Jwt__Chave, MercadoPago__AccessToken, MercadoPago__SegredoWebhook,
+#           MercadoPago__UrlNotificacao, Mapas__AzureMapsChave, Cors__Origens__0 (URL do portal)
+#   Portal: ConnectionStrings__Xepa, Jwt__Chave (a mesma da API), Api__UrlBase, Armazenamento__BlobConnectionString
 name: CD
 
 on:

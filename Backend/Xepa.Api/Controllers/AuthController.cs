@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Xepa.Api.Seguranca;
+using Xepa.Infrastructure.Seguranca;
 using Xepa.Application.Contas;
 
 namespace Xepa.Api.Controllers;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 import 'home_screen.dart';
+import 'pedidos_screen.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -16,9 +17,9 @@ class _HomeShellState extends State<HomeShell> {
   static const _telas = <Widget>[
     HomeScreen(),
     _EmBreve(titulo: 'Mapa', icone: Icons.map_outlined),
-    _EmBreve(titulo: 'Pedidos', icone: Icons.shopping_bag_outlined),
+    PedidosScreen(),
     _EmBreve(titulo: 'Favoritos', icone: Icons.favorite_border),
-    _EmBreve(titulo: 'Perfil', icone: Icons.person_outline),
+    PerfilScreen(),
   ];
 
   @override

@@ -10,6 +10,7 @@ public class PagamentoConfiguration : IEntityTypeConfiguration<Pagamento>
     {
         builder.Property(p => p.Provedor).HasMaxLength(30);
         builder.Property(p => p.IdExterno).HasMaxLength(60);
+        builder.Property(p => p.UrlCheckout).HasMaxLength(500);
 
         builder.HasOne(p => p.Pedido)
             .WithMany(p => p.Pagamentos)

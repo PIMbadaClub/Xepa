@@ -142,7 +142,7 @@ class OfertaCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      '${oferta.titulo} · ${formatarDistancia(oferta.distanciaKm)}',
+                      [oferta.titulo, if (oferta.distanciaKm != null) formatarDistancia(oferta.distanciaKm!)].join(' · '),
                       style: secundario,
                     ),
                     Row(

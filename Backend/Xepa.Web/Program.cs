@@ -1,9 +1,19 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Xepa.Infrastructure;
+using Xepa.Infrastructure.Seguranca;
+using Xepa.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddXepa(builder.Configuration, builder.Environment);
+
+// Pedidos passam pela API, que muda o status e avisa app e entregador em tempo real.
+var jwt = builder.Configuration.GetSection(OpcoesJwt.Secao).Get<OpcoesJwt>() ?? new OpcoesJwt();
+builder.Services.AddSingleton(jwt);
+builder.Services.AddSingleton<GeradorTokenJwt>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddHttpClient<ApiXepa>(c =>
+    c.BaseAddress = new Uri(builder.Configuration["Api:UrlBase"] ?? throw new InvalidOperationException("Configure Api:UrlBase.")));
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(o =>

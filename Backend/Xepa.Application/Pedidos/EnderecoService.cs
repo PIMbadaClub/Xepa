@@ -4,7 +4,7 @@ using Xepa.Domain.Entities;
 namespace Xepa.Application.Pedidos;
 
 /// <summary>Endereços de entrega do cliente.</summary>
-public class EnderecoService(IXepaDb db)
+public class EnderecoService(IXepaDb db, IServicoMapas mapas)
 {
     public async Task<IReadOnlyList<EnderecoDto>> ListarAsync(int usuarioId, CancellationToken ct) =>
         await db.Enderecos.AsNoTracking()
@@ -40,6 +40,14 @@ public class EnderecoService(IXepaDb db)
                 Longitude = request.Longitude
             }
         };
+        // Sem GPS, o Azure Maps converte o endereço em coordenadas (necessárias para a entrega).
+        if (endereco.Endereco.Latitude is null || endereco.Endereco.Longitude is null)
+        {
+            var ponto = await mapas.GeocodificarAsync(endereco.Endereco, ct);
+            if (ponto is not null)
+                endereco.Endereco = endereco.Endereco with { Latitude = ponto.Latitude, Longitude = ponto.Longitude };
+        }
+
         db.Enderecos.Add(endereco);
         await db.SaveChangesAsync(ct);
 

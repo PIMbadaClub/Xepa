@@ -48,6 +48,7 @@ public class ContaController(CredenciaisService credenciais) : Controller
         {
             new(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
             new(ClaimTypes.Name, usuario.Nome),
+            new(ClaimTypes.Email, usuario.Email),
             new(ClaimTypes.Role, usuario.Tipo.ToString())
         };
         if (usuario.Estabelecimento is { } loja)
@@ -63,7 +64,7 @@ public class ContaController(CredenciaisService credenciais) : Controller
             return LocalRedirect(form.ReturnUrl);
         return usuario.Tipo == TipoUsuario.Administrador
             ? RedirectToAction(nameof(InicioController.Administracao), "Inicio")
-            : RedirectToAction(nameof(OfertasController.Index), "Ofertas");
+            : RedirectToAction(nameof(PedidosController.Index), "Pedidos");
     }
 
     [HttpPost("sair")]

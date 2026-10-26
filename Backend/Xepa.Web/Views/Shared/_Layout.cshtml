@@ -28,7 +28,8 @@
                 {
                     <a asp-controller="Ofertas" asp-action="Index" class="@(controller == "Ofertas" ? "ativo" : "")"
                        aria-current="@(controller == "Ofertas" ? "page" : null)">Ofertas</a>
-                    <span class="em-breve" title="Sprint 2">Pedidos</span>
+                    <a asp-controller="Pedidos" asp-action="Index" class="@(controller == "Pedidos" ? "ativo" : "")"
+                       aria-current="@(controller == "Pedidos" ? "page" : null)">Pedidos</a>
                     <span class="em-breve" title="Sprint 3">Impacto e relatórios</span>
                 }
                 <form asp-controller="Conta" asp-action="Sair" method="post" class="sair">
