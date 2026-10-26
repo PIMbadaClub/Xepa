@@ -34,6 +34,10 @@ public class Pedido : Entidade
 
     public string? Observacao { get; set; }
 
+    /// <summary>Repasse em que o pedido entrou; vazio enquanto a XEPA não acertou com a loja.</summary>
+    public int? RepasseId { get; set; }
+    public Repasse? Repasse { get; set; }
+
     public List<Pagamento> Pagamentos { get; set; } = [];
     public List<RastreioEntrega> Rastreios { get; set; } = [];
     public List<PedidoHistoricoStatus> Historico { get; set; } = [];

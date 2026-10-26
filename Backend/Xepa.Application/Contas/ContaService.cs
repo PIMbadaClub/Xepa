@@ -16,7 +16,11 @@ public class CredenciaisService(IXepaDb db, IHasherSenha hasher)
             .Include(u => u.Estabelecimento)
             .FirstOrDefaultAsync(u => u.Email == normalizado, ct);
 
-        return usuario is not null && hasher.Conferir(usuario, senha) ? usuario : null;
+        if (usuario is null || !hasher.Conferir(usuario, senha))
+            return null;
+        if (usuario.Bloqueado)
+            throw new AcessoNegadoException("Esta conta está suspensa. Fale com o suporte da XEPA.");
+        return usuario;
     }
 
     public static string NormalizarEmail(string email) => email.Trim().ToLowerInvariant();
@@ -64,7 +68,7 @@ public class ContaService(IXepaDb db, IHasherSenha hasher, CredenciaisService cr
             .FirstOrDefaultAsync(t => t.TokenHash == hash, ct);
 
         var agora = DateTimeOffset.UtcNow;
-        if (token is null || !token.Valido(agora))
+        if (token is null || !token.Valido(agora) || token.Usuario.Bloqueado)
             throw new AcessoNegadoException("Sessão expirada. Entre novamente.");
 
         token.RevogadoEm = agora;

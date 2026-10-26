@@ -28,6 +28,9 @@ public class OfertaConsultaService(IXepaDb db)
         if (filtro.Categoria is { } categoria)
             ofertas = ofertas.Where(o => o.Estabelecimento.Categoria == categoria);
 
+        if (filtro.EstabelecimentoId is { } estabelecimentoId)
+            ofertas = ofertas.Where(o => o.EstabelecimentoId == estabelecimentoId);
+
         var consulta = Projetar(ofertas, filtro.Latitude, filtro.Longitude);
 
         if (filtro.RaioKm is { } raioKm)

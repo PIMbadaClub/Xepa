@@ -8,6 +8,9 @@ public class Usuario : Entidade
     public string? Telefone { get; set; }
     public TipoUsuario Tipo { get; set; }
 
+    /// <summary>Conta suspensa pela equipe da XEPA (ex.: denúncia procedente); não consegue entrar.</summary>
+    public bool Bloqueado { get; set; }
+
     /// <summary>Preenchido só quando Tipo = Estabelecimento.</summary>
     public Estabelecimento? Estabelecimento { get; set; }
 

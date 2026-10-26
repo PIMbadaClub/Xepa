@@ -12,6 +12,9 @@ public class FiltroOfertas : IValidatableObject
 
     public CategoriaEstabelecimento? Categoria { get; init; }
 
+    /// <summary>Só as ofertas de uma loja (tela de favoritos do app).</summary>
+    public int? EstabelecimentoId { get; init; }
+
     [Range(-90, 90)]
     public double? Latitude { get; init; }
 

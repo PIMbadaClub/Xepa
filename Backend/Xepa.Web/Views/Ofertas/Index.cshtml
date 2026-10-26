@@ -41,7 +41,7 @@ else
                         <div class="acoes">
                             <a class="botao secundario pequeno" asp-action="Editar" asp-route-id="@o.Id" aria-label="Editar @o.Titulo">Editar</a>
                             <form asp-action="AlterarAtiva" asp-route-id="@o.Id" method="post">
-                                <input type="hidden" name="ativa" value="@(!o.Ativa)" />
+                                <input type="hidden" name="ativa" value="@(o.Ativa ? "false" : "true")" />
                                 <button class="botao secundario pequeno" type="submit">@(o.Ativa ? "Tirar do ar" : "Reativar")</button>
                             </form>
                         </div>

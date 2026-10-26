@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../api/api.dart';
+import '../api/favoritos.dart';
 import '../models/oferta.dart';
 import '../theme.dart';
 import '../widgets/oferta_widgets.dart';
@@ -16,9 +18,25 @@ class DetalheScreen extends StatefulWidget {
 
 class _DetalheScreenState extends State<DetalheScreen> {
   int _quantidade = 1;
-  bool _favorito = false;
 
   Oferta get _oferta => widget.oferta;
+
+  Future<void> _alternarFavorito() async {
+    final id = _oferta.estabelecimentoId;
+    if (id == null) return;
+    final era = Favoritos.instance.contem(id);
+    try {
+      await Favoritos.instance.alternar(id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(era ? '${_oferta.loja} saiu dos favoritos' : '${_oferta.loja} está nos seus favoritos 🍅'),
+        ));
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.mensagem)));
+    }
+  }
 
   void _reservar() {
     Navigator.of(context).push(
@@ -70,10 +88,16 @@ class _DetalheScreenState extends State<DetalheScreen> {
                 Positioned(
                   top: topo + 8,
                   right: 12,
-                  child: _BotaoRedondo(
-                    icone: _favorito ? Icons.favorite : Icons.favorite_border,
-                    cor: XepaCores.tomateEscuro,
-                    onTap: () => setState(() => _favorito = !_favorito),
+                  child: ValueListenableBuilder(
+                    valueListenable: Favoritos.instance.ids,
+                    builder: (_, ids, __) {
+                      final favorito = o.estabelecimentoId != null && ids.contains(o.estabelecimentoId);
+                      return _BotaoRedondo(
+                        icone: favorito ? Icons.favorite : Icons.favorite_border,
+                        cor: XepaCores.tomate,
+                        onTap: _alternarFavorito,
+                      );
+                    },
                   ),
                 ),
               ],

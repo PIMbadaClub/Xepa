@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show TextInput;
 
+import 'package:url_launcher/url_launcher.dart';
+
+import '../api/api.dart';
 import '../models/auth.dart';
 import '../theme.dart';
 import '../widgets/auth_validadores.dart';
@@ -131,6 +134,9 @@ class _CadastroScreenState extends State<CadastroScreen> {
                 },
               ),
               const SizedBox(height: 22),
+              if (_ehRestaurante)
+                const _CadastroNoPortal()
+              else ...[
               if (_erro != null) ...[
                 AuthErroBanner(mensagem: _erro!),
                 const SizedBox(height: 16),
@@ -232,10 +238,11 @@ class _CadastroScreenState extends State<CadastroScreen> {
               ),
               const SizedBox(height: 20),
               AuthBotaoPrimario(
-                rotulo: _ehRestaurante ? 'Criar conta do restaurante' : 'Criar conta',
+                rotulo: 'Criar conta',
                 carregando: _carregando,
                 onPressed: _cadastrar,
               ),
+              ],
               const SizedBox(height: 20),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -358,6 +365,43 @@ class _CampoTermos extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// Lojas se cadastram pelo portal, onde o CNPJ e o endereço são conferidos antes da aprovação (RN10).
+class _CadastroNoPortal extends StatelessWidget {
+  const _CadastroNoPortal();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(XepaRaios.cartao),
+        border: Border.all(color: XepaCores.borda),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Icon(Icons.storefront_rounded, color: XepaCores.tomate, size: 32),
+          const SizedBox(height: 10),
+          const Text('Cadastro de lojas pelo portal', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 6),
+          const Text(
+            'No portal você informa CNPJ e endereço de retirada, e a equipe da XEPA aprova a loja. '
+            'Depois é por lá que você publica as ofertas e acompanha os pedidos.',
+            style: TextStyle(color: XepaCores.textoSecundario, height: 1.4),
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: () => launchUrl(Uri.parse('$portalUrl/conta/cadastrar'), mode: LaunchMode.externalApplication),
+            icon: const Icon(Icons.open_in_new_rounded),
+            label: const Text('Abrir o cadastro de lojas'),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -9,6 +9,9 @@ const String apiUrl = String.fromEnvironment(
   defaultValue: kIsWeb ? 'http://localhost:5000' : 'http://10.0.2.2:5000',
 );
 
+/// Endereço do portal do estabelecimento (cadastro de lojas). Troque com --dart-define=PORTAL_URL=...
+const String portalUrl = String.fromEnvironment('PORTAL_URL', defaultValue: 'http://localhost:5148');
+
 /// Erro com mensagem pronta para mostrar ao usuário (vem do ProblemDetails da API).
 class ApiException implements Exception {
   ApiException(this.mensagem, {this.status});
@@ -93,6 +96,8 @@ class Api {
       _executar(() => dio.get<T>(caminho, queryParameters: query));
 
   Future<T> post<T>(String caminho, [Object? corpo]) => _executar(() => dio.post<T>(caminho, data: corpo));
+
+  Future<T> put<T>(String caminho, [Object? corpo]) => _executar(() => dio.put<T>(caminho, data: corpo));
 
   Future<T> delete<T>(String caminho) => _executar(() => dio.delete<T>(caminho));
 

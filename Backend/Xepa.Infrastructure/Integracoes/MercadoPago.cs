@@ -62,7 +62,7 @@ public class GatewayMercadoPago(HttpClient http, OpcoesMercadoPago opcoes) : IGa
                 PaymentMethodId = "pix",
                 ExternalReference = pedido.Id.ToString(CultureInfo.InvariantCulture),
                 NotificationUrl = opcoes.UrlNotificacao,
-                DateOfExpiration = expira.ToOffset(TimeSpan.FromHours(-3)).ToString("yyyy-MM-dd'T'HH:mm:ss.fffzzz", CultureInfo.InvariantCulture),
+                DateOfExpiration = DataMercadoPago(expira),
                 Payer = new { Email = emailPagador }
             };
             using var resp = await EnviarAsync(HttpMethod.Post, "v1/payments", corpo, ct);
@@ -79,7 +79,7 @@ public class GatewayMercadoPago(HttpClient http, OpcoesMercadoPago opcoes) : IGa
             PaymentMethods = new { ExcludedPaymentTypes = new[] { new { Id = "ticket" } }, Installments = 1 },
             BackUrls = opcoes.UrlRetorno is null ? null : new { Success = opcoes.UrlRetorno, Failure = opcoes.UrlRetorno, Pending = opcoes.UrlRetorno },
             AutoReturn = opcoes.UrlRetorno is null ? null : "approved",
-            ExpirationDateTo = DateTimeOffset.UtcNow.AddMinutes(15).ToString("yyyy-MM-dd'T'HH:mm:ss.fffzzz", CultureInfo.InvariantCulture),
+            ExpirationDateTo = DataMercadoPago(DateTimeOffset.UtcNow.AddMinutes(15)),
             Expires = true
         };
         using var r = await EnviarAsync(HttpMethod.Post, "checkout/preferences", preferencia, ct);
@@ -136,6 +136,13 @@ public class GatewayMercadoPago(HttpClient http, OpcoesMercadoPago opcoes) : IGa
         var esperado = Convert.ToHexStringLower(HMACSHA256.HashData(Encoding.UTF8.GetBytes(segredo), Encoding.UTF8.GetBytes(manifesto)));
         return CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(esperado), Encoding.ASCII.GetBytes(v1.ToLowerInvariant()));
     }
+
+    /// <summary>
+    /// Data no fuso de Brasília. Em UTC o offset sai "+00:00" e o System.Text.Json escapa o "+" como +,
+    /// que o Mercado Pago recusa com error_parsing_date.
+    /// </summary>
+    private static string DataMercadoPago(DateTimeOffset data) =>
+        data.ToOffset(TimeSpan.FromHours(-3)).ToString("yyyy-MM-dd'T'HH:mm:ss.fffzzz", CultureInfo.InvariantCulture);
 
     private async Task<HttpResponseMessage> EnviarAsync(HttpMethod metodo, string caminho, object? corpo, CancellationToken ct,
         bool aceitar404 = false)

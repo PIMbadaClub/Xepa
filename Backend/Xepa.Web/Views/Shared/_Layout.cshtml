@@ -2,7 +2,12 @@
     var logado = User.Identity?.IsAuthenticated == true;
     var admin = User.IsInRole(nameof(TipoUsuario.Administrador));
     var loja = User.FindFirst(ContaController.ClaimEstabelecimentoNome)?.Value;
+    var statusLoja = User.FindFirst(ContaController.ClaimEstabelecimentoStatus)?.Value;
     var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+
+    string Ativo(string c, string? a = null) => controller == c && (a is null || action == a) ? "ativo" : "";
+    string? Atual(string c, string? a = null) => controller == c && (a is null || action == a) ? "page" : null;
 }
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -26,15 +31,17 @@
                 <div class="contexto">@(admin ? "Administração da plataforma" : $"Portal do estabelecimento{(loja is null ? "" : " · " + loja)}")</div>
                 @if (admin)
                 {
-                    <a asp-controller="Inicio" asp-action="Administracao" aria-current="page" class="ativo">Painel</a>
+                    <a asp-controller="Admin" asp-action="Painel" class="@Ativo("Admin", "Painel")" aria-current="@Atual("Admin", "Painel")">Painel</a>
+                    <a asp-controller="Admin" asp-action="Lojas" class="@Ativo("Admin", "Lojas")" aria-current="@Atual("Admin", "Lojas")">Lojas</a>
+                    <a asp-controller="Admin" asp-action="Denuncias" class="@Ativo("Admin", "Denuncias")" aria-current="@Atual("Admin", "Denuncias")">Denúncias</a>
+                    <a asp-controller="Admin" asp-action="Repasses" class="@Ativo("Admin", "Repasses")" aria-current="@Atual("Admin", "Repasses")">Repasses</a>
+                    <a asp-controller="Admin" asp-action="Usuarios" class="@Ativo("Admin", "Usuarios")" aria-current="@Atual("Admin", "Usuarios")">Usuários</a>
                 }
                 else
                 {
-                    <a asp-controller="Ofertas" asp-action="Index" class="@(controller == "Ofertas" ? "ativo" : "")"
-                       aria-current="@(controller == "Ofertas" ? "page" : null)">Ofertas</a>
-                    <a asp-controller="Pedidos" asp-action="Index" class="@(controller == "Pedidos" ? "ativo" : "")"
-                       aria-current="@(controller == "Pedidos" ? "page" : null)">Pedidos</a>
-                    <span class="em-breve" title="Sprint 3">Impacto e relatórios</span>
+                    <a asp-controller="Pedidos" asp-action="Index" class="@Ativo("Pedidos")" aria-current="@Atual("Pedidos")">Pedidos</a>
+                    <a asp-controller="Ofertas" asp-action="Index" class="@Ativo("Ofertas")" aria-current="@Atual("Ofertas")">Ofertas</a>
+                    <a asp-controller="Impacto" asp-action="Index" class="@Ativo("Impacto")" aria-current="@Atual("Impacto")">Impacto e vendas</a>
                 }
                 <img src="~/img/tomate.svg" alt="" class="tomate-escondido" />
                 <form asp-controller="Conta" asp-action="Sair" method="post" class="sair">
@@ -42,9 +49,21 @@
                 </form>
             </nav>
             <main id="conteudo" class="conteudo">
+                @if (statusLoja == nameof(StatusCadastro.Pendente))
+                {
+                    <p class="faixa-pendente" role="status">Sua loja está em análise pela equipe da XEPA. Você já pode cadastrar ofertas; elas aparecem no app depois da aprovação.</p>
+                }
+                else if (statusLoja == nameof(StatusCadastro.Rejeitado))
+                {
+                    <p class="faixa-pendente" role="status">O cadastro da loja não foi aprovado. Fale com o suporte da XEPA para revisar os dados.</p>
+                }
                 @if (TempData["Mensagem"] is string mensagem)
                 {
                     <p class="aviso" role="status">@mensagem</p>
+                }
+                @if (TempData["Erro"] is string erroGeral && controller != "Pedidos")
+                {
+                    <div class="validation-summary-errors" role="alert"><ul><li>@erroGeral</li></ul></div>
                 }
                 @RenderBody()
             </main>

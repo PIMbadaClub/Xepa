@@ -1,0 +1,105 @@
+@model IndicadoresLojaDto
+@{
+    ViewData["Title"] = "Impacto e vendas";
+    var repasses = ViewData["Repasses"] as IReadOnlyList<RepasseDto> ?? [];
+    var maior = Model.PorDia.Count == 0 ? 0 : Model.PorDia.Max(d => d.Vendas);
+}
+<div class="cabecalho">
+    <div>
+        <h1>Impacto e vendas</h1>
+        <p class="sub">Pedidos entregues nos últimos @Model.Dias dias.</p>
+    </div>
+    <nav class="filtros" aria-label="Período">
+        @foreach (var d in new[] { 7, 30, 90 })
+        {
+            <a asp-action="Index" asp-route-dias="@d" class="@(Model.Dias == d ? "ativo" : "")">@d dias</a>
+        }
+    </nav>
+</div>
+
+<div class="indicadores">
+    <div class="indicador verde destaque">
+        <span>Comida salva do lixo</span>
+        <strong>@Rotulos.Kg(Model.KgSalvos)</strong>
+        <small>em @Model.Unidades sacola(s) e prato(s)</small>
+    </div>
+    <div class="indicador">
+        <span>Economia gerada para os clientes</span>
+        <strong>@Rotulos.Dinheiro(Model.EconomiaClientes)</strong>
+        <small>diferença para o preço original</small>
+    </div>
+    <div class="indicador">
+        <span>Vendas</span>
+        <strong>@Rotulos.Dinheiro(Model.Vendas)</strong>
+        <small>@Model.Pedidos pedido(s) · tíquete médio @Rotulos.Dinheiro(Model.TicketMedio)</small>
+    </div>
+    <div class="indicador">
+        <span>A receber da XEPA</span>
+        <strong>@Rotulos.Dinheiro(Model.RepasseAReceber)</strong>
+        <small>repasses fechados e ainda não pagos</small>
+    </div>
+    <div class="indicador @(Model.Cancelados > 0 ? "alerta" : "")">
+        <span>Cancelados depois de pagos</span>
+        <strong>@Model.Cancelados</strong>
+        <small>recusados ou cancelados antes do aceite</small>
+    </div>
+</div>
+
+<section class="cartao" aria-labelledby="titulo-grafico" style="margin-top:16px">
+    <h2 id="titulo-grafico" class="secao" style="margin-top:0">Vendas por dia</h2>
+    @if (maior == 0)
+    {
+        <p class="vazio" style="padding:12px">Ainda sem vendas entregues no período. Publique uma oferta perto do fechamento!</p>
+    }
+    else
+    {
+        <div class="grafico" role="img" aria-label="Gráfico de vendas por dia">
+            @foreach (var dia in Model.PorDia)
+            {
+                var altura = maior == 0 ? 0 : (int)Math.Round(dia.Vendas / maior * 100);
+                <div class="barra" title="@dia.Dia.ToString("dd/MM", Rotulos.Br): @Rotulos.Dinheiro(dia.Vendas) em @dia.Pedidos pedido(s)">
+                    <span style="height:@(Math.Max(altura, dia.Vendas > 0 ? 4 : 0))%"></span>
+                    <small>@dia.Dia.ToString("dd", Rotulos.Br)</small>
+                </div>
+            }
+        </div>
+    }
+</section>
+
+<div class="duas-colunas">
+    <section class="cartao">
+        <h2 class="secao" style="margin-top:0">Mais vendidas</h2>
+        @if (Model.MaisVendidas.Count == 0)
+        {
+            <p class="sub">Nada vendido no período.</p>
+        }
+        else
+        {
+            <ol class="ranking">
+                @foreach (var o in Model.MaisVendidas)
+                {
+                    <li><strong>@o.Titulo</strong><span>@o.Unidades un. · @Rotulos.Dinheiro(o.Vendas)</span></li>
+                }
+            </ol>
+        }
+    </section>
+    <section class="cartao">
+        <h2 class="secao" style="margin-top:0">Repasses</h2>
+        @if (repasses.Count == 0)
+        {
+            <p class="sub">Nenhum repasse fechado ainda. A XEPA fecha os repasses com os pedidos entregues, já descontada a comissão.</p>
+        }
+        else
+        {
+            <ol class="ranking">
+                @foreach (var r in repasses)
+                {
+                    <li>
+                        <strong>@Rotulos.Dinheiro(r.ValorLiquido)</strong>
+                        <span>@r.Pedidos pedido(s) · @(r.PagoEm is { } p ? $"pago em {Rotulos.Data(p)}" : "a receber")</span>
+                    </li>
+                }
+            </ol>
+        }
+    </section>
+</div>
