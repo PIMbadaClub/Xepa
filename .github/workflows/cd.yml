@@ -1,0 +1,81 @@
+# CD: publica API e portal no Azure App Service (containers) a cada push na main.
+#
+# Só roda quando a variável do repositório AZURE_DEPLOY = true. Configuração necessária:
+#   Secrets:   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID (login federado OIDC, sem senha)
+#              SQL_CONNECTION_STRING (usada só para aplicar as migrations)
+#   Variáveis: ACR_NAME (ex.: xepaacr), WEBAPP_API (ex.: xepa-api), WEBAPP_WEB (ex.: xepa-web),
+#              RESOURCE_GROUP (ex.: rg-xepa)
+name: CD
+
+on:
+  push:
+    branches: [main]
+    paths: ["Backend/**", ".github/workflows/cd.yml"]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency: producao
+
+jobs:
+  deploy:
+    if: vars.AZURE_DEPLOY == 'true'
+    runs-on: ubuntu-latest
+    environment: producao
+    defaults:
+      run:
+        working-directory: Backend
+    env:
+      TAG: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Construir e enviar imagens ao Container Registry
+        run: |
+          az acr login --name ${{ vars.ACR_NAME }}
+          REG=${{ vars.ACR_NAME }}.azurecr.io
+          docker build -f Xepa.Api/Dockerfile -t $REG/xepa-api:$TAG -t $REG/xepa-api:latest .
+          docker build -f Xepa.Web/Dockerfile -t $REG/xepa-web:$TAG -t $REG/xepa-web:latest .
+          docker push --all-tags $REG/xepa-api
+          docker push --all-tags $REG/xepa-web
+
+      - name: Aplicar migrations no Azure SQL
+        run: |
+          dotnet tool restore
+          dotnet ef migrations bundle --project Xepa.Infrastructure --startup-project Xepa.Api -o efbundle --force
+          ./efbundle --connection "${{ secrets.SQL_CONNECTION_STRING }}"
+        env:
+          Jwt__Chave: "chave-somente-para-gerar-o-bundle-com-32-caracteres"
+
+      - name: Publicar a API
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.WEBAPP_API }}
+          images: ${{ vars.ACR_NAME }}.azurecr.io/xepa-api:${{ env.TAG }}
+
+      - name: Publicar o portal
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ vars.WEBAPP_WEB }}
+          images: ${{ vars.ACR_NAME }}.azurecr.io/xepa-web:${{ env.TAG }}
+
+      - name: Verificar saúde
+        run: |
+          for app in ${{ vars.WEBAPP_API }} ${{ vars.WEBAPP_WEB }}; do
+            for i in $(seq 1 30); do
+              curl -fsS "https://$app.azurewebsites.net/health" && break
+              sleep 10
+            done || { echo "Health check falhou em $app"; exit 1; }
+          done

@@ -1,0 +1,82 @@
+@model OfertaForm
+@{
+    var id = ViewData["Id"] as int?;
+    ViewData["Title"] = id is null ? "Nova oferta" : "Editar oferta";
+}
+<h1>@ViewData["Title"]</h1>
+<p class="sub">Os horários são de Brasília. Depois do fim da retirada, a oferta sai do app automaticamente.</p>
+
+<form class="cartao" method="post" enctype="multipart/form-data"
+      asp-action="@(id is null ? "Nova" : "Editar")" asp-route-id="@id" novalidate>
+    <div asp-validation-summary="All"></div>
+
+    <div class="grade">
+        <div class="campo">
+            <label asp-for="Tipo">Tipo</label>
+            <select asp-for="Tipo">
+                <option value="@TipoOferta.SacolaSurpresa">Sacola surpresa (conteúdo variável)</option>
+                <option value="@TipoOferta.Prato">Prato ou produto definido</option>
+            </select>
+        </div>
+        <div class="campo">
+            <label asp-for="Titulo"></label>
+            <input asp-for="Titulo" placeholder="Ex.: Sacola surpresa de pães" />
+            <span asp-validation-for="Titulo" class="erro"></span>
+        </div>
+    </div>
+
+    <div class="campo">
+        <label asp-for="Descricao"></label>
+        <textarea asp-for="Descricao" rows="3" placeholder="O que pode vir na sacola ou no prato"></textarea>
+    </div>
+
+    <div class="grade">
+        <div class="campo">
+            <label asp-for="PrecoOriginal"></label>
+            <input asp-for="PrecoOriginal" type="number" step="0.01" min="0.01" inputmode="decimal" />
+            <span asp-validation-for="PrecoOriginal" class="erro"></span>
+        </div>
+        <div class="campo">
+            <label asp-for="Preco"></label>
+            <input asp-for="Preco" type="number" step="0.01" min="0.01" inputmode="decimal" />
+            <span class="ajuda">Precisa ser menor que o preço original.</span>
+            <span asp-validation-for="Preco" class="erro"></span>
+        </div>
+        <div class="campo">
+            <label asp-for="QuantidadeDisponivel"></label>
+            <input asp-for="QuantidadeDisponivel" type="number" min="0" step="1" />
+        </div>
+        <div class="campo">
+            <label asp-for="PesoEstimadoKg"></label>
+            <input asp-for="PesoEstimadoKg" type="number" step="0.1" min="0" inputmode="decimal" />
+            <span class="ajuda">Usado no indicador de comida salva.</span>
+        </div>
+    </div>
+
+    <div class="grade">
+        <div class="campo">
+            <label asp-for="RetiradaInicio"></label>
+            <input asp-for="RetiradaInicio" type="datetime-local" />
+        </div>
+        <div class="campo">
+            <label asp-for="RetiradaFim"></label>
+            <input asp-for="RetiradaFim" type="datetime-local" />
+        </div>
+    </div>
+
+    <div class="campo">
+        <label for="foto">Foto</label>
+        @if (Model.FotoUrl is not null)
+        {
+            <img src="@Model.FotoUrl" alt="Foto atual da oferta" style="width:160px;border-radius:8px" />
+            <input type="hidden" asp-for="FotoUrl" />
+        }
+        <input id="foto" name="foto" type="file" accept="image/jpeg,image/png,image/webp" />
+        <span class="ajuda">JPG, PNG ou WEBP de até 5 MB. @(Model.FotoUrl is null ? "" : "Envie outra para trocar.")</span>
+    </div>
+
+    <div class="acoes">
+        <button type="submit" class="botao">@(id is null ? "Publicar oferta" : "Salvar alterações")</button>
+        <a class="botao secundario" asp-action="Index">Cancelar</a>
+    </div>
+</form>

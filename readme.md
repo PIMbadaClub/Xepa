@@ -26,26 +26,51 @@ O projeto utiliza uma arquitetura separada entre aplicativo mobile e API (Client
 O repositório está dividido em duas pastas principais:
 
 1. `/Mobile`: Contém o aplicativo Flutter (telas, serviços, modelos e configurações).
-2. `/BackEnd`: Contém a API em C#, incluindo a lógica de negócio, acesso a dados e as rotas da aplicação.
+2. `/Backend`: Contém a API, o portal web, as regras de negócio e o acesso a dados (.NET 10).
 
 ## 🛠️ Como Executar o Projeto
 
 ### Pré-requisitos
 
-* SDK do .NET (v8.0 ou superior)
-* Flutter SDK (versão estável mais recente)
-* Android Studio ou VS Code com as extensões de Flutter/Dart
+* SDK do .NET 10
+* SQL Server LocalDB (vem com o Visual Studio) ou Docker
+* Flutter SDK (versão estável mais recente), com Android Studio ou VS Code
 * Emulador Android/iOS ou dispositivo físico
-* Banco de dados configurado (ex: SQL Server ou PostgreSQL)
+
+### Estrutura do Backend
+
+| Projeto | Camada | Conteúdo |
+|---|---|---|
+| `Xepa.Domain` | Domínio | Entidades, enums e regras de negócio (sem dependências) |
+| `Xepa.Application` | Aplicação | Serviços de caso de uso, DTOs e interfaces das integrações |
+| `Xepa.Infrastructure` | Infraestrutura | EF Core, migrations, procedures/triggers, armazenamento de fotos, mapas |
+| `Xepa.Api` | Apresentação | API REST do app (JWT, rate limit, health check) |
+| `Xepa.Web` | Apresentação | Portal do estabelecimento e da administração (MVC, cookie) |
+| `Xepa.Tests` | Testes | Testes de unidade das regras |
 
 ### Configurando o Backend
 
-1. Navegue até a pasta: `cd BackEnd`
-2. Configure a string de conexão do banco em `appsettings.json`
-3. Restaure as dependências: `dotnet restore`
-4. Aplique as migrations: `dotnet ef database update`
-5. Execute a aplicação: `dotnet run`
-   * A API estará disponível em `http://localhost:5000` (ou na porta configurada em `appsettings.json`).
+1. Navegue até a pasta: `cd Backend`
+2. Restaure as ferramentas: `dotnet tool restore`
+3. Crie o banco com dados de demonstração:
+   `dotnet ef database update --project Xepa.Infrastructure --startup-project Xepa.Api`
+4. Suba a API: `dotnet run --project Xepa.Api` → `http://localhost:5000/swagger`
+5. Suba o portal: `dotnet run --project Xepa.Web` → `http://localhost:5148`
+6. Testes: `dotnet test`
+
+Usuários de demonstração (senha `Xepa@2026`): `cliente@xepa.test`, `padaria@xepa.test` (loja),
+`admin@xepa.test` e `entregador@xepa.test`. Exemplos de chamadas em `Backend/Xepa.Api/Xepa.Api.http`.
+
+Com Docker: `docker compose up --build` dentro de `Backend` (SQL Server, API e portal).
+
+Para mudar o banco: altere as entidades, gere uma migration
+(`dotnet ef migrations add Nome --project Xepa.Infrastructure --startup-project Xepa.Api --output-dir Data/Migrations`)
+e nunca edite o banco à mão. Procedures e triggers também vão por migration.
+
+### Deploy
+
+O GitHub Actions compila e testa a cada push (`ci.yml`). A publicação no Azure (`cd.yml`) roda na `main`
+quando a variável `AZURE_DEPLOY` do repositório está `true`; os secrets e variáveis necessários estão no início do arquivo.
 
 ### Configurando o App Mobile
 

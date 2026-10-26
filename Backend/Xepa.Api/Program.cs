@@ -1,23 +1,61 @@
 using System.Text.Json.Serialization;
-using Microsoft.EntityFrameworkCore;
-using Xepa.Api.Data;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using Xepa.Api.Seguranca;
+using Xepa.Application;
+using Xepa.Application.Contas;
+using Xepa.Infrastructure;
+using Xepa.Infrastructure.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<XepaDbContext>(options =>
-{
-    options.UseSqlServer(builder.Configuration.GetConnectionString("Xepa"));
+builder.Services.AddXepa(builder.Configuration, builder.Environment);
+builder.Services.AddHostedService<ExpiradorPedidos>();
 
-    // Dados de demonstração só em desenvolvimento; entram no "dotnet ef database update".
-    if (builder.Environment.IsDevelopment())
-        options.UseSeeding(DadosIniciais.Popular).UseAsyncSeeding(DadosIniciais.PopularAsync);
+var jwt = builder.Configuration.GetSection(OpcoesJwt.Secao).Get<OpcoesJwt>() ?? new OpcoesJwt();
+if (jwt.Chave.Length < 32)
+    throw new InvalidOperationException("Configure Jwt:Chave com pelo menos 32 caracteres.");
+builder.Services.AddSingleton(jwt);
+builder.Services.AddSingleton<IGeradorToken, GeradorTokenJwt>();
+builder.Services.AddScoped<ContaService>(); // sessões do app; o portal usa cookie e só o CredenciaisService
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(o =>
+    {
+        o.MapInboundClaims = false;
+        o.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidIssuer = jwt.Emissor,
+            ValidAudience = jwt.Publico,
+            IssuerSigningKey = jwt.ChaveAssinatura(),
+            RoleClaimType = System.Security.Claims.ClaimTypes.Role,
+            NameClaimType = "name",
+            ClockSkew = TimeSpan.FromSeconds(30)
+        };
+    });
+builder.Services.AddAuthorization();
+
+// Até 10 tentativas por minuto por IP nas rotas de login e cadastro.
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.AddPolicy(Program.LimiteLogin, http => RateLimitPartition.GetFixedWindowLimiter(
+        http.Connection.RemoteIpAddress?.ToString() ?? "anonimo",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1) }));
 });
+
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<TratadorErros>();
+builder.Services.AddHealthChecks().AddDbContextCheck<XepaDbContext>("banco");
 
 builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
@@ -27,11 +65,21 @@ if (app.Environment.IsDevelopment())
 else
 {
     // Em desenvolvimento fica sem redirecionar, para o emulador Android acessar http://10.0.2.2:5000.
+    app.UseHsts();
     app.UseHttpsRedirection();
 }
 
+app.UseStaticFiles();
+app.UseRateLimiter();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHealthChecks("/health");
 
 app.Run();
+
+public partial class Program
+{
+    public const string LimiteLogin = "login";
+}
