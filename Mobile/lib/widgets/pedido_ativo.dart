@@ -72,7 +72,8 @@ class BarraPedidoAtivo extends StatelessWidget {
                       ),
                       if (p.status == StatusPedido.aguardandoPagamento)
                         const _Chip(texto: 'Pagar', cor: XepaCores.tomate)
-                      else if (!p.entrega && p.codigoRetirada != null && p.status == StatusPedido.prontoParaRetirada)
+                      else if (p.codigoRetirada != null &&
+                          (p.status == StatusPedido.prontoParaRetirada || p.status == StatusPedido.saiuParaEntrega))
                         _Chip(texto: p.codigoRetirada!, cor: XepaCores.verde)
                       else
                         const Icon(Icons.chevron_right_rounded, color: XepaCores.textoSecundario),

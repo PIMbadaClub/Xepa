@@ -27,11 +27,14 @@ class ConfigMapa {
 
 /// Mapa com a loja, o destino e o entregador (que se move conforme as posições chegam).
 class MapaEntrega extends StatefulWidget {
-  const MapaEntrega({super.key, this.loja, this.destino, this.entregador, this.altura = 260});
+  const MapaEntrega({super.key, this.loja, this.destino, this.entregador, this.rota = const [], this.altura = 260});
 
   final LatLng? loja;
   final LatLng? destino;
   final LatLng? entregador;
+
+  /// Traçado real loja → destino pelas ruas; vazio, desenha a reta.
+  final List<LatLng> rota;
   final double altura;
 
   @override
@@ -87,16 +90,18 @@ class _MapaEntregaState extends State<MapaEntrega> {
             if (widget.loja != null && widget.destino != null)
               PolylineLayer(polylines: [
                 Polyline(
-                  points: [widget.loja!, if (widget.entregador != null) widget.entregador!, widget.destino!],
-                  color: XepaCores.tomate.withValues(alpha: 0.7),
-                  strokeWidth: 4,
+                  points: widget.rota.length > 1 ? widget.rota : [widget.loja!, widget.destino!],
+                  color: XepaCores.tomate,
+                  strokeWidth: 5,
+                  borderColor: Colors.white,
+                  borderStrokeWidth: 2,
                 ),
               ]),
             MarkerLayer(markers: [
               if (widget.loja != null) _marcador(widget.loja!, Icons.storefront, XepaCores.paoEscuro, 'Loja'),
               if (widget.destino != null) _marcador(widget.destino!, Icons.home_rounded, XepaCores.verde, 'Destino'),
               if (widget.entregador != null)
-                _marcador(widget.entregador!, Icons.delivery_dining, XepaCores.tomate, 'Entregador'),
+                _marcador(widget.entregador!, Icons.two_wheeler_rounded, XepaCores.tomate, 'Entregador'),
             ]),
             RichAttributionWidget(attributions: [TextSourceAttribution(config.atribuicao)]),
           ],

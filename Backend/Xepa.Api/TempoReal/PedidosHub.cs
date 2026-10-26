@@ -16,6 +16,7 @@ namespace Xepa.Api.TempoReal;
 public class PedidosHub(IXepaDb db) : Hub
 {
     public const string Rota = "/hubs/pedidos";
+    public const string GrupoEntregadores = "entregadores";
 
     public override async Task OnConnectedAsync()
     {
@@ -25,14 +26,9 @@ public class PedidosHub(IXepaDb db) : Hub
         if (Context.User!.FindFirst(GeradorTokenJwt.ClaimEstabelecimento)?.Value is { } loja)
             await Groups.AddToGroupAsync(Context.ConnectionId, $"loja-{loja}");
 
+        // Entregadores parceiros recebem as mudanças de todos os pedidos com entrega (corridas novas e aceitas).
         if (Context.User!.IsInRole(nameof(TipoUsuario.Entregador)))
-        {
-            var lojas = await db.Estabelecimentos
-                .Where(e => e.Entregadores.Any(x => x.UsuarioId == usuarioId && x.Ativo))
-                .Select(e => e.Id).ToListAsync();
-            foreach (var id in lojas)
-                await Groups.AddToGroupAsync(Context.ConnectionId, $"loja-{id}");
-        }
+            await Groups.AddToGroupAsync(Context.ConnectionId, GrupoEntregadores);
 
         await base.OnConnectedAsync();
     }
@@ -61,14 +57,16 @@ public class NotificadorSignalR(IHubContext<PedidosHub> hub, IServiceScopeFactor
         var db = scope.ServiceProvider.GetRequiredService<IXepaDb>();
         var p = await db.Pedidos.AsNoTracking()
             .Where(x => x.Id == pedidoId)
-            .Select(x => new { x.Status, x.ClienteId, x.Oferta.EstabelecimentoId })
+            .Select(x => new { x.Status, x.ClienteId, x.Oferta.EstabelecimentoId, x.TipoEntrega })
             .FirstOrDefaultAsync(ct);
         if (p is null)
             return;
 
         var evento = new { pedidoId, status = p.Status.ToString(), em = DateTimeOffset.UtcNow };
-        await hub.Clients.Groups($"pedido-{pedidoId}", $"usuario-{p.ClienteId}", $"loja-{p.EstabelecimentoId}")
-            .SendAsync("PedidoAlterado", evento, ct);
+        var grupos = new List<string> { $"pedido-{pedidoId}", $"usuario-{p.ClienteId}", $"loja-{p.EstabelecimentoId}" };
+        if (p.TipoEntrega == TipoEntrega.Entrega)
+            grupos.Add(PedidosHub.GrupoEntregadores);
+        await hub.Clients.Groups(grupos).SendAsync("PedidoAlterado", evento, ct);
     }
 
     public Task PosicaoEntregadorAsync(int pedidoId, double latitude, double longitude, CancellationToken ct) =>

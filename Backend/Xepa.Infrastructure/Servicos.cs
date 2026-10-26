@@ -65,7 +65,7 @@ public class MapasEstimados : IServicoMapas
     public Task<Rota> CalcularRotaAsync(Coordenada origem, Coordenada destino, CancellationToken ct)
     {
         var km = Geo.DistanciaKm(origem, destino) * FatorRuas;
-        return Task.FromResult(new Rota(Math.Round(km, 2), (int)Math.Ceiling(km / VelocidadeMediaKmH * 60)));
+        return Task.FromResult(new Rota(Math.Round(km, 2), (int)Math.Ceiling(km / VelocidadeMediaKmH * 60), [origem, destino]));
     }
 
     /// <summary>Sem Azure Maps não há geocodificação: o app envia as coordenadas do GPS.</summary>

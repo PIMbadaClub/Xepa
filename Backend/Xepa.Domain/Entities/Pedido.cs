@@ -17,6 +17,9 @@ public class Pedido : Entidade
     /// <summary>Preço da oferta no momento do pedido; não muda se a loja alterar a oferta depois (RN04).</summary>
     public decimal PrecoUnitario { get; set; }
     public decimal TaxaEntrega { get; set; }
+
+    /// <summary>Distância da rota loja → cliente, calculada na criação do pedido (mostrada ao entregador).</summary>
+    public double? DistanciaEntregaKm { get; set; }
     public decimal ValorTotal { get; set; }
 
     public TipoEntrega TipoEntrega { get; set; }

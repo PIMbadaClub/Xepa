@@ -46,7 +46,8 @@ public interface IGeradorToken
 
 public record Coordenada(double Latitude, double Longitude);
 
-public record Rota(double DistanciaKm, int MinutosEstimados);
+/// <summary>Rota pelas ruas. <paramref name="Pontos"/> é o traçado para desenhar no mapa (só a reta, na estimativa).</summary>
+public record Rota(double DistanciaKm, int MinutosEstimados, IReadOnlyList<Coordenada> Pontos);
 
 /// <summary>Geocodificação e rotas. A implementação de produção usa o Azure Maps.</summary>
 public interface IServicoMapas
