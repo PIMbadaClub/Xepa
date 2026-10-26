@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Xepa.Api.Seguranca;
 using Xepa.Infrastructure.Seguranca;
 using Xepa.Application.Contas;
+using Xepa.Application.Indicadores;
 
 namespace Xepa.Api.Controllers;
 
@@ -36,8 +37,13 @@ public class AuthController(ContaService contas) : ControllerBase
 [ApiController]
 [Route("api/usuarios")]
 [Authorize]
-public class UsuariosController(ContaService contas) : ControllerBase
+public class UsuariosController(ContaService contas, IndicadoresService indicadores) : ControllerBase
 {
     [HttpGet("me")]
     public Task<UsuarioDto> Me(CancellationToken ct) => contas.ObterAsync(User.UsuarioId(), ct);
+
+    /// <summary>Quanto o cliente já salvou do lixo e economizou com pedidos entregues.</summary>
+    [HttpGet("me/impacto")]
+    [Authorize(Roles = "Cliente")]
+    public Task<ImpactoClienteDto> Impacto(CancellationToken ct) => indicadores.DoClienteAsync(User.UsuarioId(), ct);
 }

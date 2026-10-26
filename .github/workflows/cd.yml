@@ -6,7 +6,7 @@
 #              AZURE_STORAGE_CONNECTION_STRING (Storage cujo site estático serve o app web)
 #              SQL_CONNECTION_STRING (usada só para aplicar as migrations)
 #   Variáveis: WEBAPP_API (ex.: xepa-api), WEBAPP_WEB (ex.: xepa-portal),
-#              API_URL (ex.: https://xepa-api.azurewebsites.net, embutida no build do app)
+#              API_URL e PORTAL_URL (ex.: https://xepa-api.azurewebsites.net, embutidas no build do app)
 # As configurações dos App Services (chaves, connection string, CORS) ficam no próprio Azure, não aqui.
 # Publica o código direto no App Service (sem container), então não precisa de Container Registry.
 name: CD
@@ -86,7 +86,7 @@ jobs:
           cache: true
 
       - run: flutter pub get
-      - run: flutter build web --release --dart-define=API_URL=${{ vars.API_URL }}
+      - run: flutter build web --release --dart-define=API_URL=${{ vars.API_URL }} --dart-define=PORTAL_URL=${{ vars.PORTAL_URL }}
 
       - name: Publicar no site estático do Storage
         run: az storage blob upload-batch -s build/web -d '$web' --overwrite -o none

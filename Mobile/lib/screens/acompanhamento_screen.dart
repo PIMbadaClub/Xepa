@@ -8,6 +8,7 @@ import '../api/tempo_real.dart';
 import '../models/oferta.dart';
 import '../models/pedido.dart';
 import '../theme.dart';
+import '../widgets/denuncia_widgets.dart';
 import '../widgets/mapa_entrega.dart';
 import '../widgets/oferta_widgets.dart';
 import '../widgets/xepa_logo.dart';
@@ -161,6 +162,10 @@ class _AcompanhamentoScreenState extends State<AcompanhamentoScreen> {
                   ),
                   const SizedBox(height: 12),
                   _Cartao(child: _LinhaDoTempo(pedido: p)),
+                  if (p.status != StatusPedido.aguardandoPagamento) ...[
+                    const SizedBox(height: 12),
+                    DenunciaDoPedido(pedidoId: p.id),
+                  ],
                   if (_erro != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
@@ -324,7 +329,9 @@ class _LinhaDoTempo extends StatelessWidget {
       );
     }
     final etapas = _etapas(pedido);
-    final atual = etapas.indexOf(pedido.status);
+    // Entregue: todas as etapas ficam concluídas (verdes), sem etapa "atual".
+    final concluido = pedido.status == StatusPedido.entregue;
+    final atual = concluido ? etapas.length : etapas.indexOf(pedido.status);
     return Column(
       children: [
         for (var i = 0; i < etapas.length; i++)

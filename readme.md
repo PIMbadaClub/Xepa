@@ -84,10 +84,17 @@ Para usar os serviços reais, configure (de preferência com `dotnet user-secret
 
 Tempo real: hub SignalR em `/hubs/pedidos` (status do pedido e posição do entregador).
 
+### Administração e impacto (Sprint 3)
+
+- **Cadastro de loja** em `/conta/cadastrar` no portal (o app leva para lá): a loja entra **pendente** e só aparece no app depois de aprovada (RN10).
+- **Portal administrativo** (`admin@xepa.test`): painel, aprovação de lojas (geocodifica o endereço na aprovação), denúncias, suspensão de lojas e de contas, e **repasses** (a XEPA retém 15% sobre os produtos e repassa o restante mais as taxas de entrega).
+- **Impacto e vendas** no portal da loja: kg salvos, economia gerada para os clientes, vendas por dia, mais vendidas e repasses.
+- **App:** favoritos (`/api/favoritos`), denúncia em cada pedido pago (`/api/pedidos/{id}/denuncias`) e "Sua xepa" no perfil (`/api/usuarios/me/impacto`).
+
 ### Configurando o App Mobile
 
 1. `cd Mobile` e `flutter pub get`
-2. Rodar apontando para a API: `flutter run --dart-define=API_URL=http://10.0.2.2:5000` (emulador Android)
+2. Rodar apontando para a API (e, se quiser, para o portal com `--dart-define=PORTAL_URL=...`): `flutter run --dart-define=API_URL=http://10.0.2.2:5000` (emulador Android)
    ou `flutter run -d chrome --dart-define=API_URL=http://localhost:5000` (navegador)
 3. Testes: `flutter analyze` e `flutter test`
 

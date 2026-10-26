@@ -15,6 +15,8 @@ public interface IXepaDb
     DbSet<Pagamento> Pagamentos { get; }
     DbSet<Favorito> Favoritos { get; }
     DbSet<TokenRenovacao> TokensRenovacao { get; }
+    DbSet<Denuncia> Denuncias { get; }
+    DbSet<Repasse> Repasses { get; }
 
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 

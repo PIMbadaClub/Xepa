@@ -38,6 +38,10 @@ for etapa in "${etapas[@]}"; do
   case "$etapa" in
     banco)
       echo "== Migrations no Azure SQL (com dados de demonstração)"
+      # O IP da máquina muda; sem atualizar a regra o SQL recusa a conexão (erro 40615).
+      MEU_IP=$(curl -fsS https://api.ipify.org)
+      az sql server firewall-rule create -g "$RG" -s "$SQL_SERVIDOR" -n MaquinaLocal \
+        --start-ip-address "$MEU_IP" --end-ip-address "$MEU_IP" -o none
       # Em Development o EF roda o seeding (usuários de teste, padaria e ofertas). Release para não
       # disputar os arquivos com uma API rodando localmente em Debug.
       (cd "$RAIZ/Backend" && ASPNETCORE_ENVIRONMENT=Development dotnet ef database update \
@@ -47,7 +51,7 @@ for etapa in "${etapas[@]}"; do
     portal) echo "== Portal"; publicar_dotnet Xepa.Web "$WEBAPP_WEB" ;;
     app)
       echo "== App web (site estático do Storage)"
-      (cd "$RAIZ/Mobile" && "$FLUTTER" build web --release --dart-define=API_URL="$URL_API")
+      (cd "$RAIZ/Mobile" && "$FLUTTER" build web --release --dart-define=API_URL="$URL_API" --dart-define=PORTAL_URL="$URL_WEB")
       az storage blob upload-batch -s "$RAIZ/Mobile/build/web" -d '$web' --overwrite \
         --connection-string "$BLOB" -o none
       ;;

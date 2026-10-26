@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api/api.dart';
+import '../api/favoritos.dart';
 import '../api/tempo_real.dart';
 import '../models/auth.dart';
 import '../models/oferta.dart';
@@ -198,6 +199,7 @@ class PerfilScreen extends StatelessWidget {
 
   Future<void> _sair(BuildContext context) async {
     await AuthService.instance.sair();
+    Favoritos.instance.limpar();
     if (context.mounted) {
       Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
     }
@@ -252,6 +254,8 @@ class PerfilScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+          const _ImpactoCliente(),
+          const SizedBox(height: 16),
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -276,6 +280,75 @@ class PerfilScreen extends StatelessWidget {
           const Center(
             child: Text('Comida boa não vai pro lixo', style: TextStyle(color: XepaCores.textoSecundario, fontSize: 12)),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "Sua xepa": quanto o cliente já salvou do lixo e economizou.
+class _ImpactoCliente extends StatefulWidget {
+  const _ImpactoCliente();
+
+  @override
+  State<_ImpactoCliente> createState() => _ImpactoClienteState();
+}
+
+class _ImpactoClienteState extends State<_ImpactoCliente> {
+  Map<String, dynamic>? _impacto;
+
+  @override
+  void initState() {
+    super.initState();
+    Api.instance.get<Map<String, dynamic>>('/api/usuarios/me/impacto').then((j) {
+      if (mounted) setState(() => _impacto = j);
+    }).catchError((_) {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final i = _impacto;
+    final pedidos = (i?['pedidos'] as int?) ?? 0;
+    final kg = (i?['kgSalvos'] as num?)?.toDouble() ?? 0;
+    final economia = (i?['economia'] as num?)?.toDouble() ?? 0;
+
+    Widget numero(String valor, String rotulo) => Expanded(
+          child: Column(
+            children: [
+              Text(valor, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: XepaCores.verdeTexto)),
+              const SizedBox(height: 2),
+              Text(rotulo, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11.5, color: XepaCores.verdeTexto)),
+            ],
+          ),
+        );
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: XepaCores.verdeClaro, borderRadius: BorderRadius.circular(XepaRaios.cartao)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.eco_rounded, color: XepaCores.verde, size: 20),
+              SizedBox(width: 6),
+              Text('Sua xepa', style: TextStyle(fontWeight: FontWeight.w800, color: XepaCores.verdeTexto, fontSize: 15)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (i == null)
+            const Center(child: Padding(padding: EdgeInsets.all(8), child: TomateCarregando(tamanho: 24)))
+          else if (pedidos == 0)
+            const Text('Seu primeiro resgate vai aparecer aqui: quanta comida você salvou e quanto economizou.',
+                style: TextStyle(color: XepaCores.verdeTexto, height: 1.4))
+          else
+            Row(
+              children: [
+                numero('${formatarDecimal(kg)} kg', 'de comida salva do lixo'),
+                numero(formatarPreco(economia), 'economizados'),
+                numero('$pedidos', pedidos == 1 ? 'resgate' : 'resgates'),
+              ],
+            ),
         ],
       ),
     );

@@ -4,7 +4,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Xepa.Application;
+using Xepa.Application.Administracao;
 using Xepa.Application.Contas;
+using Xepa.Application.Indicadores;
 using Xepa.Application.Ofertas;
 using Xepa.Application.Pagamentos;
 using Xepa.Application.Pedidos;
@@ -40,6 +42,11 @@ public static class DependencyInjection
         services.AddScoped<EntregaService>();
         services.AddScoped<EnderecoService>();
         services.AddScoped<PagamentoService>();
+        services.AddScoped<DenunciaService>();
+        services.AddScoped<FavoritoService>();
+        services.AddScoped<IndicadoresService>();
+        services.AddScoped<AdminService>();
+        services.AddScoped<CadastroLojaService>();
 
         services.AddSingleton<IHasherSenha, HasherSenha>();
         services.AddScoped<IReservaPedidos, ReservaPedidosSql>();

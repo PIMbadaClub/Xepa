@@ -109,7 +109,7 @@ done
 URL_API="https://$WEBAPP_API.azurewebsites.net"
 URL_WEB="https://$WEBAPP_WEB.azurewebsites.net"
 
-echo "== Configurações (homologação: Mercado Pago simulado até haver credenciais)"
+echo "== Configurações (homologação)"
 az webapp config appsettings set -g "$RG" -n "$WEBAPP_API" -o none --settings \
   ASPNETCORE_ENVIRONMENT=Staging \
   "ConnectionStrings__Xepa=$CONEXAO" \
@@ -119,12 +119,20 @@ az webapp config appsettings set -g "$RG" -n "$WEBAPP_API" -o none --settings \
   "Mapas__AzureMapsChave=$MAPAS_CHAVE" \
   "Armazenamento__BlobConnectionString=$BLOB" \
   "MercadoPago__UrlNotificacao=$URL_API/api/pagamentos/webhook"
+# Mercado Pago: com MP_ACCESS_TOKEN no xepa.env a API usa o gateway real (credenciais de teste); sem ele, o simulado.
+if [[ -n "${MP_ACCESS_TOKEN:-}" ]]; then
+  az webapp config appsettings set -g "$RG" -n "$WEBAPP_API" -o none --settings \
+    "MercadoPago__AccessToken=$MP_ACCESS_TOKEN" \
+    "MercadoPago__SegredoWebhook=${MP_SEGREDO_WEBHOOK:-}" \
+    "MercadoPago__UrlRetorno=$URL_APP"
+fi
 az webapp config appsettings set -g "$RG" -n "$WEBAPP_WEB" -o none --settings \
   ASPNETCORE_ENVIRONMENT=Staging \
   "ConnectionStrings__Xepa=$CONEXAO" \
   "Jwt__Chave=$JWT_CHAVE" \
   "Api__UrlBase=$URL_API/" \
   "Api__UrlPublica=$URL_API" \
+  "Mapas__AzureMapsChave=$MAPAS_CHAVE" \
   "Armazenamento__BlobConnectionString=$BLOB"
 
 # Valores derivados, lidos pelo publicar.sh. Guardados junto dos segredos, fora do Git.

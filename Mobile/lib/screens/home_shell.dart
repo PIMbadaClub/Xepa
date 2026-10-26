@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../api/favoritos.dart';
 import '../theme.dart';
+import 'favoritos_screen.dart';
 import 'home_screen.dart';
 import 'pedidos_screen.dart';
 
@@ -14,11 +16,17 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _indice = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    Favoritos.instance.carregar();
+  }
+
   static const _telas = <Widget>[
     HomeScreen(),
     _EmBreve(titulo: 'Mapa', icone: Icons.map_outlined),
     PedidosScreen(),
-    _EmBreve(titulo: 'Favoritos', icone: Icons.favorite_border),
+    FavoritosScreen(),
     PerfilScreen(),
   ];
 

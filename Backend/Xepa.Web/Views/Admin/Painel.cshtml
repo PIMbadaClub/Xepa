@@ -1,0 +1,31 @@
+@model PainelAdminDto
+@{
+    ViewData["Title"] = "Painel";
+}
+<h1>Painel da XEPA</h1>
+<p class="sub">O que precisa de atenção hoje e o impacto da plataforma.</p>
+
+<div class="indicadores">
+    <a class="indicador @(Model.LojasPendentes > 0 ? "alerta" : "")" asp-action="Lojas" asp-route-status="@StatusCadastro.Pendente">
+        <span>Lojas aguardando aprovação</span>
+        <strong>@Model.LojasPendentes</strong>
+    </a>
+    <a class="indicador @(Model.DenunciasAbertas > 0 ? "alerta" : "")" asp-action="Denuncias">
+        <span>Denúncias em análise</span>
+        <strong>@Model.DenunciasAbertas</strong>
+    </a>
+    <a class="indicador" asp-action="Repasses">
+        <span>Repasses a pagar</span>
+        <strong>@Rotulos.Dinheiro(Model.RepassesAPagar)</strong>
+    </a>
+    <div class="indicador">
+        <span>Pedidos pagos nas últimas 24 h</span>
+        <strong>@Model.PedidosHoje</strong>
+        <small>@Rotulos.Dinheiro(Model.VendasHoje) em vendas</small>
+    </div>
+    <div class="indicador verde">
+        <span>Comida salva em 30 dias</span>
+        <strong>@Rotulos.Kg(Model.KgSalvos30Dias)</strong>
+        <small>pedidos entregues</small>
+    </div>
+</div>

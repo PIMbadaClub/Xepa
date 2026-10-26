@@ -24,6 +24,71 @@ namespace Xepa.Infrastructure.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Xepa.Domain.Entities.Denuncia", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset?>("AtualizadoEm")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("AutorId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Descricao")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("EstabelecimentoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Motivo")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("PedidoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Resposta")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTimeOffset?>("TratadaEm")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int?>("TratadaPorId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AutorId");
+
+                    b.HasIndex("EstabelecimentoId");
+
+                    b.HasIndex("PedidoId")
+                        .IsUnique()
+                        .HasFilter("[Status] = 'Aberta'");
+
+                    b.HasIndex("TratadaPorId");
+
+                    b.HasIndex("Status", "CriadoEm");
+
+                    b.ToTable("Denuncias");
+                });
+
             modelBuilder.Entity("Xepa.Domain.Entities.EnderecoUsuario", b =>
                 {
                     b.Property<int>("Id")
@@ -467,6 +532,9 @@ namespace Xepa.Infrastructure.Data.Migrations
                     b.Property<int>("Quantidade")
                         .HasColumnType("int");
 
+                    b.Property<int?>("RepasseId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -547,6 +615,8 @@ namespace Xepa.Infrastructure.Data.Migrations
 
                     b.HasIndex("OfertaId");
 
+                    b.HasIndex("RepasseId");
+
                     b.HasIndex("Status");
 
                     b.ToTable("Pedidos", t =>
@@ -619,6 +689,52 @@ namespace Xepa.Infrastructure.Data.Migrations
                     b.ToTable("RastreiosEntrega", (string)null);
                 });
 
+            modelBuilder.Entity("Xepa.Domain.Entities.Repasse", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset?>("AtualizadoEm")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<decimal>("Comissao")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("EstabelecimentoId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("PagoEm")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("QuantidadePedidos")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("TaxasEntrega")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("ValorLiquido")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<decimal>("ValorVendas")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("decimal(10,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EstabelecimentoId", "CriadoEm");
+
+                    b.ToTable("Repasses");
+                });
+
             modelBuilder.Entity("Xepa.Domain.Entities.TokenRenovacao", b =>
                 {
                     b.Property<int>("Id")
@@ -666,6 +782,9 @@ namespace Xepa.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset?>("AtualizadoEm")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<bool>("Bloqueado")
+                        .HasColumnType("bit");
+
                     b.Property<DateTimeOffset>("CriadoEm")
                         .HasColumnType("datetimeoffset");
 
@@ -699,6 +818,40 @@ namespace Xepa.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("Usuarios");
+                });
+
+            modelBuilder.Entity("Xepa.Domain.Entities.Denuncia", b =>
+                {
+                    b.HasOne("Xepa.Domain.Entities.Usuario", "Autor")
+                        .WithMany()
+                        .HasForeignKey("AutorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Xepa.Domain.Entities.Estabelecimento", "Estabelecimento")
+                        .WithMany()
+                        .HasForeignKey("EstabelecimentoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Xepa.Domain.Entities.Pedido", "Pedido")
+                        .WithMany()
+                        .HasForeignKey("PedidoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Xepa.Domain.Entities.Usuario", "TratadaPor")
+                        .WithMany()
+                        .HasForeignKey("TratadaPorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Autor");
+
+                    b.Navigation("Estabelecimento");
+
+                    b.Navigation("Pedido");
+
+                    b.Navigation("TratadaPor");
                 });
 
             modelBuilder.Entity("Xepa.Domain.Entities.EnderecoUsuario", b =>
@@ -802,11 +955,18 @@ namespace Xepa.Infrastructure.Data.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Xepa.Domain.Entities.Repasse", "Repasse")
+                        .WithMany("Pedidos")
+                        .HasForeignKey("RepasseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Cliente");
 
                     b.Navigation("Entregador");
 
                     b.Navigation("Oferta");
+
+                    b.Navigation("Repasse");
                 });
 
             modelBuilder.Entity("Xepa.Domain.Entities.PedidoHistoricoStatus", b =>
@@ -827,6 +987,17 @@ namespace Xepa.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Pedido");
+                });
+
+            modelBuilder.Entity("Xepa.Domain.Entities.Repasse", b =>
+                {
+                    b.HasOne("Xepa.Domain.Entities.Estabelecimento", "Estabelecimento")
+                        .WithMany()
+                        .HasForeignKey("EstabelecimentoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Estabelecimento");
                 });
 
             modelBuilder.Entity("Xepa.Domain.Entities.TokenRenovacao", b =>
@@ -859,6 +1030,11 @@ namespace Xepa.Infrastructure.Data.Migrations
                     b.Navigation("Pagamentos");
 
                     b.Navigation("Rastreios");
+                });
+
+            modelBuilder.Entity("Xepa.Domain.Entities.Repasse", b =>
+                {
+                    b.Navigation("Pedidos");
                 });
 
             modelBuilder.Entity("Xepa.Domain.Entities.Usuario", b =>
