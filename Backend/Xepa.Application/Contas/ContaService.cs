@@ -31,7 +31,7 @@ public class ContaService(IXepaDb db, IHasherSenha hasher, CredenciaisService cr
 {
     public static readonly TimeSpan ValidadeRenovacao = TimeSpan.FromDays(7);
 
-    public async Task<SessaoDto> RegistrarClienteAsync(RegistrarRequest request, CancellationToken ct)
+    public async Task<SessaoDto> RegistrarAsync(RegistrarRequest request, CancellationToken ct)
     {
         var email = CredenciaisService.NormalizarEmail(request.Email);
         if (await db.Usuarios.AnyAsync(u => u.Email == email, ct))
@@ -42,7 +42,8 @@ public class ContaService(IXepaDb db, IHasherSenha hasher, CredenciaisService cr
             Nome = request.Nome.Trim(),
             Email = email,
             Telefone = request.Telefone,
-            Tipo = TipoUsuario.Cliente,
+            Tipo = request.Tipo,
+            Placa = request.Tipo == TipoUsuario.Entregador ? request.Placa!.Replace("-", "").ToUpperInvariant() : null,
             SenhaHash = ""
         };
         usuario.SenhaHash = hasher.Gerar(usuario, request.Senha);

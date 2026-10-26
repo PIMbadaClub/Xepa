@@ -83,13 +83,17 @@ public class PedidoTests
     }
 
     [Fact]
-    public void Pedido_de_entrega_nao_fica_pronto_para_retirada()
+    public void Entrega_so_sai_depois_de_a_loja_marcar_pronto()
     {
         var pedido = NovoPedido(TipoEntrega.Entrega, StatusPedido.EmPreparo);
 
-        Assert.Throws<RegraDeNegocioException>(() => pedido.AvancarStatus(StatusPedido.ProntoParaRetirada));
+        Assert.Throws<RegraDeNegocioException>(() => pedido.AvancarStatus(StatusPedido.SaiuParaEntrega));
+        pedido.AvancarStatus(StatusPedido.ProntoParaRetirada);
+        Assert.Throws<RegraDeNegocioException>(() => pedido.AvancarStatus(StatusPedido.Entregue));
+        Assert.Throws<RegraDeNegocioException>(() => pedido.ConfirmarRetirada("4821"));
         pedido.AvancarStatus(StatusPedido.SaiuParaEntrega);
-        Assert.Equal(StatusPedido.SaiuParaEntrega, pedido.Status);
+        pedido.AvancarStatus(StatusPedido.Entregue);
+        Assert.Equal(StatusPedido.Entregue, pedido.Status);
     }
 
     [Fact]

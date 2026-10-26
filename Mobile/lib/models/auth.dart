@@ -1,10 +1,11 @@
+import '../api/cidade.dart';
 import '../api/favoritos.dart';
 import '../api/notificacoes.dart';
 import '../api/api.dart';
 import '../api/tempo_real.dart';
 
 /// Tipos de conta escolhidos na tela de cadastro.
-enum TipoConta { cliente, restaurante }
+enum TipoConta { cliente, restaurante, entregador }
 
 /// Perfil do usuário logado, como a API devolve.
 enum PerfilUsuario { cliente, estabelecimento, entregador, administrador }
@@ -40,6 +41,7 @@ class CadastroDados {
     required this.celular,
     required this.senha,
     this.cnpj,
+    this.placa,
   });
 
   final TipoConta tipo;
@@ -53,6 +55,9 @@ class CadastroDados {
 
   /// Somente dígitos. Preenchido apenas para restaurantes.
   final String? cnpj;
+
+  /// Placa da moto, só para entregador (ex.: ABC1D23).
+  final String? placa;
   final String senha;
 }
 
@@ -125,6 +130,8 @@ class AuthService {
         'email': dados.email,
         'senha': dados.senha,
         'telefone': dados.celular,
+        'tipo': dados.tipo == TipoConta.entregador ? 'Entregador' : 'Cliente',
+        if (dados.tipo == TipoConta.entregador) 'placa': dados.placa,
       });
       return await _abrir(sessao);
     } on ApiException catch (e) {
@@ -149,6 +156,7 @@ class AuthService {
     Notificacoes.instance.parar();
     PedidosAtivos.instance.parar();
     Favoritos.instance.limpar();
+    CidadeCliente.instance.limpar();
     await TempoReal.instance.desconectar();
     await Api.instance.limparSessao();
     _usuario = null;

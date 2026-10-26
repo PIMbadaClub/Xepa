@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 
 import '../api/api.dart';
+import '../api/cidade.dart';
 import '../api/localizacao.dart';
 import '../models/oferta.dart';
 import '../theme.dart';
@@ -20,14 +21,18 @@ class MapaScreen extends StatefulWidget {
 }
 
 class _MapaScreenState extends State<MapaScreen> {
-  /// Av. Paulista: centro usado quando não há GPS nem ofertas.
-  static const _centroPadrao = LatLng(-23.5614, -46.6559);
+  /// Centro de Limeira: usado quando não há GPS, endereço nem ofertas.
+  static const _centroPadrao = LatLng(-22.5647, -47.4017);
 
   final _mapa = MapController();
   final _paginas = PageController(viewportFraction: 0.88);
 
   ConfigMapa? _config;
   LatLng? _eu;
+  String? _cidade;
+
+  /// Endereço principal: centro do mapa quando não há GPS.
+  LatLng? _casa;
   List<Oferta>? _ofertas;
   String? _erro;
   int _selecionada = 0;
@@ -49,8 +54,11 @@ class _MapaScreenState extends State<MapaScreen> {
 
   Future<void> _carregar() async {
     final posicao = await Localizacao.atual();
+    final cidade = await CidadeCliente.instance.cidade();
+    final casa = await CidadeCliente.instance.ponto();
     try {
       final pagina = await Api.instance.get<Map<String, dynamic>>('/api/ofertas', query: {
+        if (cidade != null) 'cidade': cidade,
         if (posicao != null) 'latitude': posicao.latitude,
         if (posicao != null) 'longitude': posicao.longitude,
         'tamanhoPagina': 50,
@@ -62,6 +70,8 @@ class _MapaScreenState extends State<MapaScreen> {
       if (!mounted) return;
       setState(() {
         _eu = posicao == null ? null : LatLng(posicao.latitude, posicao.longitude);
+        _cidade = cidade;
+        _casa = casa;
         _ofertas = ofertas;
         _selecionada = 0;
         _erro = null;
@@ -84,8 +94,8 @@ class _MapaScreenState extends State<MapaScreen> {
   }
 
   void _centralizarEmMim() {
-    if (_eu != null) {
-      _mapa.move(_eu!, 15);
+    if (_eu != null || _casa != null) {
+      _mapa.move(_eu ?? _casa!, 15);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ative a localização para ver as ofertas perto de você.')),
@@ -109,14 +119,16 @@ class _MapaScreenState extends State<MapaScreen> {
       return const Center(child: TomateCarregando(texto: 'Abrindo o mapa...'));
     }
 
-    final pontos = [...ofertas.map(_ponto), if (_eu != null) _eu!];
+    // Enquadra as lojas e a pessoa (GPS ou, sem ele, o endereço principal).
+    final referencia = _eu ?? _casa;
+    final pontos = [...ofertas.map(_ponto), if (referencia != null) referencia];
 
     return Stack(
       children: [
         FlutterMap(
           mapController: _mapa,
           options: MapOptions(
-            initialCenter: _eu ?? (ofertas.isNotEmpty ? _ponto(ofertas.first) : _centroPadrao),
+            initialCenter: referencia ?? (ofertas.isNotEmpty ? _ponto(ofertas.first) : _centroPadrao),
             initialZoom: 14,
             initialCameraFit: pontos.length > 1
                 ? CameraFit.coordinates(
@@ -130,6 +142,20 @@ class _MapaScreenState extends State<MapaScreen> {
           children: [
             TileLayer(urlTemplate: config.urlTiles, userAgentPackageName: 'app.xepa'),
             MarkerLayer(markers: [
+              if (_eu == null && _casa != null)
+                Marker(
+                  point: _casa!,
+                  width: 34,
+                  height: 34,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: XepaCores.verde,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
+                    ),
+                    child: const Icon(Icons.home_rounded, color: Colors.white, size: 16),
+                  ),
+                ),
               if (_eu != null)
                 Marker(
                   point: _eu!,
@@ -183,7 +209,7 @@ class _MapaScreenState extends State<MapaScreen> {
                           child: Text(
                             ofertas.isEmpty
                                 ? 'Nenhuma oferta no mapa agora'
-                                : '${ofertas.length} ${ofertas.length == 1 ? 'oferta' : 'ofertas'} ${_eu == null ? 'disponíveis' : 'perto de você'}',
+                                : '${ofertas.length} ${ofertas.length == 1 ? 'oferta' : 'ofertas'} ${_cidade != null ? 'em $_cidade' : (_eu == null ? 'disponíveis' : 'perto de você')}',
                             style: const TextStyle(fontWeight: FontWeight.w800),
                           ),
                         ),
@@ -275,7 +301,7 @@ class _Pino extends StatelessWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  XepaLogo(tamanho: 18, comX: false),
+                  XepaLogo(tamanho: 18),
                   const SizedBox(width: 4),
                   Text(formatarPreco(preco), style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5, color: texto)),
                 ],

@@ -21,6 +21,10 @@ enum StatusPedido {
 
   bool get emAndamento => this != entregue && this != cancelado;
 
+  /// Rótulo do status do ponto de vista do cliente; na entrega, "pronto" é pronto para o entregador buscar.
+  String rotuloPara({required bool entrega}) =>
+      entrega && this == prontoParaRetirada ? 'Pronto · aguardando o entregador' : rotulo;
+
   /// Cliente só cancela antes de a loja confirmar (RN05).
   bool get cancelavel => this == aguardandoPagamento || this == pendente;
 
@@ -33,12 +37,13 @@ enum StatusPedido {
 }
 
 class EnderecoPedido {
-  const EnderecoPedido({required this.logradouro, required this.numero, required this.bairro, this.latitude, this.longitude});
+  const EnderecoPedido({required this.logradouro, required this.numero, required this.bairro, this.cidade, this.latitude, this.longitude});
 
   factory EnderecoPedido.fromJson(Map<String, dynamic> j) => EnderecoPedido(
         logradouro: j['logradouro'] as String,
         numero: j['numero'] as String,
         bairro: j['bairro'] as String,
+        cidade: j['cidade'] as String?,
         latitude: (j['latitude'] as num?)?.toDouble(),
         longitude: (j['longitude'] as num?)?.toDouble(),
       );
@@ -46,6 +51,7 @@ class EnderecoPedido {
   final String logradouro;
   final String numero;
   final String bairro;
+  final String? cidade;
   final double? latitude;
   final double? longitude;
 

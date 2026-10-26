@@ -56,8 +56,8 @@ class Corrida {
   final int minutos;
   final bool minha, coletada;
 
-  /// A loja ainda não começou a preparar: o entregador pode ir indo, mas só coleta depois.
-  bool get lojaPreparando => status == 'EmPreparo';
+  /// A loja marcou o pedido como pronto: só então dá para coletar.
+  bool get pronto => status == 'ProntoParaRetirada';
 }
 
 /// Modo entregador, no estilo dos apps de delivery: ganhos do dia, corridas perto com valor e km, aceitar.
@@ -387,7 +387,10 @@ class _CartaoCorrida extends StatelessWidget {
                       ),
                     ),
                     if (c.minha)
-                      _Etiqueta(texto: c.coletada ? 'Levando ao cliente' : 'Indo até a loja', cor: XepaCores.tomate),
+                      _Etiqueta(
+                        texto: c.coletada ? 'Levando ao cliente' : (c.pronto ? 'Pronto para coletar' : 'Indo até a loja'),
+                        cor: c.pronto && !c.coletada ? XepaCores.verde : XepaCores.tomate,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 14),
@@ -540,11 +543,16 @@ class _CorridaScreenState extends State<CorridaScreen> {
     });
     _carregar();
     _timer = Timer.periodic(_intervaloGps, (_) => _enviarGps());
+    // A loja marca "pronto" pelo portal: o aviso chega em tempo real e libera o botão de coleta.
+    _avisos = TempoReal.instance.pedidoAlterado.where((e) => e['pedidoId'] == widget.pedidoId).listen((_) => _carregar());
   }
+
+  StreamSubscription<Map<String, dynamic>>? _avisos;
 
   @override
   void dispose() {
     _timer?.cancel();
+    _avisos?.cancel();
     super.dispose();
   }
 
@@ -864,11 +872,26 @@ class _CorridaScreenState extends State<CorridaScreen> {
                 const SizedBox(height: 8),
                 Text('Obs.: ${c.observacao}', style: const TextStyle(fontStyle: FontStyle.italic, fontSize: 13)),
               ],
-              if (indoNaLoja && !c.lojaPreparando)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: Text('A loja ainda vai começar o preparo. Pode ir indo!',
-                      style: TextStyle(color: XepaCores.paoEscuro, fontWeight: FontWeight.w700, fontSize: 13)),
+              if (indoNaLoja)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      Icon(c.pronto ? Icons.check_circle_rounded : Icons.hourglass_top_rounded,
+                          size: 16, color: c.pronto ? XepaCores.verde : XepaCores.paoEscuro),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          c.pronto ? 'Pedido pronto na loja. Pode coletar!' : 'A loja ainda está preparando. Pode ir indo!',
+                          style: TextStyle(
+                            color: c.pronto ? XepaCores.verdeTexto : XepaCores.paoEscuro,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               const SizedBox(height: 12),
               Row(
@@ -888,9 +911,9 @@ class _CorridaScreenState extends State<CorridaScreen> {
                   Expanded(
                     flex: 2,
                     child: FilledButton(
-                      onPressed: _ocupado ? null : (indoNaLoja ? _coletar : _finalizar),
+                      onPressed: _ocupado || (indoNaLoja && !c.pronto) ? null : (indoNaLoja ? _coletar : _finalizar),
                       style: indoNaLoja ? null : FilledButton.styleFrom(backgroundColor: XepaCores.verde),
-                      child: Text(indoNaLoja ? 'Coletei o pedido' : 'Finalizar entrega'),
+                      child: Text(indoNaLoja ? (c.pronto ? 'Coletei o pedido' : 'Aguardando a loja') : 'Finalizar entrega'),
                     ),
                   ),
                 ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/api.dart';
+import '../api/cidade.dart';
 import '../api/notificacoes.dart';
 import '../models/auth.dart';
 import '../models/pedido.dart';
@@ -36,7 +37,8 @@ class _PerfilScreenState extends State<PerfilScreen> {
     if (confirmar != true) return;
     await AuthService.instance.sair();
     if (mounted) {
-      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
+      Navigator.of(context, rootNavigator: true)
+          .pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
     }
   }
 
@@ -436,7 +438,10 @@ class _EnderecosScreenState extends State<EnderecosScreen> {
       isScrollControlled: true,
       builder: (_) => const FormEndereco(),
     );
-    if (criado != null) _carregar();
+    if (criado != null) {
+      CidadeCliente.instance.limpar();
+      _carregar();
+    }
   }
 
   Future<void> _excluir(EnderecoSalvo e) async {
@@ -454,6 +459,7 @@ class _EnderecosScreenState extends State<EnderecosScreen> {
     if (confirmar != true) return;
     try {
       await Api.instance.delete<void>('/api/enderecos/${e.id}');
+      CidadeCliente.instance.limpar();
       _carregar();
     } on ApiException catch (ex) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(ex.mensagem)));

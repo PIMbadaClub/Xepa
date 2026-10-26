@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api/api.dart';
+import '../api/cidade.dart';
 import '../api/localizacao.dart';
 import '../api/notificacoes.dart';
 import '../models/auth.dart';
@@ -25,6 +26,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _busca = '';
   Timer? _atrasoBusca;
   Posicao? _posicao;
+  String? _cidade;
   List<Oferta>? _ofertas;
   String? _erro;
 
@@ -42,6 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _iniciar() async {
     _posicao = await Localizacao.atual();
+    _cidade = await CidadeCliente.instance.cidade();
     await _carregar();
   }
 
@@ -51,6 +54,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final pagina = await Api.instance.get<Map<String, dynamic>>('/api/ofertas', query: {
         if (_busca.trim().isNotEmpty) 'busca': _busca.trim(),
         if (_categoria != null) 'categoria': _categoria!.nomeApi,
+        if (_cidade != null) 'cidade': _cidade,
         if (_posicao != null) 'latitude': _posicao!.latitude,
         if (_posicao != null) 'longitude': _posicao!.longitude,
         'tamanhoPagina': 50,
@@ -105,7 +109,7 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 10, 8, 0),
-              child: _Cabecalho(comLocalizacao: _posicao != null),
+              child: _Cabecalho(comLocalizacao: _posicao != null, cidade: _cidade),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
@@ -217,9 +221,10 @@ class _TituloSecao extends StatelessWidget {
 }
 
 class _Cabecalho extends StatelessWidget {
-  const _Cabecalho({required this.comLocalizacao});
+  const _Cabecalho({required this.comLocalizacao, this.cidade});
 
   final bool comLocalizacao;
+  final String? cidade;
 
   @override
   Widget build(BuildContext context) {
@@ -240,7 +245,7 @@ class _Cabecalho extends StatelessWidget {
                   size: 14, color: XepaCores.tomate),
               const SizedBox(width: 4),
               Text(
-                comLocalizacao ? 'Perto de mim' : 'Todas as lojas',
+                cidade ?? (comLocalizacao ? 'Perto de mim' : 'Todas as lojas'),
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
               ),
             ],

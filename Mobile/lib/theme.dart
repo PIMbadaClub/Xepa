@@ -161,19 +161,6 @@ material.ThemeData xepaTema() {
   );
 }
 
-/// Fonte da marca (usada no nome "xepa").
-material.TextStyle fonteMarca({
-  double tamanho = 22,
-  material.Color cor = XepaCores.tomate,
-}) {
-  return GoogleFonts.fredoka(
-    fontSize: tamanho,
-    fontWeight: material.FontWeight.w600,
-    color: cor,
-    letterSpacing: -0.3,
-  );
-}
-
 String formatarPreco(double valor) =>
     'R\$ ${valor.toStringAsFixed(2).replaceAll('.', ',')}';
 

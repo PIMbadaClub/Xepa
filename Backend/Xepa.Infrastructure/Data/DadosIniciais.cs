@@ -24,22 +24,23 @@ public static class DadosIniciais
         if (await db.Usuarios.AnyAsync(ct))
             return;
 
-        // Coordenadas em volta da Av. Paulista (-23.5614, -46.6559), a 0,4 / 0,9 / 1,2 / 1,6 km dela.
+        // Centro de Limeira-SP; coordenadas geocodificadas no Azure Maps (os nomes das lojas são fictícios).
         var padaria = NovoEstabelecimento("Padaria Pão Dourado", CategoriaEstabelecimento.Padaria, "padaria@xepa.test",
-            "Rua das Palmeiras", "120", "Bela Vista", -23.5578, -46.6559);
+            "Rua Senador Vergueiro", "400", "Centro", -22.56257, -47.40107);
         var cantina = NovoEstabelecimento("Cantina da Nona", CategoriaEstabelecimento.Restaurante, "cantina@xepa.test",
-            "Rua do Comércio", "45", "Consolação", -23.5614, -46.6471);
+            "Rua Santa Cruz", "300", "Centro", -22.56065, -47.40049);
         var barraca = NovoEstabelecimento("Barraca do Seu Zé", CategoriaEstabelecimento.Feira, "feira@xepa.test",
-            "Praça da Feira", "s/n", "Paraíso", -23.5722, -46.6559);
+            "Rua Boa Morte", "400", "Centro", -22.56581, -47.40154);
         var mercadinho = NovoEstabelecimento("Mercadinho Bom Preço", CategoriaEstabelecimento.Mercado, "mercado@xepa.test",
-            "Avenida Central", "800", "Jardins", -23.5614, -46.6716);
+            "Rua Carlos Gomes", "400", "Centro", -22.56446, -47.40171);
 
         var cliente = NovoUsuario("Cliente Demo", "cliente@xepa.test", TipoUsuario.Cliente);
         cliente.Enderecos.Add(new EnderecoUsuario
         {
             Apelido = "Casa",
             Principal = true,
-            Endereco = EnderecoSp("Rua das Flores", "100", "Bela Vista", -23.5614, -46.6559)
+            // A uns 3 km do centro: as entregas têm rota e taxa realistas.
+            Endereco = EnderecoLimeira("Rua Pedro Zaccaria", "300", "Jardim São Paulo", -22.55764, -47.42720, "13484000")
         });
 
         var admin = NovoUsuario("Administrador XEPA", "admin@xepa.test", TipoUsuario.Administrador);
@@ -89,16 +90,17 @@ public static class DadosIniciais
         Categoria = categoria,
         StatusCadastro = StatusCadastro.Aprovado,
         Usuario = NovoUsuario(nome, email, TipoUsuario.Estabelecimento),
-        Endereco = EnderecoSp(logradouro, numero, bairro, latitude, longitude)
+        Endereco = EnderecoLimeira(logradouro, numero, bairro, latitude, longitude)
     };
 
-    private static Endereco EnderecoSp(string logradouro, string numero, string bairro, double latitude, double longitude) => new()
+    private static Endereco EnderecoLimeira(string logradouro, string numero, string bairro, double latitude, double longitude,
+        string cep = "13480000") => new()
     {
-        Cep = "01310000",
+        Cep = cep,
         Logradouro = logradouro,
         Numero = numero,
         Bairro = bairro,
-        Cidade = "São Paulo",
+        Cidade = "Limeira",
         Uf = "SP",
         Latitude = latitude,
         Longitude = longitude

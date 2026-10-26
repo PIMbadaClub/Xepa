@@ -12,6 +12,10 @@ public class FiltroOfertas : IValidatableObject
 
     public CategoriaEstabelecimento? Categoria { get; init; }
 
+    /// <summary>Só lojas desta cidade (o app manda a cidade do endereço principal do cliente).</summary>
+    [MaxLength(80)]
+    public string? Cidade { get; init; }
+
     /// <summary>Só as ofertas de uma loja (tela de favoritos do app).</summary>
     public int? EstabelecimentoId { get; init; }
 

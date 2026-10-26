@@ -85,7 +85,8 @@ public class PedidoService(IXepaDb db, IReservaPedidos reserva, IServicoMapas ma
                             Loja = p.Oferta.Estabelecimento.Endereco,
                             p.EnderecoEntrega,
                             Ultima = p.Rastreios.OrderByDescending(r => r.RegistradoEm).FirstOrDefault(),
-                            Entregador = p.Entregador != null ? p.Entregador.Nome : null
+                            Entregador = p.Entregador != null ? p.Entregador.Nome : null,
+                            Placa = p.Entregador != null ? p.Entregador.Placa : null
                         })
                         .FirstOrDefaultAsync(ct)
                     ?? throw new NaoEncontradoException("Pedido não encontrado.");
@@ -101,7 +102,8 @@ public class PedidoService(IXepaDb db, IReservaPedidos reserva, IServicoMapas ma
             dados.Ultima is null ? null : new Coordenada(dados.Ultima.Latitude, dados.Ultima.Longitude),
             dados.Ultima?.RegistradoEm,
             rota,
-            dados.Entregador?.Split(' ')[0]);
+            dados.Entregador?.Split(' ')[0],
+            dados.Placa);
     }
 
     private static Coordenada? Ponto(double? lat, double? lng) =>

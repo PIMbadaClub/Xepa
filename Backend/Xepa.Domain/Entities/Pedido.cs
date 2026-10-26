@@ -51,8 +51,9 @@ public class Pedido : Entidade
         [StatusPedido.AguardandoPagamento] = [StatusPedido.Pendente, StatusPedido.Cancelado],
         [StatusPedido.Pendente] = [StatusPedido.Confirmado, StatusPedido.Cancelado],
         [StatusPedido.Confirmado] = [StatusPedido.EmPreparo],
-        [StatusPedido.EmPreparo] = [StatusPedido.ProntoParaRetirada, StatusPedido.SaiuParaEntrega],
-        [StatusPedido.ProntoParaRetirada] = [StatusPedido.Entregue],
+        // A loja sempre marca "pronto" (na entrega, pronto para o entregador coletar).
+        [StatusPedido.EmPreparo] = [StatusPedido.ProntoParaRetirada],
+        [StatusPedido.ProntoParaRetirada] = [StatusPedido.Entregue, StatusPedido.SaiuParaEntrega],
         [StatusPedido.SaiuParaEntrega] = [StatusPedido.Entregue],
         [StatusPedido.Entregue] = [],
         [StatusPedido.Cancelado] = [],
@@ -60,8 +61,9 @@ public class Pedido : Entidade
 
     public bool PodeIrPara(StatusPedido novo) =>
         Transicoes[Status].Contains(novo)
-        && !(novo == StatusPedido.ProntoParaRetirada && TipoEntrega == TipoEntrega.Entrega)
-        && !(novo == StatusPedido.SaiuParaEntrega && TipoEntrega == TipoEntrega.Retirada);
+        && !(novo == StatusPedido.SaiuParaEntrega && TipoEntrega == TipoEntrega.Retirada)
+        // Na entrega, "Entregue" só vem depois de o entregador coletar.
+        && !(novo == StatusPedido.Entregue && Status == StatusPedido.ProntoParaRetirada && TipoEntrega == TipoEntrega.Entrega);
 
     public void AvancarStatus(StatusPedido novo)
     {
@@ -95,6 +97,8 @@ public class Pedido : Entidade
     /// <summary>Confirma a retirada na loja conferindo o código do cliente (RN08).</summary>
     public void ConfirmarRetirada(string codigo)
     {
+        if (TipoEntrega == TipoEntrega.Entrega)
+            throw new RegraDeNegocioException("Pedido de entrega: quem confirma com o código é o entregador, na casa do cliente.");
         if (codigo != CodigoRetirada)
             throw new RegraDeNegocioException("Código de retirada incorreto.");
 

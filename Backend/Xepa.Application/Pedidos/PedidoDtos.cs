@@ -87,4 +87,5 @@ public record EnderecoDto(int Id, string Apelido, bool Principal, Endereco Ender
 
 /// <summary>Posições para o mapa do cliente; <c>Rota</c> é o traçado real loja → destino pelas ruas.</summary>
 public record RastreioDto(StatusPedido Status, Coordenada? Loja, Coordenada? Destino, Coordenada? Entregador,
-    DateTimeOffset? AtualizadoEm, IReadOnlyList<Coordenada>? Rota = null, string? NomeEntregador = null);
+    DateTimeOffset? AtualizadoEm, IReadOnlyList<Coordenada>? Rota = null, string? NomeEntregador = null,
+    string? PlacaEntregador = null);

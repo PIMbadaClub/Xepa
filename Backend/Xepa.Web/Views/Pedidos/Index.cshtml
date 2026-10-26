@@ -1,4 +1,4 @@
-@using Xepa.Application.Pedidos
+﻿@using Xepa.Application.Pedidos
 @model IReadOnlyList<PedidoLojaDto>
 @{
     ViewData["Title"] = "Pedidos";
@@ -13,8 +13,9 @@
         ("Concluídos hoje", [StatusPedido.Entregue, StatusPedido.Cancelado]),
     };
 
-    string Rotulo(StatusPedido s) => s switch
+    string Rotulo(StatusPedido s, TipoEntrega tipo) => s switch
     {
+        StatusPedido.ProntoParaRetirada when tipo == TipoEntrega.Entrega => "Pronto para coleta",
         StatusPedido.Pendente => "Aguardando aceite",
         StatusPedido.Confirmado => "Aceito",
         StatusPedido.EmPreparo => "Em preparo",
@@ -56,7 +57,7 @@
                     {
                         <span class="selo ativa">Retirada até @Hora(p.RetiradaFim)</span>
                     }
-                    <span class="selo @(p.Status == StatusPedido.Cancelado ? "inativa" : "")">@Rotulo(p.Status)</span>
+                    <span class="selo @(p.Status == StatusPedido.Cancelado ? "inativa" : "")">@Rotulo(p.Status, p.TipoEntrega)</span>
                     @if (p.Entregador is not null) { <div class="sub" style="margin:4px 0 0;font-size:13px">Entregador: @p.Entregador</div> }
                     @if (p.Observacao is not null) { <div class="sub" style="margin:4px 0 0;font-size:13px">Obs.: @p.Observacao</div> }
 
@@ -70,11 +71,11 @@
                             case StatusPedido.Confirmado:
                                 <form method="post" asp-action="AlterarStatus" asp-route-id="@p.Id"><input type="hidden" name="status" value="EmPreparo" /><button class="botao pequeno">Iniciar preparo</button></form>
                                 break;
-                            case StatusPedido.EmPreparo when p.TipoEntrega == TipoEntrega.Retirada:
-                                <form method="post" asp-action="AlterarStatus" asp-route-id="@p.Id"><input type="hidden" name="status" value="ProntoParaRetirada" /><button class="botao pequeno">Pronto</button></form>
-                                break;
                             case StatusPedido.EmPreparo:
-                                <span class="sub" style="margin:0;font-size:13px">Aguardando o entregador sair</span>
+                                <form method="post" asp-action="AlterarStatus" asp-route-id="@p.Id"><input type="hidden" name="status" value="ProntoParaRetirada" /><button class="botao pequeno">@(p.TipoEntrega == TipoEntrega.Entrega ? "Pronto para coleta" : "Pronto")</button></form>
+                                break;
+                            case StatusPedido.ProntoParaRetirada when p.TipoEntrega == TipoEntrega.Entrega:
+                                <span class="sub" style="margin:0;font-size:13px">@(p.Entregador is null ? "Procurando entregador…" : "Aguardando o entregador coletar")</span>
                                 break;
                             case StatusPedido.ProntoParaRetirada:
                                 <form method="post" asp-action="ConfirmarRetirada" asp-route-id="@p.Id" class="acoes">

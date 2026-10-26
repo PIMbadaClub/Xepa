@@ -66,6 +66,8 @@ class _AcompanhamentoScreenState extends State<AcompanhamentoScreen> {
         _entregador = ponto(r['entregador']) ?? _entregador;
         _rota = r['rota'] is List ? (r['rota'] as List).map(ponto).whereType<LatLng>().toList() : [];
         _nomeEntregador = r['nomeEntregador'] as String?;
+        final placa = r['placaEntregador'] as String?;
+        if (_nomeEntregador != null && placa != null) _nomeEntregador = '$_nomeEntregador (moto $placa)';
         _erro = null;
       });
     } on ApiException catch (e) {
@@ -202,7 +204,8 @@ List<StatusPedido> _etapas(Pedido p) => [
       StatusPedido.pendente,
       StatusPedido.confirmado,
       StatusPedido.emPreparo,
-      p.entrega ? StatusPedido.saiuParaEntrega : StatusPedido.prontoParaRetirada,
+      StatusPedido.prontoParaRetirada,
+      if (p.entrega) StatusPedido.saiuParaEntrega,
       StatusPedido.entregue,
     ];
 
@@ -251,7 +254,7 @@ class _CartaoStatus extends StatelessWidget {
           const SizedBox(height: 2),
           Semantics(
             liveRegion: true,
-            child: Text(p.status.rotulo,
+            child: Text(p.status.rotuloPara(entrega: p.entrega),
                 style: TextStyle(fontSize: 21, fontWeight: FontWeight.w800, letterSpacing: -0.4, color: p.status.cor)),
           ),
           if (p.status != StatusPedido.cancelado) ...[
@@ -375,7 +378,7 @@ class _LinhaDoTempo extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(top: 2, bottom: 16),
                   child: Text(
-                    etapas[i].rotulo,
+                    etapas[i] == StatusPedido.prontoParaRetirada && pedido.entrega ? 'Pronto para coleta' : etapas[i].rotulo,
                     style: TextStyle(
                       fontWeight: i == atual ? FontWeight.w800 : FontWeight.w600,
                       color: i <= atual ? XepaCores.texto : XepaCores.textoSecundario,

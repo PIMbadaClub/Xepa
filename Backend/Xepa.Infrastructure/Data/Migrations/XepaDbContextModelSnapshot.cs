@@ -807,6 +807,9 @@ namespace Xepa.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset?>("NotificacoesLidasAte")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<string>("Placa")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("SenhaHash")
                         .IsRequired()
                         .HasMaxLength(200)

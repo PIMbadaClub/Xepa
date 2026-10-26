@@ -40,8 +40,8 @@ class _AberturaScreenState extends State<AberturaScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             const XepaLogo(tamanho: 84),
-            const SizedBox(height: 10),
-            Text('xepa', style: fonteMarca(tamanho: 40)),
+            const SizedBox(height: 14),
+            const NomeXepa(altura: 58),
             const SizedBox(height: 4),
             const Text('Comida boa não vai pro lixo', style: TextStyle(color: XepaCores.textoSecundario)),
           ],

@@ -3,9 +3,16 @@ using Xepa.Domain.Entities;
 
 namespace Xepa.Application.Contas;
 
-/// <summary>Cadastro pelo app; sempre cria um cliente.</summary>
-public class RegistrarRequest
+/// <summary>Cadastro pelo app: cliente ou entregador parceiro (lojas se cadastram pelo portal).</summary>
+public class RegistrarRequest : IValidatableObject
 {
+    /// <summary>Cliente (padrão) ou Entregador.</summary>
+    public TipoUsuario Tipo { get; init; } = TipoUsuario.Cliente;
+
+    /// <summary>Placa da moto; obrigatória para entregador. Aceita o padrão antigo (ABC1234) e o Mercosul (ABC1D23).</summary>
+    [RegularExpression(@"^[A-Za-z]{3}-?\d[A-Za-z\d]\d{2}$", ErrorMessage = "Placa inválida.")]
+    public string? Placa { get; init; }
+
     [Required, MaxLength(120)]
     public required string Nome { get; init; }
 
@@ -17,6 +24,16 @@ public class RegistrarRequest
 
     [Phone, MaxLength(20)]
     public string? Telefone { get; init; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Tipo is not (TipoUsuario.Cliente or TipoUsuario.Entregador))
+            yield return new ValidationResult("Pelo app dá para criar conta de cliente ou de entregador.", [nameof(Tipo)]);
+        if (Tipo == TipoUsuario.Entregador && string.IsNullOrWhiteSpace(Placa))
+            yield return new ValidationResult("Informe a placa da moto.", [nameof(Placa)]);
+        if (Tipo == TipoUsuario.Entregador && string.IsNullOrWhiteSpace(Telefone))
+            yield return new ValidationResult("Informe o celular: a loja e o cliente precisam falar com você.", [nameof(Telefone)]);
+    }
 }
 
 public class LoginRequest

@@ -58,8 +58,8 @@ class AuthMarca extends StatelessWidget {
           decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
           child: const XepaLogo(tamanho: 36),
         ),
-        const SizedBox(width: 10),
-        Text('xepa', style: fonteMarca(tamanho: 30, cor: Colors.white)),
+        const SizedBox(width: 12),
+        const NomeXepa(altura: 40, cor: Colors.white),
       ],
     );
   }
@@ -458,7 +458,7 @@ class MedidorSenha extends StatelessWidget {
   }
 }
 
-/// Seletor "Cliente / Restaurante" do cadastro.
+/// Seletor "Cliente / Restaurante / Entregador" do cadastro.
 class SeletorTipoConta extends StatelessWidget {
   const SeletorTipoConta({
     super.key,
@@ -471,28 +471,27 @@ class SeletorTipoConta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
+    Widget opcao(TipoConta tipo, IconData icone, String titulo, String descricao) => Expanded(
           child: _OpcaoConta(
-            icone: Icons.shopping_bag_outlined,
-            titulo: 'Cliente',
-            descricao: 'Quero resgatar sacolas',
-            selecionado: valor == TipoConta.cliente,
-            onTap: () => onChanged(TipoConta.cliente),
+            icone: icone,
+            titulo: titulo,
+            descricao: descricao,
+            selecionado: valor == tipo,
+            onTap: () => onChanged(tipo),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _OpcaoConta(
-            icone: Icons.storefront_outlined,
-            titulo: 'Restaurante',
-            descricao: 'Quero vender excedentes',
-            selecionado: valor == TipoConta.restaurante,
-            onTap: () => onChanged(TipoConta.restaurante),
-          ),
-        ),
-      ],
+        );
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          opcao(TipoConta.cliente, Icons.shopping_bag_outlined, 'Cliente', 'Resgatar sacolas'),
+          const SizedBox(width: 8),
+          opcao(TipoConta.entregador, Icons.two_wheeler_rounded, 'Entregador', 'Ganhar por corrida'),
+          const SizedBox(width: 8),
+          opcao(TipoConta.restaurante, Icons.storefront_outlined, 'Loja', 'Vender excedentes'),
+        ],
+      ),
     );
   }
 }
@@ -532,7 +531,7 @@ class _OpcaoConta extends StatelessWidget {
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(12),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -546,8 +545,11 @@ class _OpcaoConta extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   titulo,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.fade,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 15,
                     fontWeight: FontWeight.w800,
                     color: selecionado
                         ? XepaCores.tomateEscuro

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show TextInput;
+import 'package:flutter/services.dart' show FilteringTextInputFormatter, LengthLimitingTextInputFormatter, TextInput;
 
 import 'package:url_launcher/url_launcher.dart';
 
@@ -23,6 +23,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
   final _emailCtrl = TextEditingController();
   final _celularCtrl = TextEditingController();
   final _cnpjCtrl = TextEditingController();
+  final _placaCtrl = TextEditingController();
   final _senhaCtrl = TextEditingController();
   final _confirmarCtrl = TextEditingController();
 
@@ -33,6 +34,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
   AutovalidateMode _autovalidar = AutovalidateMode.disabled;
 
   bool get _ehRestaurante => _tipo == TipoConta.restaurante;
+  bool get _ehEntregador => _tipo == TipoConta.entregador;
 
   @override
   void dispose() {
@@ -40,6 +42,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
     _emailCtrl.dispose();
     _celularCtrl.dispose();
     _cnpjCtrl.dispose();
+    _placaCtrl.dispose();
     _senhaCtrl.dispose();
     _confirmarCtrl.dispose();
     super.dispose();
@@ -66,6 +69,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
       email: _emailCtrl.text.trim().toLowerCase(),
       celular: _digitos(_celularCtrl.text),
       cnpj: _ehRestaurante ? _digitos(_cnpjCtrl.text) : null,
+      placa: _ehEntregador ? _placaCtrl.text.replaceAll('-', '').toUpperCase() : null,
       senha: _senhaCtrl.text,
     );
 
@@ -114,9 +118,11 @@ class _CadastroScreenState extends State<CadastroScreen> {
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 180),
                 child: Text(
-                  _ehRestaurante
-                      ? 'Transforme o que sobra em renda e evite o desperdício.'
-                      : 'Resgate comida boa e pague menos por isso.',
+                  switch (_tipo) {
+                    TipoConta.restaurante => 'Transforme o que sobra em renda e evite o desperdício.',
+                    TipoConta.entregador => 'Faça entregas na sua cidade e ganhe a taxa de cada corrida.',
+                    TipoConta.cliente => 'Resgate comida boa e pague menos por isso.',
+                  },
                   key: ValueKey(_tipo),
                   style: const TextStyle(
                     color: XepaCores.textoSecundario,
@@ -160,6 +166,26 @@ class _CadastroScreenState extends State<CadastroScreen> {
                 autovalidateMode: _autovalidar,
                 enabled: !_carregando,
               ),
+              if (_ehEntregador) ...[
+                const SizedBox(height: 14),
+                AuthCampoTexto(
+                  controller: _placaCtrl,
+                  rotulo: 'Placa da moto',
+                  icone: Icons.two_wheeler_rounded,
+                  dica: 'ABC1D23',
+                  ajuda: 'A loja e o cliente veem a placa para conferir quem chegou.',
+                  textCapitalization: TextCapitalization.characters,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9-]')),
+                    LengthLimitingTextInputFormatter(8),
+                  ],
+                  validator: (v) => RegExp(r'^[A-Za-z]{3}-?\d[A-Za-z\d]\d{2}$').hasMatch(v?.trim() ?? '')
+                      ? null
+                      : 'Informe a placa (ex.: ABC1D23 ou ABC-1234).',
+                  autovalidateMode: _autovalidar,
+                  enabled: !_carregando,
+                ),
+              ],
               if (_ehRestaurante) ...[
                 const SizedBox(height: 14),
                 AuthCampoTexto(
@@ -238,7 +264,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
               ),
               const SizedBox(height: 20),
               AuthBotaoPrimario(
-                rotulo: 'Criar conta',
+                rotulo: _ehEntregador ? 'Quero ser entregador' : 'Criar conta',
                 carregando: _carregando,
                 onPressed: _cadastrar,
               ),

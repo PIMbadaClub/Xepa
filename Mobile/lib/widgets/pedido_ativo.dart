@@ -17,7 +17,10 @@ Future<void> abrirPedido(BuildContext context, Pedido p) => Navigator.of(context
 
 /// Barra fixa acima do menu com o pedido em andamento mais recente (e quantos outros existem).
 class BarraPedidoAtivo extends StatelessWidget {
-  const BarraPedidoAtivo({super.key});
+  const BarraPedidoAtivo({super.key, required this.onAbrir});
+
+  /// Quem abre o pedido é o shell, na navegação da aba atual (o menu de baixo continua visível).
+  final Future<void> Function(Pedido) onAbrir;
 
   @override
   Widget build(BuildContext context) {
@@ -30,10 +33,7 @@ class BarraPedidoAtivo extends StatelessWidget {
         return Material(
           color: Colors.white,
           child: InkWell(
-            onTap: () async {
-              await abrirPedido(context, p);
-              PedidosAtivos.instance.carregar();
-            },
+            onTap: () => onAbrir(p),
             child: Container(
               padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
               decoration: const BoxDecoration(border: Border(top: BorderSide(color: XepaCores.borda))),
@@ -53,7 +53,7 @@ class BarraPedidoAtivo extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              p.status.rotulo,
+                              p.status.rotuloPara(entrega: p.entrega),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
@@ -73,7 +73,7 @@ class BarraPedidoAtivo extends StatelessWidget {
                       if (p.status == StatusPedido.aguardandoPagamento)
                         const _Chip(texto: 'Pagar', cor: XepaCores.tomate)
                       else if (p.codigoRetirada != null &&
-                          (p.status == StatusPedido.prontoParaRetirada || p.status == StatusPedido.saiuParaEntrega))
+                          ((!p.entrega && p.status == StatusPedido.prontoParaRetirada) || p.status == StatusPedido.saiuParaEntrega))
                         _Chip(texto: p.codigoRetirada!, cor: XepaCores.verde)
                       else
                         const Icon(Icons.chevron_right_rounded, color: XepaCores.textoSecundario),
@@ -104,7 +104,8 @@ class BarraPedidoAtivo extends StatelessWidget {
         StatusPedido.pendente => (0.25, true),
         StatusPedido.confirmado => (0.45, false),
         StatusPedido.emPreparo => (0.65, true),
-        StatusPedido.prontoParaRetirada || StatusPedido.saiuParaEntrega => (0.85, true),
+        StatusPedido.prontoParaRetirada => (p.entrega ? 0.75 : 0.85, true),
+        StatusPedido.saiuParaEntrega => (0.9, true),
         _ => (1, false),
       };
 }

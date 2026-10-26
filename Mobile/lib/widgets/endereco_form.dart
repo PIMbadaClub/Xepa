@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../api/api.dart';
+import '../api/cep.dart';
 import '../api/localizacao.dart';
 import '../models/pedido.dart';
 import '../theme.dart';
@@ -21,6 +22,9 @@ class _FormEnderecoState extends State<FormEndereco> {
   };
   Posicao? _gps;
   bool _salvando = false;
+  bool _buscandoCep = false;
+  String? _cepBuscado;
+  String? _erroCep;
   String? _erro;
 
   @override
@@ -28,6 +32,31 @@ class _FormEnderecoState extends State<FormEndereco> {
     super.initState();
     Localizacao.atual().then((p) {
       if (mounted) setState(() => _gps = p);
+    });
+    _c['cep']!.addListener(_cepAlterado);
+  }
+
+  /// Ao completar os 8 dígitos, preenche rua, bairro, cidade e UF pelo ViaCEP.
+  Future<void> _cepAlterado() async {
+    final digitos = _c['cep']!.text.replaceAll(RegExp(r'\D'), '');
+    if (digitos.length != 8 || digitos == _cepBuscado) return;
+    _cepBuscado = digitos;
+    setState(() {
+      _buscandoCep = true;
+      _erroCep = null;
+    });
+    final e = await Cep.buscar(digitos);
+    if (!mounted || _cepBuscado != digitos) return;
+    setState(() {
+      _buscandoCep = false;
+      if (e == null) {
+        _erroCep = 'CEP não encontrado. Preencha o endereço.';
+        return;
+      }
+      if (e.logradouro.isNotEmpty) _c['logradouro']!.text = e.logradouro;
+      if (e.bairro.isNotEmpty) _c['bairro']!.text = e.bairro;
+      _c['cidade']!.text = e.cidade;
+      _c['uf']!.text = e.uf;
     });
   }
 
@@ -69,13 +98,15 @@ class _FormEnderecoState extends State<FormEndereco> {
     }
   }
 
-  Widget _campo(String chave, String rotulo, {TextInputType? teclado, int? max, bool obrigatorio = true}) => Padding(
+  Widget _campo(String chave, String rotulo,
+          {TextInputType? teclado, int? max, bool obrigatorio = true, Widget? sufixo, String? ajuda}) =>
+      Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: TextFormField(
           controller: _c[chave],
           keyboardType: teclado,
           maxLength: max,
-          decoration: InputDecoration(labelText: rotulo, counterText: ''),
+          decoration: InputDecoration(labelText: rotulo, counterText: '', suffixIcon: sufixo, helperText: ajuda),
           validator: (v) => obrigatorio && (v == null || v.trim().isEmpty) ? 'Obrigatório' : null,
         ),
       );
@@ -98,7 +129,19 @@ class _FormEnderecoState extends State<FormEndereco> {
               ),
               const SizedBox(height: 12),
               _campo('apelido', 'Apelido (ex.: Casa)'),
-              _campo('cep', 'CEP', teclado: TextInputType.number, max: 9),
+              _campo(
+                'cep',
+                'CEP',
+                teclado: TextInputType.number,
+                max: 9,
+                ajuda: _erroCep,
+                sufixo: _buscandoCep
+                    ? const Padding(
+                        padding: EdgeInsets.all(14),
+                        child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                      )
+                    : null,
+              ),
               _campo('logradouro', 'Rua'),
               Row(children: [
                 Expanded(child: _campo('numero', 'Número')),

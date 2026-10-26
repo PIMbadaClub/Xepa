@@ -32,7 +32,8 @@ public class EntregaService(IXepaDb db, IServicoMapas mapas, INotificadorPedidos
     /// <summary>Velocidade média de moto na cidade, para estimar o tempo quando não há rota calculada.</summary>
     private const double VelocidadeMotoKmH = 25;
 
-    private static readonly StatusPedido[] StatusDisponivel = [StatusPedido.Confirmado, StatusPedido.EmPreparo];
+    /// <summary>A corrida pode ser aceita desde que a loja aceita o pedido até ela marcar pronto.</summary>
+    private static readonly StatusPedido[] StatusDisponivel = [StatusPedido.Confirmado, StatusPedido.EmPreparo, StatusPedido.ProntoParaRetirada];
 
     public async Task<IReadOnlyList<CorridaDto>> ListarAsync(int entregadorId, Coordenada? posicao, CancellationToken ct)
     {
@@ -133,8 +134,8 @@ public class EntregaService(IXepaDb db, IServicoMapas mapas, INotificadorPedidos
     public async Task ColetarAsync(int entregadorId, int pedidoId, CancellationToken ct)
     {
         var pedido = await MinhaAsync(entregadorId, pedidoId, ct);
-        if (pedido.Status == StatusPedido.Confirmado)
-            throw new RegraDeNegocioException("A loja ainda não começou a preparar o pedido. Aguarde na loja.");
+        if (pedido.Status != StatusPedido.ProntoParaRetirada)
+            throw new RegraDeNegocioException("A loja ainda está preparando o pedido. Dá para coletar quando ela marcar como pronto.");
         pedido.AvancarStatus(StatusPedido.SaiuParaEntrega);
         await db.SaveChangesAsync(ct);
         await notificador.PedidoAlteradoAsync(pedido.Id, ct);

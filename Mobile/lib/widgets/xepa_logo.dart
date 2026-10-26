@@ -1,48 +1,46 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../theme.dart';
 
-/// Tomatinho da Xepa: tomate com cálice de folhas e o "x" branco.
-/// Com [comFundo], fica dentro do quadrado bege do ícone do app.
+/// Tomate da Xepa: redondo, com duas folhas, cabinho e brilho.
+/// Com [comFundo], fica dentro do quadrado creme do ícone do app.
 class XepaLogo extends StatelessWidget {
-  const XepaLogo({super.key, this.tamanho = 32, this.comFundo = false, this.comX = true});
+  const XepaLogo({super.key, this.tamanho = 32, this.comFundo = false});
 
   final double tamanho;
   final bool comFundo;
-  final bool comX;
 
   @override
-  Widget build(BuildContext context) {
-    return SizedBox.square(
-      dimension: tamanho,
-      child: Stack(
-        children: [
-          Positioned.fill(child: CustomPaint(painter: TomatePainter(comFundo: comFundo))),
-          if (comX)
-            Align(
-              alignment: Alignment(0, comFundo ? 0.22 : 0.3),
-              child: Text(
-                'x',
-                style: GoogleFonts.fredoka(
-                  fontSize: tamanho * (comFundo ? 0.4 : 0.5),
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                  height: 1,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+  Widget build(BuildContext context) => SizedBox.square(
+        dimension: tamanho,
+        child: CustomPaint(painter: TomatePainter(comFundo: comFundo)),
+      );
 }
 
-/// Logo completo: tomatinho + "xepa". Tem um segredo para quem toca nele várias vezes.
+/// Nome "Xepa" do logo, desenhado a partir do SVG oficial (docs/marca), sem depender de fonte.
+class NomeXepa extends StatelessWidget {
+  const NomeXepa({super.key, this.altura = 30, this.cor = XepaCores.verde});
+
+  /// Altura da caixa, do topo do "X" ao pé do "p".
+  final double altura;
+  final Color cor;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+        label: 'Xepa',
+        child: SizedBox(
+          width: altura * _NomePainter.largura / _NomePainter.altura,
+          height: altura,
+          child: CustomPaint(painter: _NomePainter(cor)),
+        ),
+      );
+}
+
+/// Logo completo: tomate + "Xepa". Tem um segredo para quem toca nele várias vezes.
 class XepaMarca extends StatefulWidget {
-  const XepaMarca({super.key, this.tamanho = 30, this.cor = XepaCores.tomate});
+  const XepaMarca({super.key, this.tamanho = 30, this.cor = XepaCores.verde});
 
   final double tamanho;
   final Color cor;
@@ -83,6 +81,7 @@ class _XepaMarcaState extends State<XepaMarca> with SingleTickerProviderStateMix
       onTap: _tocar,
       child: Row(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           AnimatedBuilder(
             animation: _balanco,
@@ -90,10 +89,11 @@ class _XepaMarcaState extends State<XepaMarca> with SingleTickerProviderStateMix
               angle: math.sin(_balanco.value * math.pi * 4) * (1 - _balanco.value) * 0.35,
               child: filho,
             ),
-            child: XepaLogo(tamanho: widget.tamanho * 1.15),
+            child: XepaLogo(tamanho: widget.tamanho * 1.4),
           ),
-          SizedBox(width: widget.tamanho * 0.18),
-          Text('xepa', style: fonteMarca(tamanho: widget.tamanho, cor: widget.cor)),
+          // Mesma proporção do logo oficial: o nome tem ~0,9 da altura do tomate.
+          SizedBox(width: widget.tamanho * 0.3),
+          NomeXepa(altura: widget.tamanho * 1.25, cor: widget.cor),
         ],
       ),
     );
@@ -180,7 +180,7 @@ class _TomateCarregandoState extends State<TomateCarregando> with SingleTickerPr
                       child: Transform.scale(
                         scaleX: 1 + (1 - v) * 0.08,
                         scaleY: 1 - (1 - v) * 0.08,
-                        child: XepaLogo(tamanho: t, comX: false),
+                        child: XepaLogo(tamanho: t),
                       ),
                     ),
                   ],
@@ -198,12 +198,18 @@ class _TomateCarregandoState extends State<TomateCarregando> with SingleTickerPr
   }
 }
 
-/// Desenha o tomate num espaço de 100 x 100.
+/// Desenha o tomate num espaço de 100 x 100, igual ao SVG oficial: corpo redondo, brilho,
+/// cabinho e duas folhas.
 class TomatePainter extends CustomPainter {
   TomatePainter({this.comFundo = false, this.corUnica});
 
   final bool comFundo;
+
+  /// Com cor única (marca-d'água), o tomate inteiro sai nessa cor, sem brilho.
   final Color? corUnica;
+
+  static const _vermelho = Color(0xFFE30613);
+  static const _folha = Color(0xFF2E8B57);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -213,72 +219,44 @@ class TomatePainter extends CustomPainter {
     if (comFundo) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(const Rect.fromLTWH(0, 0, 100, 100), const Radius.circular(24)),
-        Paint()..color = XepaCores.bege,
+        Paint()..color = const Color(0xFFFFF3E0),
       );
-      // Tomate um pouco menor dentro do quadrado.
-      canvas.translate(12, 12);
-      canvas.scale(0.76);
+      canvas.translate(16.8, 16.8);
+      canvas.scale(0.664);
     }
 
-    // Corpo: um pouco mais largo que alto, com dois gomos discretos em cima.
-    final corpo = Path()
-      ..moveTo(50, 26)
-      ..cubicTo(62, 20, 80, 22, 90, 36)
-      ..cubicTo(100, 52, 96, 76, 80, 88)
-      ..cubicTo(66, 98, 34, 98, 20, 88)
-      ..cubicTo(4, 76, 0, 52, 10, 36)
-      ..cubicTo(20, 22, 38, 20, 50, 26)
-      ..close();
-    final paintCorpo = Paint();
-    if (corUnica != null) {
-      paintCorpo.color = corUnica!;
-    } else {
-      paintCorpo.shader = const RadialGradient(
-        center: Alignment(-0.35, -0.4),
-        radius: 0.95,
-        colors: [Color(0xFFF0473C), XepaCores.tomate, Color(0xFFA81A14)],
-        stops: [0, 0.6, 1],
-      ).createShader(const Rect.fromLTWH(4, 20, 92, 78));
-    }
-    canvas.drawPath(corpo, paintCorpo);
+    // Corpo.
+    canvas.drawCircle(const Offset(50, 57), 40, Paint()..color = corUnica ?? _vermelho);
 
     if (corUnica == null) {
-      // Brilho.
+      // Brilho, no alto à esquerda.
       canvas.save();
-      canvas.translate(30, 45);
-      canvas.rotate(-0.6);
-      canvas.drawOval(
-        Rect.fromCenter(center: Offset.zero, width: 18, height: 9),
-        Paint()..color = Colors.white.withAlpha(110),
-      );
+      canvas.translate(33, 44);
+      canvas.rotate(-30 * math.pi / 180);
+      canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: 20, height: 11), Paint()..color = const Color(0x73FFFFFF));
       canvas.restore();
     }
 
-    // Cálice: cinco folhas pontudas em estrela e o cabinho.
-    final verde = Paint()..color = corUnica ?? XepaCores.verdeFolha;
-    for (var i = 0; i < 5; i++) {
-      final angulo = -math.pi / 2 + i * 2 * math.pi / 5 + math.pi / 5;
-      canvas.save();
-      canvas.translate(50, 25);
-      canvas.rotate(angulo);
-      canvas.scale(1, 0.62);
-      final folha = Path()
-        ..moveTo(0, -4)
-        ..quadraticBezierTo(10, -3, 19, 0)
-        ..quadraticBezierTo(10, 3, 0, 4)
-        ..close();
-      canvas.drawPath(folha, verde);
-      canvas.restore();
-    }
-    canvas.drawCircle(const Offset(50, 25), 5, verde);
+    final verde = corUnica ?? _folha;
+
+    // Cabinho com a ponta arredondada.
     canvas.drawLine(
-      const Offset(50, 24),
-      const Offset(53, 11),
+      const Offset(50, 18),
+      const Offset(50, 6),
       Paint()
-        ..color = corUnica ?? XepaCores.verde
-        ..strokeWidth = 4
+        ..color = verde
+        ..strokeWidth = 6
         ..strokeCap = StrokeCap.round,
     );
+
+    // Folhas: duas, abrindo para os lados a partir do cabinho.
+    for (final lado in [-1.0, 1.0]) {
+      canvas.save();
+      canvas.translate(50 + lado * 12, 20.4);
+      canvas.rotate(lado * 20 * math.pi / 180);
+      canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: 28.8, height: 12), Paint()..color = verde);
+      canvas.restore();
+    }
 
     canvas.restore();
   }
@@ -287,3 +265,73 @@ class TomatePainter extends CustomPainter {
   bool shouldRepaint(covariant TomatePainter oldDelegate) =>
       oldDelegate.comFundo != comFundo || oldDelegate.corUnica != corUnica;
 }
+
+/// Desenha o nome "Xepa" a partir do path do SVG oficial (unidades da fonte, y para cima).
+class _NomePainter extends CustomPainter {
+  _NomePainter(this.cor);
+
+  final Color cor;
+
+  // Caixa do desenho: x de 0 a 1960, y de -256 (pé do "p") a 756 (topo do "X").
+  static const largura = 1960.0;
+  static const altura = 1012.0;
+
+  static final Path _nome = _lerPath(_nomeD);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.scale(size.width / largura, size.height / altura);
+    canvas.translate(0, 756);
+    canvas.scale(1, -1);
+    canvas.drawPath(_nome, Paint()..color = cor);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _NomePainter oldDelegate) => oldDelegate.cor != cor;
+
+  /// Lê só o que o path do logo usa: M, L, H, V, Q e Z absolutos (pares extras depois de M viram L).
+  static Path _lerPath(String d) {
+    final path = Path();
+    final tokens = RegExp(r'[MLHVQZ]|-?\d*\.?\d+').allMatches(d).map((m) => m.group(0)!).toList();
+    var i = 0;
+    var cmd = 'M';
+    double x = 0, y = 0;
+    double n() => double.parse(tokens[i++]);
+    while (i < tokens.length) {
+      if (RegExp(r'[MLHVQZ]').hasMatch(tokens[i])) {
+        cmd = tokens[i++];
+        if (cmd == 'Z') {
+          path.close();
+          continue;
+        }
+      }
+      switch (cmd) {
+        case 'M':
+          x = n();
+          y = n();
+          path.moveTo(x, y);
+          cmd = 'L';
+        case 'L':
+          x = n();
+          y = n();
+          path.lineTo(x, y);
+        case 'H':
+          x = n();
+          path.lineTo(x, y);
+        case 'V':
+          y = n();
+          path.lineTo(x, y);
+        case 'Q':
+          final cx = n(), cy = n();
+          x = n();
+          y = n();
+          path.quadraticBezierTo(cx, cy, x, y);
+      }
+    }
+    return path;
+  }
+}
+
+const _nomeD = 'M322 332 248 683Q177 656 138.0 599.5Q99 543 99 461Q99 424 106.0 409.5Q113 395 113 393Q59 393 32.5 415.5Q6 438 6 490Q6 554 58.5 614.5Q111 675 193.0 712.5Q275 750 357 750Q371 750 397 748L440 540L556 745H626L458 454L552 0H393L340 250L195 0H134ZM607 153Q607 222 634.0 305.0Q661 388 722.0 448.5Q783 509 877 509Q987 509 987 413Q987 357 955.0 310.0Q923 263 870.0 234.5Q817 206 757 202Q755 172 755 162Q755 113 772.0 95.5Q789 78 827 78Q881 78 919.5 103.0Q958 128 1004 179H1038Q927 -6 763 -6Q689 -6 648.0 32.5Q607 71 607 153ZM910 415Q910 456 885 456Q849 456 814.5 393.0Q780 330 765 250Q802 252 835.5 276.0Q869 300 889.5 337.0Q910 374 910 415ZM1080 537H1224L1208 462Q1258 505 1325 505Q1381 505 1414.0 468.0Q1447 431 1447 347Q1447 268 1424.0 187.5Q1401 107 1346.0 50.5Q1291 -6 1201 -6Q1137 -6 1116 30L1064 -214L913 -250ZM1310 350Q1310 433 1260 433Q1242 433 1223.5 420.0Q1205 407 1191 384L1132 104Q1140 81 1170 81Q1218 81 1249.5 126.0Q1281 171 1295.5 233.5Q1310 296 1310 350ZM1459 155Q1459 229 1488.5 310.5Q1518 392 1576.5 448.5Q1635 505 1716 505Q1757 505 1777.0 491.0Q1797 477 1797 454V447L1808 500H1952L1880 160Q1876 145 1876 128Q1876 108 1885.5 99.5Q1895 91 1917 91Q1931 91 1939 95Q1917 39 1897.0 16.5Q1877 -6 1839 -6Q1798 -6 1772.5 18.5Q1747 43 1741 87Q1680 -6 1592 -6Q1535 -6 1497.0 33.0Q1459 72 1459 155ZM1740 179 1788 405Q1788 418 1778.0 430.5Q1768 443 1747 443Q1707 443 1675.0 396.5Q1643 350 1625.0 284.5Q1607 219 1607 169Q1607 119 1621.5 105.0Q1636 91 1657 91Q1682 91 1706.5 114.5Q1731 138 1740 179Z';
