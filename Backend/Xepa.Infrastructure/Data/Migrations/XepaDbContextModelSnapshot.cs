@@ -518,6 +518,9 @@ namespace Xepa.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset>("CriadoEm")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<double?>("DistanciaEntregaKm")
+                        .HasColumnType("float");
+
                     b.Property<int?>("EntregadorId")
                         .HasColumnType("int");
 

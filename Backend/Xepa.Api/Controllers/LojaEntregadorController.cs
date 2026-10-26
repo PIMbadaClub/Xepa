@@ -1,3 +1,4 @@
+using Xepa.Application;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -43,33 +44,53 @@ public class PosicaoRequest
     public double Longitude { get; init; }
 }
 
-/// <summary>Modo entregador do app.</summary>
+public class ConcluirEntregaRequest
+{
+    [Required(ErrorMessage = "Informe o código do cliente."), RegularExpression(@"^\d{4}$", ErrorMessage = "O código tem 4 dígitos.")]
+    public required string Codigo { get; init; }
+}
+
+/// <summary>Modo entregador do app: corridas perto, aceitar, coletar, posição e finalizar com o código do cliente.</summary>
 [ApiController]
-[Route("api/entregador/entregas")]
+[Route("api/entregador")]
 [Authorize(Roles = "Entregador")]
 public class EntregadorController(EntregaService entregas) : ControllerBase
 {
-    [HttpGet]
-    public Task<IReadOnlyList<EntregaService.EntregaDto>> Listar(CancellationToken ct) => entregas.ListarAsync(User.UsuarioId(), ct);
+    /// <summary>Corridas disponíveis perto (latitude/longitude do aparelho) e as aceitas por este entregador.</summary>
+    [HttpGet("corridas")]
+    public Task<IReadOnlyList<CorridaDto>> Corridas(double? latitude, double? longitude, CancellationToken ct) =>
+        entregas.ListarAsync(User.UsuarioId(), Posicao(latitude, longitude), ct);
 
-    [HttpPost("{id:int}/iniciar")]
-    public async Task<IActionResult> Iniciar(int id, CancellationToken ct)
-    {
-        await entregas.IniciarAsync(User.UsuarioId(), id, ct);
-        return NoContent();
-    }
+    [HttpGet("corridas/{id:int}/rota")]
+    public Task<RotaCorridaDto> Rota(int id, double? latitude, double? longitude, CancellationToken ct) =>
+        entregas.RotaAsync(User.UsuarioId(), id, Posicao(latitude, longitude), ct);
 
-    [HttpPost("{id:int}/localizacao")]
-    public async Task<IActionResult> Localizacao(int id, PosicaoRequest request, CancellationToken ct)
-    {
-        await entregas.RegistrarPosicaoAsync(User.UsuarioId(), id, request.Latitude, request.Longitude, ct);
-        return NoContent();
-    }
+    [HttpPost("corridas/{id:int}/aceitar")]
+    public Task<IActionResult> Aceitar(int id, CancellationToken ct) => Fazer(() => entregas.AceitarAsync(User.UsuarioId(), id, ct));
 
-    [HttpPost("{id:int}/concluir")]
-    public async Task<IActionResult> Concluir(int id, CancellationToken ct)
+    [HttpPost("corridas/{id:int}/desistir")]
+    public Task<IActionResult> Desistir(int id, CancellationToken ct) => Fazer(() => entregas.DesistirAsync(User.UsuarioId(), id, ct));
+
+    [HttpPost("corridas/{id:int}/coletar")]
+    public Task<IActionResult> Coletar(int id, CancellationToken ct) => Fazer(() => entregas.ColetarAsync(User.UsuarioId(), id, ct));
+
+    [HttpPost("corridas/{id:int}/localizacao")]
+    public Task<IActionResult> Localizacao(int id, PosicaoRequest request, CancellationToken ct) =>
+        Fazer(() => entregas.RegistrarPosicaoAsync(User.UsuarioId(), id, request.Latitude, request.Longitude, ct));
+
+    [HttpPost("corridas/{id:int}/concluir")]
+    public Task<IActionResult> Concluir(int id, ConcluirEntregaRequest request, CancellationToken ct) =>
+        Fazer(() => entregas.ConcluirAsync(User.UsuarioId(), id, request.Codigo, ct));
+
+    [HttpGet("ganhos")]
+    public Task<GanhosDto> Ganhos(CancellationToken ct) => entregas.GanhosAsync(User.UsuarioId(), ct);
+
+    private static Coordenada? Posicao(double? latitude, double? longitude) =>
+        latitude is { } la && longitude is { } lo && Math.Abs(la) <= 90 && Math.Abs(lo) <= 180 ? new Coordenada(la, lo) : null;
+
+    private async Task<IActionResult> Fazer(Func<Task> acao)
     {
-        await entregas.ConcluirAsync(User.UsuarioId(), id, ct);
+        await acao();
         return NoContent();
     }
 }

@@ -15,7 +15,7 @@ public class RepasseTests
     };
 
     [Fact]
-    public void Retem_15_por_cento_dos_produtos_e_repassa_a_taxa_de_entrega()
+    public void Retem_15_por_cento_dos_produtos_e_deixa_a_taxa_de_entrega_para_o_entregador()
     {
         var pedidos = new[] { Entregue(12.90m, 2), Entregue(15.90m, 1, taxa: 3.60m) };
 
@@ -23,8 +23,8 @@ public class RepasseTests
 
         Assert.Equal(41.70m, repasse.ValorVendas);
         Assert.Equal(6.26m, repasse.Comissao);          // 15% de 41,70 = 6,255, arredonda para cima
-        Assert.Equal(3.60m, repasse.TaxasEntrega);
-        Assert.Equal(39.04m, repasse.ValorLiquido);     // 41,70 - 6,26 + 3,60
+        Assert.Equal(3.60m, repasse.TaxasEntrega);      // só registro: vai para o entregador
+        Assert.Equal(35.44m, repasse.ValorLiquido);     // 41,70 - 6,26
         Assert.Equal(2, repasse.QuantidadePedidos);
         Assert.All(pedidos, p => Assert.Same(repasse, p.Repasse));
     }

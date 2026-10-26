@@ -190,7 +190,7 @@ public class AdminService(IXepaDb db, IServicoMapas mapas)
         {
             var comissao = Math.Round(g.Vendas * Repasse.PercentualComissao, 2, MidpointRounding.AwayFromZero);
             return new RepassePendenteDto(g.EstabelecimentoId, g.Nome, g.Pedidos, g.Vendas, comissao, g.Taxas,
-                g.Vendas - comissao + g.Taxas);
+                g.Vendas - comissao);
         }).ToList();
     }
 

@@ -4,7 +4,7 @@
     var percentual = (Repasse.PercentualComissao * 100).ToString("0", Rotulos.Br);
 }
 <h1>Repasses</h1>
-<p class="sub">A XEPA retém @percentual% sobre o valor dos produtos e repassa o restante à loja, com as taxas de entrega (a entrega é feita pela própria loja).</p>
+<p class="sub">A XEPA retém @percentual% sobre o valor dos produtos e repassa o restante à loja. As taxas de entrega são dos entregadores parceiros e aparecem só para conferência.</p>
 
 <h2 class="secao">A fechar</h2>
 @if (Model.Pendentes.Count == 0)
@@ -15,7 +15,7 @@ else
 {
     <table>
         <thead>
-            <tr><th scope="col">Loja</th><th scope="col">Pedidos</th><th scope="col">Vendas</th><th scope="col">Comissão (@percentual%)</th><th scope="col">Entregas</th><th scope="col">A repassar</th><th scope="col"></th></tr>
+            <tr><th scope="col">Loja</th><th scope="col">Pedidos</th><th scope="col">Vendas</th><th scope="col">Comissão (@percentual%)</th><th scope="col">Entregas (entregador)</th><th scope="col">A repassar</th><th scope="col"></th></tr>
         </thead>
         <tbody>
             @foreach (var p in Model.Pendentes)
@@ -25,7 +25,7 @@ else
                     <td>@p.Pedidos</td>
                     <td>@Rotulos.Dinheiro(p.ValorVendas)</td>
                     <td>− @Rotulos.Dinheiro(p.Comissao)</td>
-                    <td>+ @Rotulos.Dinheiro(p.TaxasEntrega)</td>
+                    <td class="sub" style="margin:0">@Rotulos.Dinheiro(p.TaxasEntrega)</td>
                     <td><span class="preco">@Rotulos.Dinheiro(p.ValorLiquido)</span></td>
                     <td>
                         <form asp-action="FecharRepasse" asp-route-estabelecimentoId="@p.EstabelecimentoId" method="post">

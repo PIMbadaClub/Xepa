@@ -14,6 +14,7 @@ public class PedidoService(IXepaDb db, IReservaPedidos reserva, IServicoMapas ma
     public async Task<PedidoDto> CriarAsync(int clienteId, CriarPedidoRequest request, CancellationToken ct)
     {
         decimal taxa = 0;
+        double? distancia = null;
         if (request.TipoEntrega == TipoEntrega.Entrega)
         {
             var endereco = await db.Enderecos.AsNoTracking()
@@ -33,10 +34,14 @@ public class PedidoService(IXepaDb db, IReservaPedidos reserva, IServicoMapas ma
                 new Coordenada(loja.Latitude.Value, loja.Longitude.Value),
                 new Coordenada(endereco.Endereco.Latitude.Value, endereco.Endereco.Longitude.Value), ct);
             taxa = RegrasEntrega.CalcularTaxa(rota.DistanciaKm);
+            distancia = rota.DistanciaKm;
         }
 
         var id = await reserva.CriarAsync(clienteId, request.OfertaId, request.Quantidade, request.TipoEntrega, taxa,
             request.EnderecoId, ct);
+
+        if (distancia is { } km)
+            await db.Pedidos.Where(p => p.Id == id).ExecuteUpdateAsync(s => s.SetProperty(p => p.DistanciaEntregaKm, km), ct);
 
         if (!string.IsNullOrWhiteSpace(request.Observacao))
         {
@@ -79,17 +84,24 @@ public class PedidoService(IXepaDb db, IReservaPedidos reserva, IServicoMapas ma
                             p.Status,
                             Loja = p.Oferta.Estabelecimento.Endereco,
                             p.EnderecoEntrega,
-                            Ultima = p.Rastreios.OrderByDescending(r => r.RegistradoEm).FirstOrDefault()
+                            Ultima = p.Rastreios.OrderByDescending(r => r.RegistradoEm).FirstOrDefault(),
+                            Entregador = p.Entregador != null ? p.Entregador.Nome : null
                         })
                         .FirstOrDefaultAsync(ct)
                     ?? throw new NaoEncontradoException("Pedido não encontrado.");
 
+        var loja = Ponto(dados.Loja.Latitude, dados.Loja.Longitude);
+        var destino = dados.EnderecoEntrega is null ? null : Ponto(dados.EnderecoEntrega.Latitude, dados.EnderecoEntrega.Longitude);
+        var rota = loja is not null && destino is not null ? (await mapas.CalcularRotaAsync(loja, destino, ct)).Pontos : null;
+
         return new RastreioDto(
             dados.Status,
-            Ponto(dados.Loja.Latitude, dados.Loja.Longitude),
-            dados.EnderecoEntrega is null ? null : Ponto(dados.EnderecoEntrega.Latitude, dados.EnderecoEntrega.Longitude),
+            loja,
+            destino,
             dados.Ultima is null ? null : new Coordenada(dados.Ultima.Latitude, dados.Ultima.Longitude),
-            dados.Ultima?.RegistradoEm);
+            dados.Ultima?.RegistradoEm,
+            rota,
+            dados.Entregador?.Split(' ')[0]);
     }
 
     private static Coordenada? Ponto(double? lat, double? lng) =>

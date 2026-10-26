@@ -1,8 +1,8 @@
 namespace Xepa.Domain.Entities;
 
 /// <summary>
-/// Valor que a XEPA deve ao estabelecimento pelos pedidos entregues: vendas menos a comissão, mais as taxas
-/// de entrega (a entrega é feita pela própria loja).
+/// Valor que a XEPA deve ao estabelecimento pelos pedidos entregues: vendas menos a comissão. As taxas de entrega
+/// ficam registradas só para conferência, porque vão para o entregador parceiro, não para a loja.
 /// </summary>
 public class Repasse : Entidade
 {
@@ -42,7 +42,7 @@ public class Repasse : Entidade
             ValorVendas = vendas,
             Comissao = comissao,
             TaxasEntrega = taxas,
-            ValorLiquido = vendas - comissao + taxas
+            ValorLiquido = vendas - comissao
         };
         foreach (var pedido in pedidos)
             pedido.Repasse = repasse;

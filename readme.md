@@ -91,6 +91,17 @@ Tempo real: hub SignalR em `/hubs/pedidos` (status do pedido e posição do entr
 - **Impacto e vendas** no portal da loja: kg salvos, economia gerada para os clientes, vendas por dia, mais vendidas e repasses.
 - **App:** favoritos (`/api/favoritos`), denúncia em cada pedido pago (`/api/pedidos/{id}/denuncias`) e "Sua xepa" no perfil (`/api/usuarios/me/impacto`).
 
+### Entregadores parceiros e dados de Limeira
+
+- O modo entregador funciona como nos apps de delivery: corridas perto (até 15 km) com **valor** (a taxa de entrega
+  vai inteira para o entregador), **km até a coleta e de entrega** e tempo estimado; aceitar, coletar, navegar
+  (Google Maps) e finalizar com o **código de 4 dígitos** do cliente. Ganhos do dia e da semana no topo.
+- As rotas vêm do Azure Maps (modo moto) com o traçado pelas ruas: o cliente vê a rota real e o entregador;
+  na demonstração, a moto percorre esse traçado.
+- `python infra/azure/gerar-dados-limeira.py` geocodifica endereços reais de Limeira-SP e gera
+  `infra/azure/dados-limeira.sql` (12 lojas fictícias, ofertas do dia e um endereço de entrega do cliente demo).
+  Rode o SQL de novo para renovar as ofertas. Contas das lojas: `<loja>@xepa.test` / `Xepa@2026`.
+
 ### Configurando o App Mobile
 
 1. `cd Mobile` e `flutter pub get`

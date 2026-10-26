@@ -85,5 +85,6 @@ public class EnderecoRequest
 
 public record EnderecoDto(int Id, string Apelido, bool Principal, Endereco Endereco);
 
+/// <summary>Posições para o mapa do cliente; <c>Rota</c> é o traçado real loja → destino pelas ruas.</summary>
 public record RastreioDto(StatusPedido Status, Coordenada? Loja, Coordenada? Destino, Coordenada? Entregador,
-    DateTimeOffset? AtualizadoEm);
+    DateTimeOffset? AtualizadoEm, IReadOnlyList<Coordenada>? Rota = null, string? NomeEntregador = null);

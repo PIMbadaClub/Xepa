@@ -26,6 +26,8 @@ class AcompanhamentoScreen extends StatefulWidget {
 class _AcompanhamentoScreenState extends State<AcompanhamentoScreen> {
   Pedido? _pedido;
   LatLng? _loja, _destino, _entregador;
+  List<LatLng> _rota = [];
+  String? _nomeEntregador;
   String? _erro;
   final _assinaturas = <StreamSubscription<Map<String, dynamic>>>[];
 
@@ -62,6 +64,8 @@ class _AcompanhamentoScreenState extends State<AcompanhamentoScreen> {
         _loja = ponto(r['loja']);
         _destino = ponto(r['destino']);
         _entregador = ponto(r['entregador']) ?? _entregador;
+        _rota = r['rota'] is List ? (r['rota'] as List).map(ponto).whereType<LatLng>().toList() : [];
+        _nomeEntregador = r['nomeEntregador'] as String?;
         _erro = null;
       });
     } on ApiException catch (e) {
@@ -110,14 +114,18 @@ class _AcompanhamentoScreenState extends State<AcompanhamentoScreen> {
                   if (p.entrega && p.status != StatusPedido.cancelado) ...[
                     ClipRRect(
                       borderRadius: BorderRadius.circular(XepaRaios.cartao),
-                      child: MapaEntrega(loja: _loja, destino: _destino, entregador: _entregador, altura: 200),
+                      child: MapaEntrega(loja: _loja, destino: _destino, entregador: _entregador, rota: _rota, altura: 220),
                     ),
                     const SizedBox(height: 14),
                   ],
-                  _CartaoStatus(pedido: p),
-                  if (!p.entrega && p.codigoRetirada != null && p.status.emAndamento && p.status != StatusPedido.aguardandoPagamento) ...[
+                  _CartaoStatus(pedido: p, entregador: _nomeEntregador),
+                  if (p.codigoRetirada != null && p.status.emAndamento && p.status != StatusPedido.aguardandoPagamento) ...[
                     const SizedBox(height: 12),
-                    _CodigoRetirada(codigo: p.codigoRetirada!, janela: '${_hora(p.retiradaInicio)}–${_hora(p.retiradaFim)}'),
+                    _CodigoRetirada(
+                      codigo: p.codigoRetirada!,
+                      titulo: p.entrega ? 'Informe este código ao entregador' : 'Mostre este código na loja',
+                      rodape: p.entrega ? 'Só passe o código quando receber o pedido' : 'Retirada entre ${_hora(p.retiradaInicio)}–${_hora(p.retiradaFim)}',
+                    ),
                   ],
                   const SizedBox(height: 12),
                   _Cartao(
@@ -217,9 +225,10 @@ class _Cartao extends StatelessWidget {
 }
 
 class _CartaoStatus extends StatelessWidget {
-  const _CartaoStatus({required this.pedido});
+  const _CartaoStatus({required this.pedido, this.entregador});
 
   final Pedido pedido;
+  final String? entregador;
 
   @override
   Widget build(BuildContext context) {
@@ -230,7 +239,9 @@ class _CartaoStatus extends StatelessWidget {
       StatusPedido.aguardandoPagamento => 'Falta só confirmar o pagamento',
       StatusPedido.cancelado => 'Se havia pagamento aprovado, o estorno foi solicitado',
       StatusPedido.entregue => p.entrega ? 'Bom apetite! Obrigado por salvar essa comida' : 'Retirado. Obrigado por salvar essa comida',
-      _ => p.entrega ? 'Entrega pela própria loja' : 'Retirada na loja',
+      StatusPedido.saiuParaEntrega when entregador != null => '$entregador está a caminho com seu pedido',
+      _ when p.entrega && entregador != null => '$entregador vai buscar seu pedido na loja',
+      _ => p.entrega ? 'Entrega por entregador parceiro XEPA' : 'Retirada na loja',
     };
     return _Cartao(
       child: Column(
@@ -270,10 +281,11 @@ class _CartaoStatus extends StatelessWidget {
 }
 
 class _CodigoRetirada extends StatelessWidget {
-  const _CodigoRetirada({required this.codigo, required this.janela});
+  const _CodigoRetirada({required this.codigo, required this.titulo, required this.rodape});
 
   final String codigo;
-  final String janela;
+  final String titulo;
+  final String rodape;
 
   @override
   Widget build(BuildContext context) {
@@ -294,14 +306,13 @@ class _CodigoRetirada extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
               child: Column(
                 children: [
-                  const Text('Mostre este código na loja',
-                      style: TextStyle(color: XepaCores.tomateEscuro, fontWeight: FontWeight.w700)),
+                  Text(titulo, style: const TextStyle(color: XepaCores.tomateEscuro, fontWeight: FontWeight.w700)),
                   Semantics(
                     label: 'Código de retirada ${codigo.split('').join(' ')}',
                     child: Text(codigo,
                         style: const TextStyle(fontSize: 40, letterSpacing: 10, fontWeight: FontWeight.w800, color: XepaCores.tomateEscuro)),
                   ),
-                  Text('Retirada entre $janela', style: const TextStyle(color: XepaCores.tomateEscuro, fontSize: 13)),
+                  Text(rodape, style: const TextStyle(color: XepaCores.tomateEscuro, fontSize: 13)),
                 ],
               ),
             ),
