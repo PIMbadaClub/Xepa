@@ -120,7 +120,7 @@ th { background: var(--bege); text-align: left; padding: 12px 14px; font-size: 1
 td { padding: 12px 14px; border-top: 1px solid var(--borda); vertical-align: middle; }
 tbody tr:hover td { background: #FFFDFB; }
 td img { width: 64px; height: 48px; object-fit: cover; border-radius: 10px; display: block; }
-.miniatura-vazia { width: 64px; height: 48px; border-radius: 10px; background: var(--bege) url("../img/tomate.svg") center / 26px no-repeat; opacity: .8; }
+.miniatura-vazia { width: 64px; height: 48px; border-radius: 10px; background: var(--bege) url("../img/tomate.svg?v=2") center / 26px no-repeat; opacity: .8; }
 .preco { color: var(--tomate); font-weight: 800; white-space: nowrap; }
 .riscado { text-decoration: line-through; color: var(--texto-2); font-size: 13px; }
 .selo { display: inline-block; font-size: 12px; font-weight: 800; padding: 4px 10px; border-radius: 99px; }
@@ -130,7 +130,7 @@ td img { width: 64px; height: 48px; object-fit: cover; border-radius: 10px; disp
 .acoes { display: flex; gap: 6px; flex-wrap: wrap; }
 .acoes form { margin: 0; }
 .vazio { padding: 40px 32px 36px; text-align: center; color: var(--texto-2); }
-.vazio::before { content: ""; display: block; width: 56px; height: 56px; margin: 0 auto 12px; background: url("../img/tomate.svg") center / contain no-repeat; transform: rotate(-12deg); }
+.vazio::before { content: ""; display: block; width: 56px; height: 56px; margin: 0 auto 12px; background: url("../img/tomate.svg?v=2") center / contain no-repeat; transform: rotate(-12deg); }
 
 @media (max-width: 760px) {
     .app { flex-direction: column; }
@@ -176,7 +176,7 @@ a.indicador:hover { border-color: var(--tomate); }
 .indicador.verde { background: var(--verde-claro); border-color: transparent; }
 .indicador.verde strong { color: var(--verde-texto); }
 .indicador.destaque { position: relative; overflow: hidden; }
-.indicador.destaque::after { content: ""; position: absolute; right: -18px; bottom: -22px; width: 90px; height: 90px; background: url("../img/tomate.svg") center / contain no-repeat; opacity: .12; transform: rotate(-16deg); }
+.indicador.destaque::after { content: ""; position: absolute; right: -18px; bottom: -22px; width: 90px; height: 90px; background: url("../img/tomate.svg?v=2") center / contain no-repeat; opacity: .12; transform: rotate(-16deg); }
 
 .filtros { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 16px; }
 .filtros a { padding: 7px 14px; border-radius: 99px; border: 1px solid var(--borda); background: #fff; color: var(--texto); text-decoration: none; font-weight: 700; font-size: 13.5px; }
