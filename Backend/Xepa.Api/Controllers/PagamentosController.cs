@@ -37,15 +37,15 @@ public class PagamentosController(PagamentoService pagamentos, OpcoesMercadoPago
         return Ok();
     }
 
-    /// <summary>Só em desenvolvimento: aprova uma cobrança do gateway simulado e dispara o mesmo fluxo do webhook.</summary>
+    /// <summary>
+    /// Desenvolvimento e homologação: aprova uma cobrança do gateway simulado e dispara o mesmo fluxo do webhook.
+    /// Em produção o simulado nem é registrado, então a rota responde 404.
+    /// </summary>
     [HttpPost("simulado/{idExterno}/aprovar")]
-    public async Task<IActionResult> AprovarSimulado(string idExterno, [FromServices] IServiceProvider sp,
-        [FromServices] IWebHostEnvironment env, CancellationToken ct)
+    public async Task<IActionResult> AprovarSimulado(string idExterno, [FromServices] IServiceProvider sp, CancellationToken ct)
     {
         var simulado = sp.GetService<GatewaySimulado>();
-        if (!env.IsDevelopment() || simulado is null)
-            return NotFound();
-        if (!simulado.Aprovar(idExterno))
+        if (simulado is null || !simulado.Aprovar(idExterno))
             return NotFound();
 
         await pagamentos.ProcessarNotificacaoAsync(idExterno, ct);

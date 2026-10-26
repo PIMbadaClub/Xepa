@@ -95,7 +95,7 @@ class _PagamentoScreenState extends State<PagamentoScreen> {
     }
   }
 
-  /// Só no ambiente de desenvolvimento (gateway simulado): aprova como se o banco tivesse pagado.
+  /// Só com o gateway simulado (desenvolvimento e homologação): aprova como se o banco tivesse pagado.
   Future<void> _simularAprovacao() async {
     try {
       await Api.instance.post<void>('/api/pagamentos/simulado/${_pagamento!.idExterno}/aprovar');
