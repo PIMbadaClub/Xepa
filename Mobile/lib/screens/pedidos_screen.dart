@@ -3,16 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../api/api.dart';
-import '../api/favoritos.dart';
 import '../api/tempo_real.dart';
-import '../models/auth.dart';
 import '../models/oferta.dart';
 import '../models/pedido.dart';
 import '../theme.dart';
 import '../widgets/oferta_widgets.dart';
 import '../widgets/xepa_logo.dart';
 import 'acompanhamento_screen.dart';
-import 'login_screen.dart';
 import 'pagamento_screen.dart';
 
 /// Aba Pedidos: histórico do cliente, atualizado em tempo real.
@@ -188,168 +185,6 @@ class _CartaoPedido extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-/// Aba Perfil: dados da conta e sair.
-class PerfilScreen extends StatelessWidget {
-  const PerfilScreen({super.key});
-
-  Future<void> _sair(BuildContext context) async {
-    await AuthService.instance.sair();
-    Favoritos.instance.limpar();
-    if (context.mounted) {
-      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => const LoginScreen()), (_) => false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final u = AuthService.instance.usuario;
-    final nome = u?.nome ?? '';
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        children: [
-          const Text('Perfil', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.6)),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(XepaRaios.cartao),
-            child: Container(
-              color: XepaCores.tomate,
-              child: Stack(
-                children: [
-                  const Positioned(
-                    right: -20,
-                    top: -24,
-                    child: TomateMarcaDagua(tamanho: 120, opacidade: 0.15, angulo: 0.3, cor: Colors.white),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 28,
-                          backgroundColor: Colors.white,
-                          child: Text(nome.isEmpty ? '?' : nome[0].toUpperCase(),
-                              style: const TextStyle(color: XepaCores.tomate, fontSize: 22, fontWeight: FontWeight.w800)),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(nome, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-                              Text(u?.email ?? '', style: TextStyle(color: Colors.white.withAlpha(220), fontSize: 13)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          const _ImpactoCliente(),
-          const SizedBox(height: 16),
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(XepaRaios.cartao),
-              border: Border.all(color: XepaCores.borda),
-            ),
-            child: Column(
-              children: [
-                if (u?.telefone != null)
-                  ListTile(leading: const Icon(Icons.phone_outlined), title: Text(u!.telefone!)),
-                ListTile(
-                  leading: const Icon(Icons.logout_rounded, color: XepaCores.tomateEscuro),
-                  title: const Text('Sair', style: TextStyle(color: XepaCores.tomateEscuro, fontWeight: FontWeight.w800)),
-                  onTap: () => _sair(context),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 28),
-          const Center(child: XepaMarca(tamanho: 20)),
-          const SizedBox(height: 4),
-          const Center(
-            child: Text('Comida boa não vai pro lixo', style: TextStyle(color: XepaCores.textoSecundario, fontSize: 12)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// "Sua xepa": quanto o cliente já salvou do lixo e economizou.
-class _ImpactoCliente extends StatefulWidget {
-  const _ImpactoCliente();
-
-  @override
-  State<_ImpactoCliente> createState() => _ImpactoClienteState();
-}
-
-class _ImpactoClienteState extends State<_ImpactoCliente> {
-  Map<String, dynamic>? _impacto;
-
-  @override
-  void initState() {
-    super.initState();
-    Api.instance.get<Map<String, dynamic>>('/api/usuarios/me/impacto').then((j) {
-      if (mounted) setState(() => _impacto = j);
-    }).catchError((_) {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final i = _impacto;
-    final pedidos = (i?['pedidos'] as int?) ?? 0;
-    final kg = (i?['kgSalvos'] as num?)?.toDouble() ?? 0;
-    final economia = (i?['economia'] as num?)?.toDouble() ?? 0;
-
-    Widget numero(String valor, String rotulo) => Expanded(
-          child: Column(
-            children: [
-              Text(valor, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: XepaCores.verdeTexto)),
-              const SizedBox(height: 2),
-              Text(rotulo, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11.5, color: XepaCores.verdeTexto)),
-            ],
-          ),
-        );
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: XepaCores.verdeClaro, borderRadius: BorderRadius.circular(XepaRaios.cartao)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.eco_rounded, color: XepaCores.verde, size: 20),
-              SizedBox(width: 6),
-              Text('Sua xepa', style: TextStyle(fontWeight: FontWeight.w800, color: XepaCores.verdeTexto, fontSize: 15)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (i == null)
-            const Center(child: Padding(padding: EdgeInsets.all(8), child: TomateCarregando(tamanho: 24)))
-          else if (pedidos == 0)
-            const Text('Seu primeiro resgate vai aparecer aqui: quanta comida você salvou e quanto economizou.',
-                style: TextStyle(color: XepaCores.verdeTexto, height: 1.4))
-          else
-            Row(
-              children: [
-                numero('${formatarDecimal(kg)} kg', 'de comida salva do lixo'),
-                numero(formatarPreco(economia), 'economizados'),
-                numero('$pedidos', pedidos == 1 ? 'resgate' : 'resgates'),
-              ],
-            ),
-        ],
       ),
     );
   }

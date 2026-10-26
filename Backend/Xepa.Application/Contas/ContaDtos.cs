@@ -28,6 +28,24 @@ public class LoginRequest
     public required string Senha { get; init; }
 }
 
+public class AtualizarPerfilRequest
+{
+    [Required(ErrorMessage = "Informe seu nome."), MaxLength(120)]
+    public required string Nome { get; init; }
+
+    [Phone(ErrorMessage = "Telefone inválido."), MaxLength(20)]
+    public string? Telefone { get; init; }
+}
+
+public class AlterarSenhaRequest
+{
+    [Required(ErrorMessage = "Informe a senha atual.")]
+    public required string SenhaAtual { get; init; }
+
+    [Required, MinLength(8, ErrorMessage = "A nova senha precisa de ao menos 8 caracteres."), MaxLength(100)]
+    public required string NovaSenha { get; init; }
+}
+
 public class RenovarRequest
 {
     [Required]

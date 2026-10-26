@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Xepa.Application;
 using Xepa.Application.Ofertas;
 using Xepa.Application.Pagamentos;
 using Xepa.Application.Pedidos;
@@ -44,12 +45,19 @@ public class PedidosController(PedidoService pedidos, PagamentoService pagamento
     public Task<RastreioDto> Rastreio(int id, CancellationToken ct) => pedidos.ObterRastreioAsync(User.UsuarioId(), id, ct);
 
     /// <summary>Canal de denúncia do pedido; tratado pela equipe da XEPA no portal administrativo.</summary>
+    /// <remarks>Formulário multipart: motivo, descricao e, opcionalmente, uma foto como prova (até 5 MB).</remarks>
     [HttpPost("{id:int}/denuncias")]
-    public async Task<ActionResult<DenunciaDto>> Denunciar(int id, CriarDenunciaRequest request, CancellationToken ct) =>
-        StatusCode(StatusCodes.Status201Created, await denuncias.CriarAsync(User.UsuarioId(), id, request, ct));
+    [Consumes("multipart/form-data", "application/x-www-form-urlencoded")]
+    [RequestSizeLimit(Fotos.TamanhoMaximo + 1024 * 1024)]
+    public async Task<ActionResult<DenunciaDto>> Denunciar(int id, [FromForm] CriarDenunciaRequest request, IFormFile? foto,
+        CancellationToken ct)
+    {
+        var arquivo = foto is { Length: > 0 } ? new Foto(foto.OpenReadStream(), foto.FileName, foto.Length) : null;
+        return StatusCode(StatusCodes.Status201Created, await denuncias.CriarAsync(User.UsuarioId(), id, request, arquivo, ct));
+    }
 
     [HttpGet("{id:int}/denuncias")]
-    public Task<IReadOnlyList<DenunciaDto>> Denuncias(int id, CancellationToken ct) =>
+    public Task<List<DenunciaDto>> Denuncias(int id, CancellationToken ct) =>
         denuncias.ListarDoPedidoAsync(User.UsuarioId(), id, ct);
 }
 

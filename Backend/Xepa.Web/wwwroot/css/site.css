@@ -211,3 +211,8 @@ a.indicador:hover { border-color: var(--tomate); }
 .cadastro { max-width: 720px; }
 
 @media (max-width: 900px) { .duas-colunas { grid-template-columns: 1fr; } }
+
+.relato { display: flex; gap: 12px; align-items: flex-start; }
+.relato blockquote { flex: 1; }
+.prova img { width: 120px; height: 90px; object-fit: cover; border-radius: 12px; margin-top: 12px; border: 1px solid var(--borda); }
+.prova:hover img { outline: 3px solid var(--tomate-claro); }

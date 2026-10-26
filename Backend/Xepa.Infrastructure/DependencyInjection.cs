@@ -7,6 +7,7 @@ using Xepa.Application;
 using Xepa.Application.Administracao;
 using Xepa.Application.Contas;
 using Xepa.Application.Indicadores;
+using Xepa.Application.Notificacoes;
 using Xepa.Application.Ofertas;
 using Xepa.Application.Pagamentos;
 using Xepa.Application.Pedidos;
@@ -47,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IndicadoresService>();
         services.AddScoped<AdminService>();
         services.AddScoped<CadastroLojaService>();
+        services.AddScoped<NotificacaoService>();
 
         services.AddSingleton<IHasherSenha, HasherSenha>();
         services.AddScoped<IReservaPedidos, ReservaPedidosSql>();
@@ -58,6 +60,12 @@ public static class DependencyInjection
         services.AddSingleton(mp);
         if (mp.Configurado)
         {
+            if (mp.PixSimulado)
+            {
+                if (env.IsProduction())
+                    throw new InvalidOperationException("MercadoPago:PixSimulado não pode ser usado em produção.");
+                services.AddSingleton<GatewaySimulado>();
+            }
             services.AddHttpClient<IGatewayPagamento, GatewayMercadoPago>(c => c.BaseAddress = new Uri("https://api.mercadopago.com/"));
         }
         else

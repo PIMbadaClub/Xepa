@@ -49,6 +49,9 @@ namespace Xepa.Infrastructure.Data.Migrations
                     b.Property<int>("EstabelecimentoId")
                         .HasColumnType("int");
 
+                    b.Property<string>("FotoUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Motivo")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -797,6 +800,9 @@ namespace Xepa.Infrastructure.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
+
+                    b.Property<DateTimeOffset?>("NotificacoesLidasAte")
+                        .HasColumnType("datetimeoffset");
 
                     b.Property<string>("SenhaHash")
                         .IsRequired()

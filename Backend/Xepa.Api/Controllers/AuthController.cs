@@ -5,6 +5,8 @@ using Xepa.Api.Seguranca;
 using Xepa.Infrastructure.Seguranca;
 using Xepa.Application.Contas;
 using Xepa.Application.Indicadores;
+using Xepa.Application.Notificacoes;
+using Xepa.Application.Pedidos;
 
 namespace Xepa.Api.Controllers;
 
@@ -37,10 +39,42 @@ public class AuthController(ContaService contas) : ControllerBase
 [ApiController]
 [Route("api/usuarios")]
 [Authorize]
-public class UsuariosController(ContaService contas, IndicadoresService indicadores) : ControllerBase
+public class UsuariosController(ContaService contas, IndicadoresService indicadores, NotificacaoService notificacoes,
+    DenunciaService denuncias) : ControllerBase
 {
     [HttpGet("me")]
     public Task<UsuarioDto> Me(CancellationToken ct) => contas.ObterAsync(User.UsuarioId(), ct);
+
+    [HttpPut("me")]
+    public Task<UsuarioDto> AtualizarPerfil(AtualizarPerfilRequest request, CancellationToken ct) =>
+        contas.AtualizarPerfilAsync(User.UsuarioId(), request, ct);
+
+    /// <summary>Troca a senha. Mande o token de renovação atual no cabeçalho X-Token-Renovacao para manter esta sessão.</summary>
+    [HttpPost("me/senha")]
+    public async Task<IActionResult> AlterarSenha(AlterarSenhaRequest request, [FromHeader(Name = "X-Token-Renovacao")] string? tokenAtual,
+        CancellationToken ct)
+    {
+        await contas.AlterarSenhaAsync(User.UsuarioId(), request, tokenAtual, ct);
+        return NoContent();
+    }
+
+    /// <summary>Central de notificações: status dos pedidos, respostas de denúncia e ofertas das lojas favoritas.</summary>
+    [HttpGet("me/notificacoes")]
+    [Authorize(Roles = "Cliente")]
+    public Task<CaixaNotificacoesDto> Notificacoes(int limite = 50, CancellationToken ct = default) =>
+        notificacoes.ListarAsync(User.UsuarioId(), limite, ct);
+
+    [HttpPost("me/notificacoes/lidas")]
+    [Authorize(Roles = "Cliente")]
+    public async Task<IActionResult> MarcarLidas(CancellationToken ct)
+    {
+        await notificacoes.MarcarLidasAsync(User.UsuarioId(), ct);
+        return NoContent();
+    }
+
+    [HttpGet("me/denuncias")]
+    [Authorize(Roles = "Cliente")]
+    public Task<List<DenunciaDto>> MinhasDenuncias(CancellationToken ct) => denuncias.ListarDoClienteAsync(User.UsuarioId(), ct);
 
     /// <summary>Quanto o cliente já salvou do lixo e economizou com pedidos entregues.</summary>
     [HttpGet("me/impacto")]

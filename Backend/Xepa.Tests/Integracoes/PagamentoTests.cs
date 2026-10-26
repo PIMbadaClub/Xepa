@@ -64,6 +64,20 @@ public class GatewaySimuladoTests
     [Fact]
     public async Task Pagamento_desconhecido_retorna_nulo() =>
         Assert.Null(await new GatewaySimulado().ConsultarAsync("nao-existe", CancellationToken.None));
+
+    [Fact]
+    public async Task Pix_simulado_no_mercado_pago_nao_chama_a_api()
+    {
+        // HttpClient sem endereço: qualquer chamada real ao Mercado Pago lançaria exceção.
+        var simulado = new GatewaySimulado();
+        var gateway = new GatewayMercadoPago(new HttpClient(), new OpcoesMercadoPago { AccessToken = "APP_USR-x", PixSimulado = true }, simulado);
+
+        var cobranca = await gateway.CriarCobrancaAsync(NovoPedido(), MetodoPagamento.Pix, "a@b.c", CancellationToken.None);
+        Assert.StartsWith(GatewaySimulado.Prefixo, cobranca.IdExterno);
+
+        Assert.True(simulado.Aprovar(cobranca.IdExterno));
+        Assert.Equal(StatusPagamento.Aprovado, (await gateway.ConsultarAsync(cobranca.IdExterno, CancellationToken.None))!.Status);
+    }
 }
 
 public class PagamentoEntidadeTests

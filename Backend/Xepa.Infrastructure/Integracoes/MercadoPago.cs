@@ -32,6 +32,12 @@ public class OpcoesMercadoPago
 
     public int MinutosValidadePix { get; init; } = 15;
 
+    /// <summary>
+    /// Homologação: Pix pelo gateway simulado e cartão pelo Mercado Pago. As credenciais de teste do
+    /// Mercado Pago recusam Pix ("Unauthorized use of live credentials"). Proibido em produção.
+    /// </summary>
+    public bool PixSimulado { get; init; }
+
     public bool Configurado => !string.IsNullOrWhiteSpace(AccessToken);
 }
 
@@ -39,7 +45,8 @@ public class OpcoesMercadoPago
 /// Integração com a API do Mercado Pago: Pix pela API de pagamentos e cartão pelo Checkout Pro
 /// (a página do gateway recebe o cartão; os dados nunca passam pela XEPA).
 /// </summary>
-public class GatewayMercadoPago(HttpClient http, OpcoesMercadoPago opcoes) : IGatewayPagamento
+public class GatewayMercadoPago(HttpClient http, OpcoesMercadoPago opcoes, GatewaySimulado? pixSimulado = null)
+    : IGatewayPagamento
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
     {
@@ -51,6 +58,9 @@ public class GatewayMercadoPago(HttpClient http, OpcoesMercadoPago opcoes) : IGa
 
     public async Task<Cobranca> CriarCobrancaAsync(Pedido pedido, MetodoPagamento metodo, string emailPagador, CancellationToken ct)
     {
+        if (metodo == MetodoPagamento.Pix && pixSimulado is not null)
+            return await pixSimulado.CriarCobrancaAsync(pedido, metodo, emailPagador, ct);
+
         var descricao = $"XEPA pedido {pedido.Id}: {pedido.Quantidade}x {pedido.Oferta.Titulo}";
         if (metodo == MetodoPagamento.Pix)
         {
@@ -90,6 +100,9 @@ public class GatewayMercadoPago(HttpClient http, OpcoesMercadoPago opcoes) : IGa
 
     public async Task<SituacaoPagamento?> ConsultarAsync(string idExterno, CancellationToken ct)
     {
+        if (DoSimulado(idExterno))
+            return await pixSimulado!.ConsultarAsync(idExterno, ct);
+
         using var resp = await EnviarAsync(HttpMethod.Get, $"v1/payments/{Uri.EscapeDataString(idExterno)}", null, ct, aceitar404: true);
         if (resp.StatusCode == System.Net.HttpStatusCode.NotFound)
             return null;
@@ -109,6 +122,12 @@ public class GatewayMercadoPago(HttpClient http, OpcoesMercadoPago opcoes) : IGa
 
     public async Task EstornarAsync(string idExterno, CancellationToken ct)
     {
+        if (DoSimulado(idExterno))
+        {
+            await pixSimulado!.EstornarAsync(idExterno, ct);
+            return;
+        }
+
         using var _ = await EnviarAsync(HttpMethod.Post, $"v1/payments/{Uri.EscapeDataString(idExterno)}/refunds", new { }, ct);
     }
 
@@ -136,6 +155,9 @@ public class GatewayMercadoPago(HttpClient http, OpcoesMercadoPago opcoes) : IGa
         var esperado = Convert.ToHexStringLower(HMACSHA256.HashData(Encoding.UTF8.GetBytes(segredo), Encoding.UTF8.GetBytes(manifesto)));
         return CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(esperado), Encoding.ASCII.GetBytes(v1.ToLowerInvariant()));
     }
+
+    private bool DoSimulado(string idExterno) =>
+        pixSimulado is not null && idExterno.StartsWith(GatewaySimulado.Prefixo, StringComparison.Ordinal);
 
     /// <summary>
     /// Data no fuso de Brasília. Em UTC o offset sai "+00:00" e o System.Text.Json escapa o "+" como +,
@@ -179,13 +201,15 @@ public class GatewayMercadoPago(HttpClient http, OpcoesMercadoPago opcoes) : IGa
 /// </summary>
 public class GatewaySimulado : IGatewayPagamento
 {
+    public const string Prefixo = "SIM-";
+
     private readonly ConcurrentDictionary<string, SituacaoPagamento> pagamentos = new();
 
     public string Provedor => Pagamento.Simulado;
 
     public Task<Cobranca> CriarCobrancaAsync(Pedido pedido, MetodoPagamento metodo, string emailPagador, CancellationToken ct)
     {
-        var id = $"SIM-{Guid.NewGuid():N}"[..20];
+        var id = $"{Prefixo}{Guid.NewGuid():N}"[..20];
         pagamentos[id] = new SituacaoPagamento(id, StatusPagamento.Pendente, pedido.Id, pedido.ValorTotal, metodo, null);
         var pix = metodo == MetodoPagamento.Pix
             ? $"00020126580014BR.GOV.BCB.PIX0136XEPA-SIMULADO-{id}5204000053039865406{pedido.ValorTotal.ToString("0.00", CultureInfo.InvariantCulture)}5802BR5904XEPA6007LIMEIRA62070503***6304ABCD"

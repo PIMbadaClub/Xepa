@@ -95,7 +95,11 @@ class Api {
   Future<T> get<T>(String caminho, {Map<String, dynamic>? query}) =>
       _executar(() => dio.get<T>(caminho, queryParameters: query));
 
-  Future<T> post<T>(String caminho, [Object? corpo]) => _executar(() => dio.post<T>(caminho, data: corpo));
+  Future<T> post<T>(String caminho, [Object? corpo, Map<String, dynamic>? cabecalhos]) => _executar(() => dio.post<T>(
+        caminho,
+        data: corpo,
+        options: cabecalhos == null ? null : Options(headers: {...cabecalhos}..removeWhere((_, v) => v == null)),
+      ));
 
   Future<T> put<T>(String caminho, [Object? corpo]) => _executar(() => dio.put<T>(caminho, data: corpo));
 

@@ -94,6 +94,35 @@ public class ContaService(IXepaDb db, IHasherSenha hasher, CredenciaisService cr
         return ParaDto(usuario);
     }
 
+    public async Task<UsuarioDto> AtualizarPerfilAsync(int usuarioId, AtualizarPerfilRequest request, CancellationToken ct)
+    {
+        var usuario = await db.Usuarios.Include(u => u.Estabelecimento).FirstOrDefaultAsync(u => u.Id == usuarioId, ct)
+                      ?? throw new NaoEncontradoException("Usuário não encontrado.");
+        usuario.Nome = request.Nome.Trim();
+        usuario.Telefone = string.IsNullOrWhiteSpace(request.Telefone) ? null : request.Telefone.Trim();
+        await db.SaveChangesAsync(ct);
+        return ParaDto(usuario);
+    }
+
+    /// <summary>Troca a senha conferindo a atual; as outras sessões abertas são encerradas.</summary>
+    public async Task AlterarSenhaAsync(int usuarioId, AlterarSenhaRequest request, string? tokenRenovacaoAtual, CancellationToken ct)
+    {
+        var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Id == usuarioId, ct)
+                      ?? throw new NaoEncontradoException("Usuário não encontrado.");
+        if (!hasher.Conferir(usuario, request.SenhaAtual))
+            throw new RegraDeNegocioException("A senha atual não confere.");
+        if (request.SenhaAtual == request.NovaSenha)
+            throw new RegraDeNegocioException("A nova senha precisa ser diferente da atual.");
+
+        usuario.SenhaHash = hasher.Gerar(usuario, request.NovaSenha);
+        var manter = tokenRenovacaoAtual is null ? null : Hash(tokenRenovacaoAtual);
+        var agora = DateTimeOffset.UtcNow;
+        await foreach (var token in db.TokensRenovacao.Where(t => t.UsuarioId == usuarioId && t.RevogadoEm == null && t.TokenHash != manter)
+                           .AsAsyncEnumerable().WithCancellation(ct))
+            token.RevogadoEm = agora;
+        await db.SaveChangesAsync(ct);
+    }
+
     private async Task<SessaoDto> AbrirSessaoAsync(Usuario usuario, CancellationToken ct)
     {
         var agora = DateTimeOffset.UtcNow;

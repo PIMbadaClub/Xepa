@@ -12,7 +12,7 @@ public record LojaAdminDto(int Id, string Nome, CategoriaEstabelecimento Categor
     bool Ativa, DateTimeOffset CriadoEm, int Pedidos, int DenunciasProcedentes);
 
 public record DenunciaAdminDto(int Id, int PedidoId, string Cliente, int ClienteId, bool ClienteBloqueado,
-    string Loja, int LojaId, bool LojaAtiva, MotivoDenuncia Motivo, string Descricao, StatusDenuncia Status,
+    string Loja, int LojaId, bool LojaAtiva, MotivoDenuncia Motivo, string Descricao, string? FotoUrl, StatusDenuncia Status,
     string? Resposta, DateTimeOffset CriadoEm, DateTimeOffset? TratadaEm);
 
 public record UsuarioAdminDto(int Id, string Nome, string Email, TipoUsuario Tipo, bool Bloqueado, DateTimeOffset CriadoEm,
@@ -114,7 +114,7 @@ public class AdminService(IXepaDb db, IServicoMapas mapas)
             .OrderBy(d => d.Status == StatusDenuncia.Aberta ? 0 : 1).ThenBy(d => d.CriadoEm)
             .Take(200)
             .Select(d => new DenunciaAdminDto(d.Id, d.PedidoId, d.Autor.Nome, d.AutorId, d.Autor.Bloqueado,
-                d.Estabelecimento.Nome, d.EstabelecimentoId, d.Estabelecimento.Ativo, d.Motivo, d.Descricao, d.Status,
+                d.Estabelecimento.Nome, d.EstabelecimentoId, d.Estabelecimento.Ativo, d.Motivo, d.Descricao, d.FotoUrl, d.Status,
                 d.Resposta, d.CriadoEm, d.TratadaEm))
             .ToListAsync(ct);
     }
