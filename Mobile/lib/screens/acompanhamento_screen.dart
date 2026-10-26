@@ -121,6 +121,10 @@ class _AcompanhamentoScreenState extends State<AcompanhamentoScreen> {
                     const SizedBox(height: 14),
                   ],
                   _CartaoStatus(pedido: p, entregador: _nomeEntregador),
+                  if (p.entrega && p.status == StatusPedido.entregue && p.nomeEntregador != null) ...[
+                    const SizedBox(height: 12),
+                    _AvaliarEntregador(pedido: p, onAvaliado: _carregar),
+                  ],
                   if (p.codigoRetirada != null && p.status.emAndamento && p.status != StatusPedido.aguardandoPagamento) ...[
                     const SizedBox(height: 12),
                     _CodigoRetirada(
@@ -389,6 +393,115 @@ class _LinhaDoTempo extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Depois de receber, o cliente dá de 1 a 5 estrelas ao entregador (vai para a nota dele no app do entregador).
+class _AvaliarEntregador extends StatefulWidget {
+  const _AvaliarEntregador({required this.pedido, required this.onAvaliado});
+
+  final Pedido pedido;
+  final Future<void> Function() onAvaliado;
+
+  @override
+  State<_AvaliarEntregador> createState() => _AvaliarEntregadorState();
+}
+
+class _AvaliarEntregadorState extends State<_AvaliarEntregador> {
+  static const _amarelo = Color(0xFFF5A524);
+  static const _rotulos = ['', 'Muito ruim', 'Ruim', 'Ok', 'Boa', 'Excelente'];
+
+  final _comentario = TextEditingController();
+  var _nota = 0;
+  var _enviando = false;
+
+  @override
+  void dispose() {
+    _comentario.dispose();
+    super.dispose();
+  }
+
+  Future<void> _enviar() async {
+    setState(() => _enviando = true);
+    try {
+      await Api.instance.post<void>('/api/pedidos/${widget.pedido.id}/avaliar-entregador', {
+        'nota': _nota,
+        if (_comentario.text.trim().isNotEmpty) 'comentario': _comentario.text.trim(),
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Obrigado pela avaliação!')));
+      await widget.onAvaliado();
+    } on ApiException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.mensagem)));
+    } finally {
+      if (mounted) setState(() => _enviando = false);
+    }
+  }
+
+  Widget _estrelas(int nota, {ValueChanged<int>? onTap, double tamanho = 36}) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 1; i <= 5; i++)
+            GestureDetector(
+              onTap: onTap == null ? null : () => onTap(i),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: Icon(i <= nota ? Icons.star_rounded : Icons.star_outline_rounded, size: tamanho, color: _amarelo),
+              ),
+            ),
+        ],
+      );
+
+  @override
+  Widget build(BuildContext context) {
+    final p = widget.pedido;
+    final nome = p.nomeEntregador!;
+    if (p.notaEntregador != null) {
+      return _Cartao(
+        child: Row(
+          children: [
+            const Icon(Icons.two_wheeler_rounded, color: XepaCores.textoSecundario),
+            const SizedBox(width: 10),
+            Expanded(child: Text('Você avaliou a entrega de $nome', style: const TextStyle(fontWeight: FontWeight.w700))),
+            _estrelas(p.notaEntregador!, tamanho: 18),
+          ],
+        ),
+      );
+    }
+    return _Cartao(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Como foi a entrega do $nome?', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+          const Text('Sua nota ajuda os entregadores parceiros da XEPA.',
+              style: TextStyle(color: XepaCores.textoSecundario, fontSize: 13)),
+          const SizedBox(height: 10),
+          Center(child: _estrelas(_nota, onTap: (n) => setState(() => _nota = n))),
+          if (_nota > 0) ...[
+            Center(
+              child: Text(_rotulos[_nota], style: const TextStyle(fontWeight: FontWeight.w800, color: XepaCores.textoSecundario)),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _comentario,
+              maxLength: 300,
+              maxLines: 2,
+              decoration: const InputDecoration(hintText: 'Quer deixar um comentário? (opcional)', counterText: ''),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _enviando ? null : _enviar,
+                child: _enviando
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                    : const Text('Enviar avaliação'),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }

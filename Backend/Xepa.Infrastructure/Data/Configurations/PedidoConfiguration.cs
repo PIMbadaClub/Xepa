@@ -9,6 +9,7 @@ public class PedidoConfiguration : IEntityTypeConfiguration<Pedido>
     public void Configure(EntityTypeBuilder<Pedido> builder)
     {
         builder.Property(p => p.Observacao).HasMaxLength(500);
+        builder.Property(p => p.ComentarioEntregador).HasMaxLength(300);
         builder.Property(p => p.CodigoRetirada).HasMaxLength(4).IsFixedLength();
         builder.ComplexProperty(p => p.EnderecoEntrega, e => EnderecoMapeamento.Configurar(e, "Entrega"));
 

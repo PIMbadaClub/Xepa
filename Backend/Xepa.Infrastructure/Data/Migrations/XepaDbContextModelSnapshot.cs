@@ -515,13 +515,23 @@ namespace Xepa.Infrastructure.Data.Migrations
                         .HasColumnType("nchar(4)")
                         .IsFixedLength();
 
+                    b.Property<string>("ComentarioEntregador")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
                     b.Property<DateTimeOffset>("CriadoEm")
                         .HasColumnType("datetimeoffset");
 
                     b.Property<double?>("DistanciaEntregaKm")
                         .HasColumnType("float");
 
+                    b.Property<DateTimeOffset?>("EntregadorAvaliadoEm")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<int?>("EntregadorId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("NotaEntregador")
                         .HasColumnType("int");
 
                     b.Property<string>("Observacao")
@@ -799,6 +809,10 @@ namespace Xepa.Infrastructure.Data.Migrations
                         .HasMaxLength(254)
                         .HasColumnType("nvarchar(254)");
 
+                    b.Property<string>("ModeloMoto")
+                        .HasMaxLength(60)
+                        .HasColumnType("nvarchar(60)");
+
                     b.Property<string>("Nome")
                         .IsRequired()
                         .HasMaxLength(120)
@@ -807,8 +821,15 @@ namespace Xepa.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset?>("NotificacoesLidasAte")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<bool>("Online")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Placa")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<int>("RaioCorridasKm")
+                        .HasColumnType("int");
 
                     b.Property<string>("SenhaHash")
                         .IsRequired()

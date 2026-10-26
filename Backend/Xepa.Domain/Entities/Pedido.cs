@@ -38,6 +38,11 @@ public class Pedido : Entidade
     public string? Observacao { get; set; }
 
     /// <summary>Repasse em que o pedido entrou; vazio enquanto a XEPA não acertou com a loja.</summary>
+    /// <summary>Nota de 1 a 5 que o cliente dá ao entregador depois de receber o pedido.</summary>
+    public int? NotaEntregador { get; set; }
+    public string? ComentarioEntregador { get; set; }
+    public DateTimeOffset? EntregadorAvaliadoEm { get; set; }
+
     public int? RepasseId { get; set; }
     public Repasse? Repasse { get; set; }
 
@@ -103,5 +108,22 @@ public class Pedido : Entidade
             throw new RegraDeNegocioException("Código de retirada incorreto.");
 
         AvancarStatus(StatusPedido.Entregue);
+    }
+
+    /// <summary>O cliente avalia o entregador uma vez, depois de receber a entrega.</summary>
+    public void AvaliarEntregador(int nota, string? comentario)
+    {
+        if (TipoEntrega != TipoEntrega.Entrega || EntregadorId is null)
+            throw new RegraDeNegocioException("Só dá para avaliar o entregador em pedidos com entrega.");
+        if (Status != StatusPedido.Entregue)
+            throw new RegraDeNegocioException("Avalie o entregador depois de receber o pedido.");
+        if (NotaEntregador is not null)
+            throw new RegraDeNegocioException("Você já avaliou esta entrega.");
+        if (nota is < 1 or > 5)
+            throw new RegraDeNegocioException("A nota vai de 1 a 5.");
+
+        NotaEntregador = nota;
+        ComentarioEntregador = string.IsNullOrWhiteSpace(comentario) ? null : comentario.Trim();
+        EntregadorAvaliadoEm = DateTimeOffset.UtcNow;
     }
 }

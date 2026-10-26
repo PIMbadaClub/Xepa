@@ -106,6 +106,15 @@ public class PedidoService(IXepaDb db, IReservaPedidos reserva, IServicoMapas ma
             dados.Placa);
     }
 
+    /// <summary>Nota do cliente para o entregador que levou o pedido (uma vez, depois de entregue).</summary>
+    public async Task AvaliarEntregadorAsync(int clienteId, int pedidoId, AvaliarEntregadorRequest request, CancellationToken ct)
+    {
+        var pedido = await db.Pedidos.FirstOrDefaultAsync(p => p.Id == pedidoId && p.ClienteId == clienteId, ct)
+                     ?? throw new NaoEncontradoException("Pedido não encontrado.");
+        pedido.AvaliarEntregador(request.Nota, request.Comentario);
+        await db.SaveChangesAsync(ct);
+    }
+
     private static Coordenada? Ponto(double? lat, double? lng) =>
         lat is { } a && lng is { } b ? new Coordenada(a, b) : null;
 
@@ -122,6 +131,8 @@ public class PedidoService(IXepaDb db, IReservaPedidos reserva, IServicoMapas ma
             CodigoRetirada = p.CodigoRetirada,
             CriadoEm = p.CriadoEm,
             EnderecoEntrega = p.EnderecoEntrega,
+            NomeEntregador = p.Entregador != null ? p.Entregador.Nome : null,
+            NotaEntregador = p.NotaEntregador,
             Oferta = new PedidoOfertaDto(p.Oferta.Id, p.Oferta.Titulo, p.Oferta.FotoUrl, p.Oferta.EstabelecimentoId,
                 p.Oferta.Estabelecimento.Nome, p.Oferta.RetiradaInicio, p.Oferta.RetiradaFim)
         });

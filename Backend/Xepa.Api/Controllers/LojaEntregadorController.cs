@@ -85,6 +85,20 @@ public class EntregadorController(EntregaService entregas) : ControllerBase
     [HttpGet("ganhos")]
     public Task<GanhosDto> Ganhos(CancellationToken ct) => entregas.GanhosAsync(User.UsuarioId(), ct);
 
+    /// <summary>Fica online (recebe corridas) ou offline.</summary>
+    [HttpPut("online")]
+    public async Task<OnlineDto> Online(OnlineDto request, CancellationToken ct) =>
+        new(await entregas.DefinirOnlineAsync(User.UsuarioId(), request.Online, ct));
+
+    [HttpGet("perfil")]
+    public Task<PerfilEntregadorDto> Perfil(CancellationToken ct) => entregas.PerfilAsync(User.UsuarioId(), ct);
+
+    [HttpPut("perfil")]
+    public Task<PerfilEntregadorDto> AtualizarPerfil(AtualizarPerfilEntregadorRequest request, CancellationToken ct) =>
+        entregas.AtualizarPerfilAsync(User.UsuarioId(), request, ct);
+
+    public record OnlineDto(bool Online);
+
     private static Coordenada? Posicao(double? latitude, double? longitude) =>
         latitude is { } la && longitude is { } lo && Math.Abs(la) <= 90 && Math.Abs(lo) <= 180 ? new Coordenada(la, lo) : null;
 
