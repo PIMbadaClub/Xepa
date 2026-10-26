@@ -4,12 +4,14 @@ import 'package:flutter/material.dart';
 
 import '../api/api.dart';
 import '../api/localizacao.dart';
+import '../api/notificacoes.dart';
 import '../models/auth.dart';
 import '../models/oferta.dart';
 import '../theme.dart';
 import '../widgets/oferta_widgets.dart';
 import '../widgets/xepa_logo.dart';
 import 'detalhe_screen.dart';
+import 'notificacoes_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -244,12 +246,20 @@ class _Cabecalho extends StatelessWidget {
             ],
           ),
         ),
-        IconButton(
-          onPressed: () {},
-          icon: const Badge(
-            smallSize: 8,
-            backgroundColor: XepaCores.tomate,
-            child: Icon(Icons.notifications_none_rounded, color: XepaCores.texto),
+        ValueListenableBuilder<int>(
+          valueListenable: Notificacoes.instance.naoLidas,
+          builder: (context, naoLidas, _) => IconButton(
+            tooltip: naoLidas == 0 ? 'Notificações' : '$naoLidas notificações novas',
+            onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificacoesScreen())),
+            icon: Badge.count(
+              count: naoLidas,
+              isLabelVisible: naoLidas > 0,
+              backgroundColor: XepaCores.tomate,
+              child: Icon(
+                naoLidas > 0 ? Icons.notifications_active_rounded : Icons.notifications_none_rounded,
+                color: XepaCores.texto,
+              ),
+            ),
           ),
         ),
       ],

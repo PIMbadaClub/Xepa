@@ -138,7 +138,8 @@ class Pagamento {
   final String? urlCheckout;
   final DateTime? expiraEm;
 
-  bool get simulado => provedor == 'Simulado';
+  /// Gateway simulado, ou Pix simulado em homologação com o cartão no Mercado Pago (id "SIM-").
+  bool get simulado => provedor == 'Simulado' || idExterno.startsWith('SIM-');
 }
 
 class EnderecoSalvo {

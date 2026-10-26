@@ -14,15 +14,16 @@ public class CriarDenunciaRequest
     public required string Descricao { get; init; }
 }
 
-public record DenunciaDto(int Id, int PedidoId, MotivoDenuncia Motivo, string Descricao, StatusDenuncia Status,
-    string? Resposta, DateTimeOffset CriadoEm, DateTimeOffset? TratadaEm);
+public record DenunciaDto(int Id, int PedidoId, string Loja, MotivoDenuncia Motivo, string Descricao, string? FotoUrl,
+    StatusDenuncia Status, string? Resposta, DateTimeOffset CriadoEm, DateTimeOffset? TratadaEm);
 
 /// <summary>Canal de denúncia em cada pedido (seção de ética do PIM); a equipe trata no portal administrativo.</summary>
-public class DenunciaService(IXepaDb db)
+public class DenunciaService(IXepaDb db, IArmazenamento armazenamento)
 {
-    public async Task<DenunciaDto> CriarAsync(int clienteId, int pedidoId, CriarDenunciaRequest request, CancellationToken ct)
+    public async Task<DenunciaDto> CriarAsync(int clienteId, int pedidoId, CriarDenunciaRequest request, Foto? foto,
+        CancellationToken ct)
     {
-        var pedido = await db.Pedidos.Include(p => p.Oferta)
+        var pedido = await db.Pedidos.Include(p => p.Oferta).ThenInclude(o => o.Estabelecimento)
                          .FirstOrDefaultAsync(p => p.Id == pedidoId && p.ClienteId == clienteId, ct)
                      ?? throw new NaoEncontradoException("Pedido não encontrado.");
         if (pedido.Status == StatusPedido.AguardandoPagamento)
@@ -38,18 +39,25 @@ public class DenunciaService(IXepaDb db)
             Motivo = request.Motivo,
             Descricao = request.Descricao.Trim()
         };
+        if (foto is not null)
+            denuncia.FotoUrl = await Fotos.SalvarAsync(armazenamento, foto, ct);
         db.Denuncias.Add(denuncia);
         await db.SaveChangesAsync(ct);
-        return Dto(denuncia);
+        return new DenunciaDto(denuncia.Id, denuncia.PedidoId, pedido.Oferta.Estabelecimento.Nome, denuncia.Motivo,
+            denuncia.Descricao, denuncia.FotoUrl, denuncia.Status, denuncia.Resposta, denuncia.CriadoEm, denuncia.TratadaEm);
     }
 
-    public async Task<IReadOnlyList<DenunciaDto>> ListarDoPedidoAsync(int clienteId, int pedidoId, CancellationToken ct) =>
-        (await db.Denuncias.AsNoTracking()
-            .Where(d => d.PedidoId == pedidoId && d.AutorId == clienteId)
-            .OrderByDescending(d => d.CriadoEm)
-            .ToListAsync(ct))
-        .Select(Dto).ToList();
+    public Task<List<DenunciaDto>> ListarDoPedidoAsync(int clienteId, int pedidoId, CancellationToken ct) =>
+        Consultar(clienteId, pedidoId).ToListAsync(ct);
 
-    private static DenunciaDto Dto(Denuncia d) =>
-        new(d.Id, d.PedidoId, d.Motivo, d.Descricao, d.Status, d.Resposta, d.CriadoEm, d.TratadaEm);
+    /// <summary>Todas as denúncias do cliente (tela "Minhas denúncias" do perfil).</summary>
+    public Task<List<DenunciaDto>> ListarDoClienteAsync(int clienteId, CancellationToken ct) =>
+        Consultar(clienteId, null).Take(100).ToListAsync(ct);
+
+    private IQueryable<DenunciaDto> Consultar(int clienteId, int? pedidoId) =>
+        db.Denuncias.AsNoTracking()
+            .Where(d => d.AutorId == clienteId && (pedidoId == null || d.PedidoId == pedidoId))
+            .OrderByDescending(d => d.CriadoEm)
+            .Select(d => new DenunciaDto(d.Id, d.PedidoId, d.Estabelecimento.Nome, d.Motivo, d.Descricao, d.FotoUrl,
+                d.Status, d.Resposta, d.CriadoEm, d.TratadaEm));
 }

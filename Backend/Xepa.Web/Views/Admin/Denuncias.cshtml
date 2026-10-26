@@ -29,7 +29,15 @@
         <p class="sub" style="margin:6px 0 0">
             <strong>@d.Cliente</strong>@(d.ClienteBloqueado ? " (suspenso)" : "") sobre <strong>@d.Loja</strong>@(d.LojaAtiva ? "" : " (suspensa)")
         </p>
-        <blockquote>@d.Descricao</blockquote>
+        <div class="relato">
+            <blockquote>@d.Descricao</blockquote>
+            @if (d.FotoUrl is not null)
+            {
+                <a href="@d.FotoUrl" target="_blank" rel="noopener" class="prova" title="Abrir a foto enviada pelo cliente">
+                    <img src="@d.FotoUrl" alt="Foto enviada pelo cliente como prova" />
+                </a>
+            }
+        </div>
 
         @if (d.Status == StatusDenuncia.Aberta)
         {

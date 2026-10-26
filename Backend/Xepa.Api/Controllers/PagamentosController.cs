@@ -29,7 +29,8 @@ public class PagamentosController(PagamentoService pagamentos, OpcoesMercadoPago
             && !GatewayMercadoPago.AssinaturaValida(opcoes.SegredoWebhook, Request.Headers["x-signature"],
                 Request.Headers["x-request-id"], dataId))
         {
-            log.LogWarning("Webhook com assinatura inválida para o pagamento {Id}.", dataId);
+            log.LogWarning("Webhook com assinatura inválida para o pagamento {Id} (x-signature {Assinatura}, x-request-id {RequestId}).",
+                dataId, Request.Headers["x-signature"].ToString(), Request.Headers["x-request-id"].ToString());
             return Unauthorized();
         }
 

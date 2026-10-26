@@ -32,6 +32,9 @@ public class Denuncia : Entidade
     public MotivoDenuncia Motivo { get; set; }
     public required string Descricao { get; set; }
 
+    /// <summary>Foto opcional enviada pelo cliente como prova (ex.: comida estragada).</summary>
+    public string? FotoUrl { get; set; }
+
     public StatusDenuncia Status { get; set; } = StatusDenuncia.Aberta;
     public string? Resposta { get; set; }
     public DateTimeOffset? TratadaEm { get; set; }

@@ -1,3 +1,5 @@
+import '../api/favoritos.dart';
+import '../api/notificacoes.dart';
 import '../api/api.dart';
 import '../api/tempo_real.dart';
 
@@ -85,6 +87,21 @@ class AuthService {
     }
   }
 
+  /// Salva nome e telefone; o usuário em memória passa a refletir o que a API devolveu.
+  Future<Usuario> atualizarPerfil({required String nome, String? telefone}) async {
+    final j = await Api.instance.put<Map<String, dynamic>>('/api/usuarios/me', {'nome': nome, 'telefone': telefone});
+    return _usuario = Usuario.fromJson(j);
+  }
+
+  /// Troca a senha mantendo esta sessão (as outras são encerradas pela API).
+  Future<void> alterarSenha({required String atual, required String nova}) async {
+    await Api.instance.post<void>(
+      '/api/usuarios/me/senha',
+      {'senhaAtual': atual, 'novaSenha': nova},
+      {'X-Token-Renovacao': await Api.instance.tokenRenovacao()},
+    );
+  }
+
   Future<Usuario> login({required String email, required String senha}) async {
     try {
       final sessao = await Api.instance.post<Map<String, dynamic>>('/api/auth/login', {'email': email, 'senha': senha});
@@ -129,6 +146,9 @@ class AuthService {
         // Mesmo offline o app esquece a sessão local.
       }
     }
+    Notificacoes.instance.parar();
+    PedidosAtivos.instance.parar();
+    Favoritos.instance.limpar();
     await TempoReal.instance.desconectar();
     await Api.instance.limparSessao();
     _usuario = null;

@@ -54,12 +54,7 @@ public class OfertaGestaoService(IXepaDb db, IArmazenamento armazenamento)
 {
     public static readonly TimeZoneInfo FusoBrasilia = TimeZoneInfo.FindSystemTimeZoneById("America/Sao_Paulo");
 
-    private static readonly Dictionary<string, string> TiposImagem = new(StringComparer.OrdinalIgnoreCase)
-    {
-        [".jpg"] = "image/jpeg", [".jpeg"] = "image/jpeg", [".png"] = "image/png", [".webp"] = "image/webp"
-    };
-
-    public const long TamanhoMaximoFoto = 5 * 1024 * 1024;
+    public const long TamanhoMaximoFoto = Fotos.TamanhoMaximo;
 
     public async Task<IReadOnlyList<OfertaLojaDto>> ListarAsync(int estabelecimentoId, CancellationToken ct) =>
         await db.Ofertas.AsNoTracking()
@@ -125,15 +120,7 @@ public class OfertaGestaoService(IXepaDb db, IArmazenamento armazenamento)
         oferta.Validar();
 
         if (foto is not null)
-        {
-            var extensao = Path.GetExtension(foto.NomeArquivo);
-            if (!TiposImagem.TryGetValue(extensao, out var contentType))
-                throw new RegraDeNegocioException("Envie a foto em JPG, PNG ou WEBP.");
-            if (foto.Tamanho > TamanhoMaximoFoto)
-                throw new RegraDeNegocioException("A foto deve ter no máximo 5 MB.");
-
-            oferta.FotoUrl = await armazenamento.SalvarAsync(foto.Conteudo, extensao.ToLowerInvariant(), contentType, ct);
-        }
+            oferta.FotoUrl = await Fotos.SalvarAsync(armazenamento, foto, ct);
     }
 
     private async Task<Oferta> BuscarAsync(int estabelecimentoId, int ofertaId, CancellationToken ct) =>
@@ -147,4 +134,3 @@ public class OfertaGestaoService(IXepaDb db, IArmazenamento armazenamento)
     }
 }
 
-public record Foto(Stream Conteudo, string NomeArquivo, long Tamanho);

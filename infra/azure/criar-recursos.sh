@@ -124,7 +124,8 @@ if [[ -n "${MP_ACCESS_TOKEN:-}" ]]; then
   az webapp config appsettings set -g "$RG" -n "$WEBAPP_API" -o none --settings \
     "MercadoPago__AccessToken=$MP_ACCESS_TOKEN" \
     "MercadoPago__SegredoWebhook=${MP_SEGREDO_WEBHOOK:-}" \
-    "MercadoPago__UrlRetorno=$URL_APP"
+    "MercadoPago__UrlRetorno=$URL_APP" \
+    "MercadoPago__PixSimulado=true"
 fi
 az webapp config appsettings set -g "$RG" -n "$WEBAPP_WEB" -o none --settings \
   ASPNETCORE_ENVIRONMENT=Staging \
