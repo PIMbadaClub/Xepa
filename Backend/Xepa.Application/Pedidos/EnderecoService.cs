@@ -51,13 +51,14 @@ public class EnderecoService(IXepaDb db, IServicoMapas mapas)
     /// <summary>
     /// O ponto de entrega vem do endereço digitado (Azure Maps). O GPS do aparelho só refina o ponto quando está
     /// a até 300 m dele: cadastrar a casa estando no trabalho não pode salvar o ponto do trabalho.
-    /// Sem geocodificação (Azure Maps fora ou ambiente local), fica o GPS, se veio.
+    /// Sem geocodificação (Azure Maps fora do ar), o GPS não tem com o que ser conferido e é descartado:
+    /// o endereço fica sem ponto e a cotação da entrega tenta geocodificar de novo.
     /// </summary>
     private async Task<Endereco> LocalizarAsync(Endereco endereco, CancellationToken ct)
     {
         var ponto = await mapas.GeocodificarAsync(endereco, ct);
         if (ponto is null)
-            return endereco;
+            return endereco with { Latitude = null, Longitude = null };
 
         var gpsPerto = endereco.Latitude is { } lat && endereco.Longitude is { } lon
                        && Geo.DistanciaKm(ponto, new Coordenada(lat, lon)) <= RaioGpsKm;

@@ -44,9 +44,15 @@ public class PedidoService(IXepaDb db, IReservaPedidos reserva, IServicoMapas ma
     /// <summary>Distância da rota e taxa de entrega (RN07), para o cliente ver o valor antes de pagar.</summary>
     public async Task<CotacaoEntregaDto> CotarEntregaAsync(int clienteId, int ofertaId, int? enderecoId, CancellationToken ct)
     {
-        var endereco = await db.Enderecos.AsNoTracking()
+        var endereco = await db.Enderecos
                            .FirstOrDefaultAsync(e => e.Id == enderecoId && e.UsuarioId == clienteId, ct)
                        ?? throw new RegraDeNegocioException("Endereço de entrega inválido.");
+        // Salvo sem ponto (Azure Maps fora do ar no cadastro): tenta de novo e guarda o resultado.
+        if (endereco.Endereco.Latitude is null && await mapas.GeocodificarAsync(endereco.Endereco, ct) is { } ponto)
+        {
+            endereco.Endereco = endereco.Endereco with { Latitude = ponto.Latitude, Longitude = ponto.Longitude };
+            await db.SaveChangesAsync(ct);
+        }
         var loja = await db.Ofertas.AsNoTracking()
                        .Where(o => o.Id == ofertaId)
                        .Select(o => o.Estabelecimento.Endereco)

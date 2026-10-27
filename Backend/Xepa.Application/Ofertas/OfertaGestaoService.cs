@@ -98,10 +98,13 @@ public class OfertaGestaoService(IXepaDb db, IArmazenamento armazenamento)
         await db.SaveChangesAsync(ct);
     }
 
-    /// <summary>Tira a oferta do ar sem apagá-la (RN06).</summary>
+    /// <summary>Tira a oferta do ar sem apagá-la (RN06). Reativar confere de novo a retirada contra o horário da loja.</summary>
     public async Task AlterarAtivaAsync(int estabelecimentoId, int ofertaId, bool ativa, CancellationToken ct)
     {
         var oferta = await BuscarAsync(estabelecimentoId, ofertaId, ct);
+        // Uma oferta antiga, de antes da regra, voltaria ao ar com retirada depois do fechamento.
+        if (ativa && !oferta.Ativa && oferta.RetiradaFim > DateTimeOffset.UtcNow)
+            await ValidarHorarioAsync(oferta.EstabelecimentoId, oferta.RetiradaInicio, oferta.RetiradaFim, ct);
         oferta.Ativa = ativa;
         await db.SaveChangesAsync(ct);
     }
@@ -119,12 +122,18 @@ public class OfertaGestaoService(IXepaDb db, IArmazenamento armazenamento)
         oferta.RetiradaFim = DeBrasilia(form.RetiradaFim);
         oferta.Validar();
 
-        var horarios = await db.Estabelecimentos.AsNoTracking().Where(e => e.Id == oferta.EstabelecimentoId)
-            .SelectMany(e => e.Horarios).ToListAsync(ct);
-        Funcionamento.ValidarRetirada(horarios, form.RetiradaInicio, form.RetiradaFim);
+        await ValidarHorarioAsync(oferta.EstabelecimentoId, oferta.RetiradaInicio, oferta.RetiradaFim, ct);
 
         if (foto is not null)
             oferta.FotoUrl = await Fotos.SalvarAsync(armazenamento, foto, ct);
+    }
+
+    private async Task ValidarHorarioAsync(int estabelecimentoId, DateTimeOffset inicio, DateTimeOffset fim, CancellationToken ct)
+    {
+        var horarios = await db.Estabelecimentos.AsNoTracking().Where(e => e.Id == estabelecimentoId)
+            .SelectMany(e => e.Horarios).ToListAsync(ct);
+        Funcionamento.ValidarRetirada(horarios,
+            TimeZoneInfo.ConvertTime(inicio, FusoBrasilia).DateTime, TimeZoneInfo.ConvertTime(fim, FusoBrasilia).DateTime);
     }
 
     private async Task<Oferta> BuscarAsync(int estabelecimentoId, int ofertaId, CancellationToken ct) =>
