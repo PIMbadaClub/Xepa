@@ -57,6 +57,8 @@ class Oferta {
     required this.restantes,
     required this.avaliacao,
     this.avaliacoes = 0,
+    this.funcionamento,
+    this.aberta,
     required this.kgSalvos,
     required this.categoria,
     this.estabelecimentoId,
@@ -82,6 +84,8 @@ class Oferta {
       restantes: j['restantes'] as int,
       avaliacao: (loja['nota'] as num?)?.toDouble(),
       avaliacoes: loja['avaliacoes'] as int? ?? 0,
+      funcionamento: loja['funcionamento'] as String?,
+      aberta: loja['aberta'] as bool?,
       kgSalvos: (j['kgSalvos'] as num?)?.toDouble() ?? 0,
       categoria: Categoria.values.byName((loja['categoria'] as String).toLowerCase()),
       estabelecimentoId: loja['id'] as int,
@@ -108,6 +112,10 @@ class Oferta {
   /// Média das notas que os clientes deram à loja e às sacolas (nula sem avaliações).
   final double? avaliacao;
   final int avaliacoes;
+
+  /// "Aberta · fecha às 20:00" (nulo se a loja não cadastrou horário de funcionamento).
+  final String? funcionamento;
+  final bool? aberta;
   final double kgSalvos;
   final Categoria categoria;
   final int? estabelecimentoId;

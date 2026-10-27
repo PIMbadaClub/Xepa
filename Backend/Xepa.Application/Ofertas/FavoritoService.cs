@@ -19,7 +19,7 @@ public class FavoritoService(IXepaDb db)
             .Select(e => new
             {
                 e.Id, e.Nome, e.Categoria, e.LogoUrl, e.Endereco.Bairro,
-                Disponiveis = e.Ofertas.Where(o => o.Ativa && e.Ativo && e.StatusCadastro == StatusCadastro.Aprovado
+                Disponiveis = e.Ofertas.Where(o => o.Ativa && e.Ativo && !e.Pausada && e.StatusCadastro == StatusCadastro.Aprovado
                                                    && o.QuantidadeDisponivel > 0 && o.RetiradaFim > agora)
             })
             .Select(e => new LojaFavoritaDto(e.Id, e.Nome, e.Categoria, e.LogoUrl, e.Bairro,

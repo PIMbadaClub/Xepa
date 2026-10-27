@@ -89,7 +89,7 @@ public class ContaController(CredenciaisService credenciais, CadastroLojaService
             return LocalRedirect(form.ReturnUrl);
         return usuario.Tipo == TipoUsuario.Administrador
             ? RedirectToAction(nameof(AdminController.Painel), "Admin")
-            : RedirectToAction(nameof(PedidosController.Index), "Pedidos");
+            : RedirectToAction(nameof(LojaController.Inicio), "Loja");
     }
 
     /// <summary>"Cadastre sua loja": a loja entra pendente e só aparece no app depois de aprovada (RN10).</summary>
@@ -113,7 +113,7 @@ public class ContaController(CredenciaisService credenciais, CadastroLojaService
         }
 
         TempData["Mensagem"] = "Cadastro recebido! Já dá para preparar as ofertas; elas aparecem no app assim que a equipe da XEPA aprovar a loja.";
-        return RedirectToAction(nameof(OfertasController.Index), "Ofertas");
+        return RedirectToAction(nameof(LojaController.Inicio), "Loja");
     }
 
     /// <summary>"Esqueci minha senha": manda o código por e-mail (a mesma resposta exista ou não a conta).</summary>
@@ -161,28 +161,10 @@ public class ContaController(CredenciaisService credenciais, CadastroLojaService
         TempData["Mensagem"] = "Senha alterada. Bem-vindo de volta!";
         return usuario.Tipo == TipoUsuario.Administrador
             ? RedirectToAction(nameof(AdminController.Painel), "Admin")
-            : RedirectToAction(nameof(PedidosController.Index), "Pedidos");
+            : RedirectToAction(nameof(LojaController.Inicio), "Loja");
     }
 
-    private Task AbrirSessaoAsync(Usuario usuario)
-    {
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
-            new(ClaimTypes.Name, usuario.Nome),
-            new(ClaimTypes.Email, usuario.Email),
-            new(ClaimTypes.Role, usuario.Tipo.ToString())
-        };
-        if (usuario.Estabelecimento is { } loja)
-        {
-            claims.Add(new Claim(ClaimEstabelecimentoId, loja.Id.ToString()));
-            claims.Add(new Claim(ClaimEstabelecimentoNome, loja.Nome));
-            claims.Add(new Claim(ClaimEstabelecimentoStatus, loja.StatusCadastro.ToString()));
-        }
-
-        return HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme,
-            new ClaimsPrincipal(new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme)));
-    }
+    private Task AbrirSessaoAsync(Usuario usuario) => SessaoPortal.EntrarAsync(HttpContext, usuario);
 
     [HttpPost("sair")]
     public async Task<IActionResult> Sair()
@@ -201,7 +183,7 @@ public class InicioController : Controller
     public IActionResult Index() =>
         User.IsInRole(nameof(TipoUsuario.Administrador))
             ? RedirectToAction(nameof(AdminController.Painel), "Admin")
-            : RedirectToAction(nameof(OfertasController.Index), "Ofertas");
+            : RedirectToAction(nameof(LojaController.Inicio), "Loja");
 
     [HttpGet("/erro"), AllowAnonymous]
     public IActionResult Erro() => View();

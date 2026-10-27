@@ -280,6 +280,9 @@ namespace Xepa.Infrastructure.Data.Migrations
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)");
 
+                    b.Property<bool>("Pausada")
+                        .HasColumnType("bit");
+
                     b.Property<string>("StatusCadastro")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -383,6 +386,34 @@ namespace Xepa.Infrastructure.Data.Migrations
                     b.HasIndex("EstabelecimentoId");
 
                     b.ToTable("Favoritos");
+                });
+
+            modelBuilder.Entity("Xepa.Domain.Entities.HorarioFuncionamento", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<TimeOnly>("Abre")
+                        .HasColumnType("time");
+
+                    b.Property<int>("DiaSemana")
+                        .HasColumnType("int");
+
+                    b.Property<int>("EstabelecimentoId")
+                        .HasColumnType("int");
+
+                    b.Property<TimeOnly>("Fecha")
+                        .HasColumnType("time");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EstabelecimentoId", "DiaSemana")
+                        .IsUnique();
+
+                    b.ToTable("HorariosFuncionamento", (string)null);
                 });
 
             modelBuilder.Entity("Xepa.Domain.Entities.Oferta", b =>
@@ -1057,6 +1088,15 @@ namespace Xepa.Infrastructure.Data.Migrations
                     b.Navigation("Usuario");
                 });
 
+            modelBuilder.Entity("Xepa.Domain.Entities.HorarioFuncionamento", b =>
+                {
+                    b.HasOne("Xepa.Domain.Entities.Estabelecimento", null)
+                        .WithMany("Horarios")
+                        .HasForeignKey("EstabelecimentoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Xepa.Domain.Entities.Oferta", b =>
                 {
                     b.HasOne("Xepa.Domain.Entities.Estabelecimento", "Estabelecimento")
@@ -1175,6 +1215,8 @@ namespace Xepa.Infrastructure.Data.Migrations
             modelBuilder.Entity("Xepa.Domain.Entities.Estabelecimento", b =>
                 {
                     b.Navigation("Entregadores");
+
+                    b.Navigation("Horarios");
 
                     b.Navigation("Ofertas");
                 });

@@ -42,9 +42,11 @@
                 else
                 {
                     <div class="contexto">Portal do estabelecimento@(loja is null ? "" : " · " + loja)</div>
+                    <a asp-controller="Loja" asp-action="Inicio" class="@Ativo("Loja", "Inicio")" aria-current="@Atual("Loja", "Inicio")">@Icones.Svg("inicio")Início</a>
                     <a asp-controller="Pedidos" asp-action="Index" class="@Ativo("Pedidos")" aria-current="@Atual("Pedidos")">@Icones.Svg("pedidos")Pedidos</a>
                     <a asp-controller="Ofertas" asp-action="Index" class="@Ativo("Ofertas")" aria-current="@Atual("Ofertas")">@Icones.Svg("ofertas")Ofertas</a>
                     <a asp-controller="Impacto" asp-action="Index" class="@Ativo("Impacto")" aria-current="@Atual("Impacto")">@Icones.Svg("impacto")Impacto e vendas</a>
+                    <a asp-controller="Loja" asp-action="Configuracoes" class="@Ativo("Loja", "Configuracoes")" aria-current="@Atual("Loja", "Configuracoes")">@Icones.Svg("config")Configurações</a>
                 }
                 <img src="~/img/tomate.svg" asp-append-version="true" alt="" class="tomate-escondido" />
                 <form asp-controller="Conta" asp-action="Sair" method="post" class="sair">

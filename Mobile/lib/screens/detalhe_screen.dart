@@ -5,6 +5,7 @@ import '../api/favoritos.dart';
 import '../models/oferta.dart';
 import '../theme.dart';
 import '../widgets/oferta_widgets.dart';
+import '../widgets/xepa_logo.dart';
 import 'checkout_screen.dart';
 
 class DetalheScreen extends StatefulWidget {
@@ -130,6 +131,10 @@ class _DetalheScreenState extends State<DetalheScreen> {
                       SeloRestantes(restantes: o.restantes, sobreFoto: false),
                     ],
                   ),
+                  if (o.funcionamento != null) ...[
+                    const SizedBox(height: 8),
+                    _Funcionamento(oferta: o),
+                  ],
                   const SizedBox(height: 14),
                   Text(
                     o.titulo,
@@ -328,6 +333,92 @@ class _Quantidade extends StatelessWidget {
             color: XepaCores.tomateEscuro,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// "● Aberta · fecha às 20:00" com o horário da semana num toque (busca o detalhe da oferta na API).
+class _Funcionamento extends StatelessWidget {
+  const _Funcionamento({required this.oferta});
+
+  final Oferta oferta;
+
+  void _abrirHorarios(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (_) => FutureBuilder<Map<String, dynamic>>(
+        future: Api.instance.get<Map<String, dynamic>>('/api/ofertas/${oferta.id}'),
+        builder: (context, snap) {
+          final horarios = ((snap.data?['estabelecimento'] as Map<String, dynamic>?)?['horarios'] as List?)
+              ?.cast<Map<String, dynamic>>();
+          final hoje = const ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'][DateTime.now().weekday % 7];
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Horário da ${oferta.loja}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+                  const SizedBox(height: 12),
+                  if (snap.connectionState != ConnectionState.done)
+                    const Center(child: Padding(padding: EdgeInsets.all(16), child: TomateCarregando()))
+                  else if (horarios == null)
+                    const Text('Não foi possível carregar o horário agora.', style: TextStyle(color: XepaCores.textoSecundario))
+                  else
+                    // Segunda primeiro, domingo por último.
+                    for (final h in [...horarios.skip(1), horarios.first])
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                '${(h['dia'] as String)[0].toUpperCase()}${(h['dia'] as String).substring(1)}',
+                                style: TextStyle(fontWeight: h['dia'] == hoje ? FontWeight.w800 : FontWeight.w500),
+                              ),
+                            ),
+                            Text(
+                              h['abre'] == null ? 'Fechada' : '${h['abre']} – ${h['fecha']}',
+                              style: TextStyle(
+                                fontWeight: h['dia'] == hoje ? FontWeight.w800 : FontWeight.w500,
+                                color: h['abre'] == null ? XepaCores.textoSecundario : XepaCores.texto,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final aberta = oferta.aberta ?? false;
+    final cor = aberta ? XepaCores.verde : XepaCores.textoSecundario;
+    return InkWell(
+      onTap: () => _abrirHorarios(context),
+      borderRadius: BorderRadius.circular(XepaRaios.pilula),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Icon(Icons.circle, size: 9, color: cor),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(oferta.funcionamento!, style: TextStyle(color: cor, fontWeight: FontWeight.w700, fontSize: 13)),
+            ),
+            const SizedBox(width: 4),
+            const Text('· ver horários', style: TextStyle(color: XepaCores.tomateEscuro, fontWeight: FontWeight.w700, fontSize: 13)),
+          ],
+        ),
       ),
     );
   }

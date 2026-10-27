@@ -19,12 +19,24 @@ public class OfertasController(OfertaGestaoService ofertas) : Controller
         View(await ofertas.ListarAsync(EstabelecimentoId, ct));
 
     [HttpGet("nova")]
-    public IActionResult Nova()
+    public async Task<IActionResult> Nova([FromServices] LojaPainelService painel, CancellationToken ct)
     {
-        // Sugere a janela das 18h às 20h (Brasília); se ela já passou, a de amanhã.
-        var agora = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, OfertaGestaoService.FusoBrasilia);
-        var dia = agora.Hour >= 20 ? agora.Date.AddDays(1) : agora.Date;
-        return View("Form", new OfertaForm { RetiradaInicio = dia.AddHours(18), RetiradaFim = dia.AddHours(20) });
+        // Sugere as duas últimas horas do horário de funcionamento de hoje; sem horário, das 18h às 20h.
+        // Se a janela de hoje já passou, a de amanhã.
+        var agora = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, OfertaGestaoService.FusoBrasilia).DateTime;
+        var horarios = await painel.HorariosAsync(EstabelecimentoId, ct);
+        (DateTime Inicio, DateTime Fim) Janela(DateTime dia)
+        {
+            var h = horarios.FirstOrDefault(x => x.Dia == dia.DayOfWeek && x.Aberto);
+            if (h is null || !TimeSpan.TryParse(h.Fecha, out var fecha) || !TimeSpan.TryParse(h.Abre, out var abre))
+                return (dia.AddHours(18), dia.AddHours(20));
+            var inicio = fecha - TimeSpan.FromHours(2) < abre ? abre : fecha - TimeSpan.FromHours(2);
+            return (dia + inicio, dia + fecha);
+        }
+        var janela = Janela(agora.Date);
+        if (janela.Fim <= agora.AddMinutes(30))
+            janela = Janela(agora.Date.AddDays(1));
+        return View("Form", new OfertaForm { RetiradaInicio = janela.Inicio, RetiradaFim = janela.Fim });
     }
 
     [HttpPost("nova")]
