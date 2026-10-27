@@ -1,7 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FilteringTextInputFormatter, TextInput;
@@ -141,19 +140,11 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  void _loginSocial(String provedor) {
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text('Entrar com $provedor estará disponível em breve.')),
-      );
-  }
-
   /// Vai para o Google na mesma aba; ele volta para a abertura do app com ?google=código.
   Future<void> _entrarComGoogle() async {
     final retorno = EnderecoPagina.base;
     if (retorno == null) {
-      _loginSocial('Google no celular');
+      setState(() => _erro = 'O login com Google não está disponível neste aparelho.');
       return;
     }
     setState(() {
@@ -176,9 +167,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final mostrarApple = defaultTargetPlatform == TargetPlatform.iOS ||
-        defaultTargetPlatform == TargetPlatform.macOS;
-
     return AuthPagina(
       child: Form(
         key: _formKey,
@@ -252,14 +240,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   if (!_carregando) _entrarComGoogle();
                 },
               ),
-              if (mostrarApple) ...[
-                const SizedBox(height: 12),
-                AuthBotaoSocial(
-                  rotulo: 'Continuar com Apple',
-                  icone: const Icon(Icons.apple, size: 24),
-                  onPressed: () => _loginSocial('Apple'),
-                ),
-              ],
               const SizedBox(height: 10),
               // Conta nova pelo Google não passa pela caixa de aceite do cadastro.
               Text.rich(
