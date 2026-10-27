@@ -116,6 +116,9 @@ class _InicioEntregadorState extends State<_InicioEntregador> {
   ConfigMapa? _config;
   LatLng? _eu;
   bool? _online;
+
+  /// Situação do cadastro: só "Aprovado" pode ficar online.
+  String? _cadastro;
   bool _trocandoOnline = false;
   List<Corrida>? _corridas;
   Map<String, dynamic>? _ganhos;
@@ -149,7 +152,11 @@ class _InicioEntregadorState extends State<_InicioEntregador> {
   Future<void> _carregar() async {
     final gps = await Localizacao.atual();
     try {
-      _online ??= (await Api.instance.get<Map<String, dynamic>>('/api/entregador/perfil'))['online'] as bool;
+      if (_online == null || _cadastro != 'Aprovado') {
+        final perfil = await Api.instance.get<Map<String, dynamic>>('/api/entregador/perfil');
+        _online = perfil['online'] as bool;
+        _cadastro = perfil['cadastro'] as String?;
+      }
       final lista = await Api.instance.get<List<dynamic>>('/api/entregador/corridas', query: {
         if (gps != null) 'latitude': gps.latitude,
         if (gps != null) 'longitude': gps.longitude,
@@ -316,7 +323,14 @@ class _InicioEntregadorState extends State<_InicioEntregador> {
             onAtualizar: _carregar,
           )
         else
-          _PainelOffline(minha: minha, trocando: _trocandoOnline, erro: _erro, onOnline: _alternarOnline, onAbrir: _abrir),
+          _PainelOffline(
+            minha: minha,
+            trocando: _trocandoOnline,
+            erro: _erro,
+            cadastro: _cadastro,
+            onOnline: _alternarOnline,
+            onAbrir: _abrir,
+          ),
       ],
     );
   }
@@ -477,11 +491,19 @@ class _PilulaGanhos extends StatelessWidget {
 
 /// Offline: o mapa fica livre e um botão grande liga o recebimento de corridas.
 class _PainelOffline extends StatelessWidget {
-  const _PainelOffline({required this.minha, required this.trocando, required this.erro, required this.onOnline, required this.onAbrir});
+  const _PainelOffline({
+    required this.minha,
+    required this.trocando,
+    required this.erro,
+    required this.cadastro,
+    required this.onOnline,
+    required this.onAbrir,
+  });
 
   final Corrida? minha;
   final bool trocando;
   final String? erro;
+  final String? cadastro;
   final VoidCallback onOnline;
   final ValueChanged<int> onAbrir;
 
@@ -504,23 +526,41 @@ class _PainelOffline extends StatelessWidget {
             if (minha != null) ...[
               _CartaoCorrida(corrida: minha!, onTap: () => onAbrir(minha!.pedidoId)),
             ],
-            const Row(
-              children: [
-                Icon(Icons.nightlight_round, color: XepaCores.textoSecundario, size: 20),
-                SizedBox(width: 8),
-                Text('Você está offline', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
-              ],
-            ),
-            const SizedBox(height: 4),
-            const Text('Fique online para receber corridas das lojas perto de você.',
-                style: TextStyle(color: XepaCores.textoSecundario)),
+            if (cadastro != null && cadastro != 'Aprovado') ...[
+              Row(
+                children: [
+                  Icon(cadastro == 'Pendente' ? Icons.hourglass_top_rounded : Icons.block_rounded, color: XepaCores.paoEscuro, size: 20),
+                  const SizedBox(width: 8),
+                  Text(cadastro == 'Pendente' ? 'Cadastro em análise' : 'Cadastro não aprovado',
+                      style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Text(
+                cadastro == 'Pendente'
+                    ? 'A equipe da XEPA confere seus dados e a placa da moto. Assim que aprovar, você já pode ficar online.'
+                    : 'Fale com o suporte da XEPA para revisar seu cadastro.',
+                style: const TextStyle(color: XepaCores.textoSecundario),
+              ),
+            ] else ...[
+              const Row(
+                children: [
+                  Icon(Icons.nightlight_round, color: XepaCores.textoSecundario, size: 20),
+                  SizedBox(width: 8),
+                  Text('Você está offline', style: TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
+                ],
+              ),
+              const SizedBox(height: 4),
+              const Text('Fique online para receber corridas das lojas perto de você.',
+                  style: TextStyle(color: XepaCores.textoSecundario)),
+            ],
             if (erro != null) ...[
               const SizedBox(height: 8),
               Text(erro!, style: const TextStyle(color: XepaCores.tomateEscuro, fontSize: 13)),
             ],
             const SizedBox(height: 14),
             FilledButton.icon(
-              onPressed: trocando ? null : onOnline,
+              onPressed: trocando || (cadastro != null && cadastro != 'Aprovado') ? null : onOnline,
               style: FilledButton.styleFrom(backgroundColor: XepaCores.verde, minimumSize: const Size(0, 56)),
               icon: trocando
                   ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))

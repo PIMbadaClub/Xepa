@@ -32,4 +32,8 @@ public class EstabelecimentoResumoDto
     public required string Bairro { get; init; }
     public double? Latitude { get; init; }
     public double? Longitude { get; init; }
+
+    /// <summary>Média das notas que os clientes deram à loja e às sacolas (nula sem avaliações).</summary>
+    public double? Nota { get; init; }
+    public int Avaliacoes { get; init; }
 }

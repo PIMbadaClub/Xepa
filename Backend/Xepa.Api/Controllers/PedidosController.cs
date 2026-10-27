@@ -45,6 +45,14 @@ public class PedidosController(PedidoService pedidos, PagamentoService pagamento
     [HttpGet("{id:int}/rastreio")]
     public Task<RastreioDto> Rastreio(int id, CancellationToken ct) => pedidos.ObterRastreioAsync(User.UsuarioId(), id, ct);
 
+    /// <summary>Nota de 1 a 5 (e comentário opcional) para a loja e a sacola, depois de receber o pedido.</summary>
+    [HttpPost("{id:int}/avaliar-loja")]
+    public async Task<IActionResult> AvaliarLoja(int id, AvaliarEntregadorRequest request, CancellationToken ct)
+    {
+        await pedidos.AvaliarLojaAsync(User.UsuarioId(), id, request, ct);
+        return NoContent();
+    }
+
     /// <summary>Nota de 1 a 5 (e comentário opcional) para o entregador, depois de receber o pedido.</summary>
     [HttpPost("{id:int}/avaliar-entregador")]
     public async Task<IActionResult> AvaliarEntregador(int id, AvaliarEntregadorRequest request, CancellationToken ct)

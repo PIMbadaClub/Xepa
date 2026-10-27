@@ -42,7 +42,7 @@ public class CadastroLojaForm
     public string Bairro { get; set; } = "";
 
     [Required(ErrorMessage = "Informe a cidade."), StringLength(80), Display(Name = "Cidade")]
-    public string Cidade { get; set; } = "São Paulo";
+    public string Cidade { get; set; } = "Limeira";
 
     [Required(ErrorMessage = "Informe a UF."), RegularExpression("^[A-Za-z]{2}$", ErrorMessage = "UF com 2 letras."), Display(Name = "UF")]
     public string Uf { get; set; } = "SP";

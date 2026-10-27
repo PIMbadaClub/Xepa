@@ -121,9 +121,29 @@ class _AcompanhamentoScreenState extends State<AcompanhamentoScreen> {
                     const SizedBox(height: 14),
                   ],
                   _CartaoStatus(pedido: p, entregador: _nomeEntregador),
+                  if (p.status == StatusPedido.entregue) ...[
+                    const SizedBox(height: 12),
+                    _Avaliar(
+                      pedido: p,
+                      titulo: 'Como estava a sacola da ${p.loja}?',
+                      feito: 'Você avaliou a ${p.loja}',
+                      icone: Icons.storefront_rounded,
+                      notaDada: p.notaLoja,
+                      endpoint: 'avaliar-loja',
+                      onAvaliado: _carregar,
+                    ),
+                  ],
                   if (p.entrega && p.status == StatusPedido.entregue && p.nomeEntregador != null) ...[
                     const SizedBox(height: 12),
-                    _AvaliarEntregador(pedido: p, onAvaliado: _carregar),
+                    _Avaliar(
+                      pedido: p,
+                      titulo: 'Como foi a entrega do ${p.nomeEntregador}?',
+                      feito: 'Você avaliou a entrega do ${p.nomeEntregador}',
+                      icone: Icons.two_wheeler_rounded,
+                      notaDada: p.notaEntregador,
+                      endpoint: 'avaliar-entregador',
+                      onAvaliado: _carregar,
+                    ),
                   ],
                   if (p.codigoRetirada != null && p.status.emAndamento && p.status != StatusPedido.aguardandoPagamento) ...[
                     const SizedBox(height: 12),
@@ -397,18 +417,31 @@ class _LinhaDoTempo extends StatelessWidget {
   }
 }
 
-/// Depois de receber, o cliente dá de 1 a 5 estrelas ao entregador (vai para a nota dele no app do entregador).
-class _AvaliarEntregador extends StatefulWidget {
-  const _AvaliarEntregador({required this.pedido, required this.onAvaliado});
+/// Depois de receber, o cliente dá de 1 a 5 estrelas à loja (e, na entrega, ao entregador).
+class _Avaliar extends StatefulWidget {
+  const _Avaliar({
+    required this.pedido,
+    required this.titulo,
+    required this.feito,
+    required this.icone,
+    required this.notaDada,
+    required this.endpoint,
+    required this.onAvaliado,
+  });
 
   final Pedido pedido;
+  final String titulo;
+  final String feito;
+  final IconData icone;
+  final int? notaDada;
+  final String endpoint;
   final Future<void> Function() onAvaliado;
 
   @override
-  State<_AvaliarEntregador> createState() => _AvaliarEntregadorState();
+  State<_Avaliar> createState() => _AvaliarState();
 }
 
-class _AvaliarEntregadorState extends State<_AvaliarEntregador> {
+class _AvaliarState extends State<_Avaliar> {
   static const _amarelo = Color(0xFFF5A524);
   static const _rotulos = ['', 'Muito ruim', 'Ruim', 'Ok', 'Boa', 'Excelente'];
 
@@ -425,7 +458,7 @@ class _AvaliarEntregadorState extends State<_AvaliarEntregador> {
   Future<void> _enviar() async {
     setState(() => _enviando = true);
     try {
-      await Api.instance.post<void>('/api/pedidos/${widget.pedido.id}/avaliar-entregador', {
+      await Api.instance.post<void>('/api/pedidos/${widget.pedido.id}/${widget.endpoint}', {
         'nota': _nota,
         if (_comentario.text.trim().isNotEmpty) 'comentario': _comentario.text.trim(),
       });
@@ -455,16 +488,14 @@ class _AvaliarEntregadorState extends State<_AvaliarEntregador> {
 
   @override
   Widget build(BuildContext context) {
-    final p = widget.pedido;
-    final nome = p.nomeEntregador!;
-    if (p.notaEntregador != null) {
+    if (widget.notaDada != null) {
       return _Cartao(
         child: Row(
           children: [
-            const Icon(Icons.two_wheeler_rounded, color: XepaCores.textoSecundario),
+            Icon(widget.icone, color: XepaCores.textoSecundario),
             const SizedBox(width: 10),
-            Expanded(child: Text('Você avaliou a entrega de $nome', style: const TextStyle(fontWeight: FontWeight.w700))),
-            _estrelas(p.notaEntregador!, tamanho: 18),
+            Expanded(child: Text(widget.feito, style: const TextStyle(fontWeight: FontWeight.w700))),
+            _estrelas(widget.notaDada!, tamanho: 18),
           ],
         ),
       );
@@ -473,9 +504,13 @@ class _AvaliarEntregadorState extends State<_AvaliarEntregador> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Como foi a entrega do $nome?', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-          const Text('Sua nota ajuda os entregadores parceiros da XEPA.',
-              style: TextStyle(color: XepaCores.textoSecundario, fontSize: 13)),
+          Row(
+            children: [
+              Icon(widget.icone, color: XepaCores.tomate),
+              const SizedBox(width: 8),
+              Expanded(child: Text(widget.titulo, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800))),
+            ],
+          ),
           const SizedBox(height: 10),
           Center(child: _estrelas(_nota, onTap: (n) => setState(() => _nota = n))),
           if (_nota > 0) ...[

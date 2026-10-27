@@ -1,0 +1,134 @@
+@model (UsuarioDetalheAdminDto Usuario, EditarUsuarioAdminForm Form)
+@{
+    var u = Model.Usuario;
+    ViewData["Title"] = u.Nome;
+    var entregador = u.Tipo == TipoUsuario.Entregador;
+}
+<a asp-action="@(entregador ? "Entregadores" : "Usuarios")" class="voltar">@Icones.Svg("voltar", 16)@(entregador ? "Entregadores" : "Usuários")</a>
+<div class="titulo-detalhe">
+    <h1>@u.Nome</h1>
+    <span class="selo inativa">@Rotulos.Tipo(u.Tipo)</span>
+    @if (u.Bloqueado) { <span class="selo perigo">Suspensa</span> } else { <span class="selo ativa">Ativa</span> }
+    @if (u.CadastroEntregador is { } c)
+    {
+        <span class="selo @(c switch { StatusCadastro.Aprovado => "ativa", StatusCadastro.Pendente => "sacola", _ => "perigo" })">@Rotulos.CadastroEntregador(c)</span>
+    }
+</div>
+<p class="sub">Conta criada em @Rotulos.Data(u.CriadoEm)@(u.ContaGoogle ? " · entra com Google" : "")</p>
+
+<div class="indicadores">
+    @if (u.Tipo == TipoUsuario.Cliente || entregador)
+    {
+        <a class="indicador" asp-action="Pedidos" asp-route-clienteId="@u.Id">
+            <span>Pedidos recebidos</span>
+            <strong>@u.Pedidos</strong>
+            <small>@Rotulos.Dinheiro(u.Gasto) em compras</small>
+        </a>
+    }
+    @if (entregador)
+    {
+        <a class="indicador" asp-action="Pedidos" asp-route-entregadorId="@u.Id">
+            <span>Corridas como entregador</span>
+            <strong>Ver</strong>
+            <small>todas as entregas dele</small>
+        </a>
+    }
+    @if (u.LojaId is { } lojaId)
+    {
+        <a class="indicador" asp-action="Loja" asp-route-id="@lojaId">
+            <span>Loja</span>
+            <strong style="font-size:20px">@u.Loja</strong>
+            <small>abrir cadastro da loja</small>
+        </a>
+    }
+</div>
+
+<div class="blocos">
+    <section class="cartao form-edicao">
+        <h2>@Icones.Svg("editar", 18)Dados da conta</h2>
+        <form asp-action="Usuario" asp-route-id="@u.Id" method="post" novalidate>
+            <div asp-validation-summary="ModelOnly"></div>
+            <div class="campo">
+                <label asp-for="Form.Nome"></label>
+                <input asp-for="Form.Nome" />
+                <span asp-validation-for="Form.Nome" class="erro"></span>
+            </div>
+            <div class="grade">
+                <div class="campo">
+                    <label asp-for="Form.Email"></label>
+                    <input asp-for="Form.Email" />
+                    <span asp-validation-for="Form.Email" class="erro"></span>
+                </div>
+                <div class="campo">
+                    <label asp-for="Form.Telefone"></label>
+                    <input asp-for="Form.Telefone" type="tel" />
+                    <span asp-validation-for="Form.Telefone" class="erro"></span>
+                </div>
+            </div>
+            @if (entregador)
+            {
+                <div class="grade">
+                    <div class="campo">
+                        <label asp-for="Form.Placa"></label>
+                        <input asp-for="Form.Placa" style="text-transform:uppercase" />
+                        <span asp-validation-for="Form.Placa" class="erro"></span>
+                    </div>
+                    <div class="campo">
+                        <label asp-for="Form.ModeloMoto"></label>
+                        <input asp-for="Form.ModeloMoto" placeholder="Honda CG 160" />
+                    </div>
+                </div>
+            }
+            <button type="submit" class="botao">Salvar alterações</button>
+        </form>
+    </section>
+
+    <section class="cartao">
+        <h2>Acesso</h2>
+        <p class="mini" style="font-size:14px">A equipe não vê nem define senhas. Para ajudar quem esqueceu, mande o código de "Esqueci minha senha" para o e-mail da conta.</p>
+        <div class="acoes-detalhe">
+            <form asp-action="EnviarRecuperacao" asp-route-id="@u.Id" method="post">
+                <button class="botao secundario pequeno" type="submit">@Icones.Svg("email", 16) Enviar código de nova senha</button>
+            </form>
+            @if (u.Tipo != TipoUsuario.Administrador)
+            {
+                <form asp-action="AlterarBloqueio" asp-route-id="@u.Id" method="post">
+                    <input type="hidden" name="bloqueado" value="@(u.Bloqueado ? "false" : "true")" />
+                    <input type="hidden" name="voltar" value="Usuario" />
+                    <button class="botao secundario pequeno" type="submit">@(u.Bloqueado ? "Liberar conta" : "Suspender conta")</button>
+                </form>
+            }
+        </div>
+        @if (u.CadastroEntregador is { } cad && cad != StatusCadastro.Aprovado)
+        {
+            <h2 style="margin-top:20px">Cadastro de entregador</h2>
+            <div class="acoes-detalhe">
+                <form asp-action="AvaliarEntregador" asp-route-id="@u.Id" method="post">
+                    <input type="hidden" name="aprovar" value="true" />
+                    <input type="hidden" name="voltar" value="Usuario" />
+                    <button class="botao pequeno" type="submit">Aprovar entregador</button>
+                </form>
+                @if (cad == StatusCadastro.Pendente)
+                {
+                    <form asp-action="AvaliarEntregador" asp-route-id="@u.Id" method="post">
+                        <input type="hidden" name="aprovar" value="false" />
+                        <input type="hidden" name="voltar" value="Usuario" />
+                        <button class="botao secundario pequeno" type="submit">Rejeitar</button>
+                    </form>
+                }
+            </div>
+        }
+        else if (u.CadastroEntregador == StatusCadastro.Aprovado)
+        {
+            <h2 style="margin-top:20px">Cadastro de entregador</h2>
+            <form asp-action="AvaliarEntregador" asp-route-id="@u.Id" method="post">
+                <input type="hidden" name="aprovar" value="false" />
+                <input type="hidden" name="voltar" value="Usuario" />
+                <button class="botao secundario pequeno" type="submit">Descredenciar entregador</button>
+            </form>
+        }
+    </section>
+</div>
+
+<h2 class="secao">Últimos pedidos</h2>
+<partial name="_TabelaPedidos" model="u.UltimosPedidos" />

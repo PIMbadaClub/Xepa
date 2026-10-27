@@ -1,0 +1,85 @@
+@model IReadOnlyList<EntregadorAdminDto>
+@{
+    ViewData["Title"] = "Entregadores";
+    var filtro = ViewData["Filtro"] as StatusCadastro?;
+}
+<h1>Entregadores</h1>
+<p class="sub">Entregador novo só fica online depois de aprovado. A taxa de entrega é toda dele; feche o repasse em Repasses.</p>
+
+<nav class="filtros" aria-label="Filtrar por situação">
+    <a asp-action="Entregadores" class="@(filtro is null ? "ativo" : "")">Todos</a>
+    @foreach (var s in Enum.GetValues<StatusCadastro>())
+    {
+        <a asp-action="Entregadores" asp-route-status="@s" class="@(filtro == s ? "ativo" : "")">@Rotulos.CadastroEntregador(s)</a>
+    }
+</nav>
+<form method="get" asp-action="Entregadores" class="busca">
+    @if (filtro is { } f) { <input type="hidden" name="status" value="@f" /> }
+    <label for="busca" class="pular">Buscar</label>
+    <input id="busca" name="busca" value="@ViewData["Busca"]" placeholder="Nome, e-mail ou placa" />
+    <button class="botao secundario" type="submit">Buscar</button>
+</form>
+
+@if (Model.Count == 0)
+{
+    <div class="cartao vazio">Nenhum entregador por aqui.</div>
+}
+else
+{
+    <table>
+        <thead>
+            <tr><th scope="col">Entregador</th><th scope="col">Moto</th><th scope="col">Situação</th><th scope="col">Corridas</th><th scope="col">Nota</th><th scope="col">Ganhos</th><th scope="col">Ações</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var e in Model)
+            {
+                <tr>
+                    <td>
+                        <a asp-action="Usuario" asp-route-id="@e.Id" class="linha-link">@e.Nome</a>
+                        <div class="mini">@e.Email · @(e.Telefone ?? "sem telefone")</div>
+                        <div class="mini">desde @Rotulos.Data(e.CriadoEm)</div>
+                    </td>
+                    <td><strong>@(e.Placa ?? "—")</strong><div class="mini">@(e.ModeloMoto ?? "modelo não informado")</div></td>
+                    <td>
+                        <span class="selo @(e.Cadastro switch { StatusCadastro.Aprovado => "ativa", StatusCadastro.Pendente => "sacola", _ => "inativa" })">@Rotulos.CadastroEntregador(e.Cadastro)</span>
+                        @if (e.Bloqueado) { <span class="selo perigo">Suspenso</span> }
+                        @if (e.EmCorrida) { <div style="margin-top:4px"><span class="selo sacola">Em corrida</span></div> }
+                        else if (e.Online) { <div style="margin-top:4px"><span class="selo online">Online</span></div> }
+                    </td>
+                    <td>@e.Corridas
+                        @if (e.Corridas > 0) { <div class="mini"><a asp-action="Pedidos" asp-route-entregadorId="@e.Id">ver corridas</a></div> }
+                    </td>
+                    <td>@Icones.Estrelas(e.Nota)<div class="mini">@Rotulos.Nota(e.Nota) · @e.Avaliacoes avaliação(ões)</div></td>
+                    <td>
+                        <strong>@Rotulos.Dinheiro(e.Ganhos)</strong>
+                        @if (e.ARepassar > 0) { <div class="mini">@Rotulos.Dinheiro(e.ARepassar) a repassar</div> }
+                    </td>
+                    <td>
+                        <div class="acoes">
+                            @if (e.Cadastro == StatusCadastro.Pendente)
+                            {
+                                <form asp-action="AvaliarEntregador" asp-route-id="@e.Id" method="post">
+                                    <input type="hidden" name="aprovar" value="true" />
+                                    <button class="botao pequeno" type="submit">Aprovar</button>
+                                </form>
+                                <form asp-action="AvaliarEntregador" asp-route-id="@e.Id" method="post">
+                                    <input type="hidden" name="aprovar" value="false" />
+                                    <button class="botao secundario pequeno" type="submit">Rejeitar</button>
+                                </form>
+                            }
+                            else
+                            {
+                                <form asp-action="AlterarBloqueio" asp-route-id="@e.Id" method="post">
+                                    <input type="hidden" name="bloqueado" value="@(e.Bloqueado ? "false" : "true")" />
+                                    <input type="hidden" name="voltar" value="Entregadores" />
+                                    <button class="botao secundario pequeno" type="submit">@(e.Bloqueado ? "Liberar" : "Suspender")</button>
+                                </form>
+                            }
+                            <a asp-action="Usuario" asp-route-id="@e.Id" class="botao secundario pequeno">Editar</a>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

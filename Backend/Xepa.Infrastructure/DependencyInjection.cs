@@ -49,6 +49,9 @@ public static class DependencyInjection
         services.AddScoped<FavoritoService>();
         services.AddScoped<IndicadoresService>();
         services.AddScoped<AdminService>();
+        services.AddScoped<AdminEntregadoresService>();
+        services.AddScoped<AdminPedidosService>();
+        services.AddScoped<AdminCadastrosService>();
         services.AddScoped<CadastroLojaService>();
         services.AddScoped<NotificacaoService>();
 

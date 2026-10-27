@@ -19,7 +19,7 @@ IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Email = 'laranjal@xepa.test')
 SET @u = (SELECT Id FROM Usuarios WHERE Email = 'laranjal@xepa.test');
 IF NOT EXISTS (SELECT 1 FROM Estabelecimentos WHERE UsuarioId = @u)
     INSERT INTO Estabelecimentos (UsuarioId, Nome, Categoria, LogoUrl, Cep, Logradouro, Numero, Bairro, Cidade, Uf, Latitude, Longitude, StatusCadastro, Ativo, CriadoEm)
-    VALUES (@u, N'Padaria Laranjal', 'Padaria', 'https://images.unsplash.com/photo-1517433670267-08bbd4be890f?w=160&q=75&auto=format&fit=crop', '13480', N'Rua Barão de Cascalho', '455', N'Centro', N'Limeira', 'SP', -22.5609394, -47.4015568, 'Aprovado', 1, @agora);
+    VALUES (@u, N'Padaria Laranjal', 'Padaria', 'https://images.unsplash.com/photo-1517433670267-08bbd4be890f?w=160&q=75&auto=format&fit=crop', '13480000', N'Rua Barão de Cascalho', '455', N'Centro', N'Limeira', 'SP', -22.5609394, -47.4015568, 'Aprovado', 1, @agora);
 SET @e = (SELECT Id FROM Estabelecimentos WHERE UsuarioId = @u);
 UPDATE Ofertas SET Ativa = 0, AtualizadoEm = @agora WHERE EstabelecimentoId = @e AND Ativa = 1;
 INSERT INTO Ofertas (EstabelecimentoId, Tipo, Titulo, Descricao, FotoUrl, PrecoOriginal, Preco, QuantidadeDisponivel, PesoEstimadoKg, RetiradaInicio, RetiradaFim, Ativa, CriadoEm) VALUES (@e, 'SacolaSurpresa', N'Sacola surpresa de pães', N'Pães franceses, de forma e doces do dia.', 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=800&q=75&auto=format&fit=crop', 30.00, 11.90, 4, 1.6, @inicio, @fim, 1, @agora);
@@ -31,7 +31,7 @@ IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Email = 'morroazul@xepa.test')
 SET @u = (SELECT Id FROM Usuarios WHERE Email = 'morroazul@xepa.test');
 IF NOT EXISTS (SELECT 1 FROM Estabelecimentos WHERE UsuarioId = @u)
     INSERT INTO Estabelecimentos (UsuarioId, Nome, Categoria, LogoUrl, Cep, Logradouro, Numero, Bairro, Cidade, Uf, Latitude, Longitude, StatusCadastro, Ativo, CriadoEm)
-    VALUES (@u, N'Panificadora Morro Azul', 'Padaria', 'https://images.unsplash.com/photo-1586444248902-2f64eddc13df?w=160&q=75&auto=format&fit=crop', '13480', N'Rua Senador Vergueiro', '1200', N'Centro', N'Limeira', 'SP', -22.5678579, -47.4068539, 'Aprovado', 1, @agora);
+    VALUES (@u, N'Panificadora Morro Azul', 'Padaria', 'https://images.unsplash.com/photo-1586444248902-2f64eddc13df?w=160&q=75&auto=format&fit=crop', '13480000', N'Rua Senador Vergueiro', '1200', N'Centro', N'Limeira', 'SP', -22.5678579, -47.4068539, 'Aprovado', 1, @agora);
 SET @e = (SELECT Id FROM Estabelecimentos WHERE UsuarioId = @u);
 UPDATE Ofertas SET Ativa = 0, AtualizadoEm = @agora WHERE EstabelecimentoId = @e AND Ativa = 1;
 INSERT INTO Ofertas (EstabelecimentoId, Tipo, Titulo, Descricao, FotoUrl, PrecoOriginal, Preco, QuantidadeDisponivel, PesoEstimadoKg, RetiradaInicio, RetiradaFim, Ativa, CriadoEm) VALUES (@e, 'SacolaSurpresa', N'Sacola surpresa', N'Pães artesanais e de fermentação natural do dia.', 'https://images.unsplash.com/photo-1586444248902-2f64eddc13df?w=800&q=75&auto=format&fit=crop', 34.00, 12.90, 3, 1.5, @inicio, @fim, 1, @agora);
@@ -42,7 +42,7 @@ IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Email = 'vilaclaudia@xepa.test')
 SET @u = (SELECT Id FROM Usuarios WHERE Email = 'vilaclaudia@xepa.test');
 IF NOT EXISTS (SELECT 1 FROM Estabelecimentos WHERE UsuarioId = @u)
     INSERT INTO Estabelecimentos (UsuarioId, Nome, Categoria, LogoUrl, Cep, Logradouro, Numero, Bairro, Cidade, Uf, Latitude, Longitude, StatusCadastro, Ativo, CriadoEm)
-    VALUES (@u, N'Doceria Vila Claudia', 'Padaria', 'https://images.unsplash.com/photo-1550617931-e17a7b70dce2?w=160&q=75&auto=format&fit=crop', '13480', N'Avenida Campinas', '900', N'Vila Claudia', N'Limeira', 'SP', -22.5755219, -47.3932229, 'Aprovado', 1, @agora);
+    VALUES (@u, N'Doceria Vila Claudia', 'Padaria', 'https://images.unsplash.com/photo-1550617931-e17a7b70dce2?w=160&q=75&auto=format&fit=crop', '13480000', N'Avenida Campinas', '900', N'Vila Claudia', N'Limeira', 'SP', -22.5755219, -47.3932229, 'Aprovado', 1, @agora);
 SET @e = (SELECT Id FROM Estabelecimentos WHERE UsuarioId = @u);
 UPDATE Ofertas SET Ativa = 0, AtualizadoEm = @agora WHERE EstabelecimentoId = @e AND Ativa = 1;
 INSERT INTO Ofertas (EstabelecimentoId, Tipo, Titulo, Descricao, FotoUrl, PrecoOriginal, Preco, QuantidadeDisponivel, PesoEstimadoKg, RetiradaInicio, RetiradaFim, Ativa, CriadoEm) VALUES (@e, 'SacolaSurpresa', N'Caixa de doces', N'Cupcakes, fatias de bolo e doces finos que não saíram hoje.', 'https://images.unsplash.com/photo-1565958011703-44f9829ba187?w=800&q=75&auto=format&fit=crop', 45.00, 16.90, 3, 0.8, @inicio, @fim, 1, @agora);
@@ -54,7 +54,7 @@ IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Email = 'bellalimeira@xepa.test')
 SET @u = (SELECT Id FROM Usuarios WHERE Email = 'bellalimeira@xepa.test');
 IF NOT EXISTS (SELECT 1 FROM Estabelecimentos WHERE UsuarioId = @u)
     INSERT INTO Estabelecimentos (UsuarioId, Nome, Categoria, LogoUrl, Cep, Logradouro, Numero, Bairro, Cidade, Uf, Latitude, Longitude, StatusCadastro, Ativo, CriadoEm)
-    VALUES (@u, N'Cantina Bella Limeira', 'Restaurante', 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=160&q=75&auto=format&fit=crop', '13480', N'Rua Santa Cruz', '700', N'Centro', N'Limeira', 'SP', -22.5634859, -47.4035536, 'Aprovado', 1, @agora);
+    VALUES (@u, N'Cantina Bella Limeira', 'Restaurante', 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=160&q=75&auto=format&fit=crop', '13480000', N'Rua Santa Cruz', '700', N'Centro', N'Limeira', 'SP', -22.5634859, -47.4035536, 'Aprovado', 1, @agora);
 SET @e = (SELECT Id FROM Estabelecimentos WHERE UsuarioId = @u);
 UPDATE Ofertas SET Ativa = 0, AtualizadoEm = @agora WHERE EstabelecimentoId = @e AND Ativa = 1;
 INSERT INTO Ofertas (EstabelecimentoId, Tipo, Titulo, Descricao, FotoUrl, PrecoOriginal, Preco, QuantidadeDisponivel, PesoEstimadoKg, RetiradaInicio, RetiradaFim, Ativa, CriadoEm) VALUES (@e, 'Prato', N'Massa do almoço', N'Porção de massa com molho do dia, embalada para viagem.', 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=800&q=75&auto=format&fit=crop', 42.00, 15.90, 5, 0.6, @inicio, @fim, 1, @agora);
@@ -77,7 +77,7 @@ IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Email = 'sushicascalho@xepa.test')
 SET @u = (SELECT Id FROM Usuarios WHERE Email = 'sushicascalho@xepa.test');
 IF NOT EXISTS (SELECT 1 FROM Estabelecimentos WHERE UsuarioId = @u)
     INSERT INTO Estabelecimentos (UsuarioId, Nome, Categoria, LogoUrl, Cep, Logradouro, Numero, Bairro, Cidade, Uf, Latitude, Longitude, StatusCadastro, Ativo, CriadoEm)
-    VALUES (@u, N'Sushi do Cascalho', 'Restaurante', 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=160&q=75&auto=format&fit=crop', '13480', N'Rua Barão de Cascalho', '1100', N'Centro', N'Limeira', 'SP', -22.5626569, -47.3996758, 'Aprovado', 1, @agora);
+    VALUES (@u, N'Sushi do Cascalho', 'Restaurante', 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=160&q=75&auto=format&fit=crop', '13480000', N'Rua Barão de Cascalho', '1100', N'Centro', N'Limeira', 'SP', -22.5626569, -47.3996758, 'Aprovado', 1, @agora);
 SET @e = (SELECT Id FROM Estabelecimentos WHERE UsuarioId = @u);
 UPDATE Ofertas SET Ativa = 0, AtualizadoEm = @agora WHERE EstabelecimentoId = @e AND Ativa = 1;
 INSERT INTO Ofertas (EstabelecimentoId, Tipo, Titulo, Descricao, FotoUrl, PrecoOriginal, Preco, QuantidadeDisponivel, PesoEstimadoKg, RetiradaInicio, RetiradaFim, Ativa, CriadoEm) VALUES (@e, 'SacolaSurpresa', N'Combinado surpresa', N'20 peças de sushi e hot roll do dia.', 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=800&q=75&auto=format&fit=crop', 75.00, 29.90, 2, 0.6, @inicio, @fim, 1, @agora);
@@ -100,7 +100,7 @@ IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Email = 'bomjardim@xepa.test')
 SET @u = (SELECT Id FROM Usuarios WHERE Email = 'bomjardim@xepa.test');
 IF NOT EXISTS (SELECT 1 FROM Estabelecimentos WHERE UsuarioId = @u)
     INSERT INTO Estabelecimentos (UsuarioId, Nome, Categoria, LogoUrl, Cep, Logradouro, Numero, Bairro, Cidade, Uf, Latitude, Longitude, StatusCadastro, Ativo, CriadoEm)
-    VALUES (@u, N'Mercado Bom Jardim', 'Mercado', 'https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=160&q=75&auto=format&fit=crop', '13480', N'Rua Carlos Gomes', '800', N'Centro', N'Limeira', 'SP', -22.5671255, -47.4046319, 'Aprovado', 1, @agora);
+    VALUES (@u, N'Mercado Bom Jardim', 'Mercado', 'https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=160&q=75&auto=format&fit=crop', '13480000', N'Rua Carlos Gomes', '800', N'Centro', N'Limeira', 'SP', -22.5671255, -47.4046319, 'Aprovado', 1, @agora);
 SET @e = (SELECT Id FROM Estabelecimentos WHERE UsuarioId = @u);
 UPDATE Ofertas SET Ativa = 0, AtualizadoEm = @agora WHERE EstabelecimentoId = @e AND Ativa = 1;
 INSERT INTO Ofertas (EstabelecimentoId, Tipo, Titulo, Descricao, FotoUrl, PrecoOriginal, Preco, QuantidadeDisponivel, PesoEstimadoKg, RetiradaInicio, RetiradaFim, Ativa, CriadoEm) VALUES (@e, 'SacolaSurpresa', N'Kit despensa', N'Laticínios, frios e itens perto da validade, todos dentro do prazo.', 'https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=800&q=75&auto=format&fit=crop', 55.00, 21.90, 3, 2.5, @inicio, @fim, 1, @agora);
@@ -111,7 +111,7 @@ IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Email = 'emporiotoledo@xepa.test')
 SET @u = (SELECT Id FROM Usuarios WHERE Email = 'emporiotoledo@xepa.test');
 IF NOT EXISTS (SELECT 1 FROM Estabelecimentos WHERE UsuarioId = @u)
     INSERT INTO Estabelecimentos (UsuarioId, Nome, Categoria, LogoUrl, Cep, Logradouro, Numero, Bairro, Cidade, Uf, Latitude, Longitude, StatusCadastro, Ativo, CriadoEm)
-    VALUES (@u, N'Empório Toledo', 'Mercado', 'https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=160&q=75&auto=format&fit=crop', '13480', N'Rua Tiradentes', '600', N'Centro', N'Limeira', 'SP', -22.5665979, -47.4027219, 'Aprovado', 1, @agora);
+    VALUES (@u, N'Empório Toledo', 'Mercado', 'https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=160&q=75&auto=format&fit=crop', '13480000', N'Rua Tiradentes', '600', N'Centro', N'Limeira', 'SP', -22.5665979, -47.4027219, 'Aprovado', 1, @agora);
 SET @e = (SELECT Id FROM Estabelecimentos WHERE UsuarioId = @u);
 UPDATE Ofertas SET Ativa = 0, AtualizadoEm = @agora WHERE EstabelecimentoId = @e AND Ativa = 1;
 INSERT INTO Ofertas (EstabelecimentoId, Tipo, Titulo, Descricao, FotoUrl, PrecoOriginal, Preco, QuantidadeDisponivel, PesoEstimadoKg, RetiradaInicio, RetiradaFim, Ativa, CriadoEm) VALUES (@e, 'SacolaSurpresa', N'Cesta do empório', N'Queijos, embutidos e pães especiais da semana.', 'https://images.unsplash.com/photo-1606787366850-de6330128bfc?w=800&q=75&auto=format&fit=crop', 80.00, 29.90, 2, 1.8, @inicio, @fim, 1, @agora);
@@ -122,7 +122,7 @@ IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Email = 'quitanda@xepa.test')
 SET @u = (SELECT Id FROM Usuarios WHERE Email = 'quitanda@xepa.test');
 IF NOT EXISTS (SELECT 1 FROM Estabelecimentos WHERE UsuarioId = @u)
     INSERT INTO Estabelecimentos (UsuarioId, Nome, Categoria, LogoUrl, Cep, Logradouro, Numero, Bairro, Cidade, Uf, Latitude, Longitude, StatusCadastro, Ativo, CriadoEm)
-    VALUES (@u, N'Quitanda da Boa Morte', 'Feira', 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=160&q=75&auto=format&fit=crop', '13480', N'Rua Boa Morte', '900', N'Centro', N'Limeira', 'SP', -22.5624129, -47.405227, 'Aprovado', 1, @agora);
+    VALUES (@u, N'Quitanda da Boa Morte', 'Feira', 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=160&q=75&auto=format&fit=crop', '13480000', N'Rua Boa Morte', '900', N'Centro', N'Limeira', 'SP', -22.5624129, -47.405227, 'Aprovado', 1, @agora);
 SET @e = (SELECT Id FROM Estabelecimentos WHERE UsuarioId = @u);
 UPDATE Ofertas SET Ativa = 0, AtualizadoEm = @agora WHERE EstabelecimentoId = @e AND Ativa = 1;
 INSERT INTO Ofertas (EstabelecimentoId, Tipo, Titulo, Descricao, FotoUrl, PrecoOriginal, Preco, QuantidadeDisponivel, PesoEstimadoKg, RetiradaInicio, RetiradaFim, Ativa, CriadoEm) VALUES (@e, 'SacolaSurpresa', N'Caixa de frutas', N'Frutas maduras e boas para consumo hoje ou para doces e sucos.', 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=800&q=75&auto=format&fit=crop', 32.00, 9.90, 5, 3.5, @inicio, @fim, 1, @agora);
@@ -134,7 +134,7 @@ IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Email = 'feiradapraca@xepa.test')
 SET @u = (SELECT Id FROM Usuarios WHERE Email = 'feiradapraca@xepa.test');
 IF NOT EXISTS (SELECT 1 FROM Estabelecimentos WHERE UsuarioId = @u)
     INSERT INTO Estabelecimentos (UsuarioId, Nome, Categoria, LogoUrl, Cep, Logradouro, Numero, Bairro, Cidade, Uf, Latitude, Longitude, StatusCadastro, Ativo, CriadoEm)
-    VALUES (@u, N'Barraca Feira da Praça', 'Feira', 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=160&q=75&auto=format&fit=crop', '13480', N'Rua Doutor Trajano de Barros Camargo', '500', N'Centro', N'Limeira', 'SP', -22.5647028, -47.4001857, 'Aprovado', 1, @agora);
+    VALUES (@u, N'Barraca Feira da Praça', 'Feira', 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=160&q=75&auto=format&fit=crop', '13480000', N'Rua Doutor Trajano de Barros Camargo', '500', N'Centro', N'Limeira', 'SP', -22.5647028, -47.4001857, 'Aprovado', 1, @agora);
 SET @e = (SELECT Id FROM Estabelecimentos WHERE UsuarioId = @u);
 UPDATE Ofertas SET Ativa = 0, AtualizadoEm = @agora WHERE EstabelecimentoId = @e AND Ativa = 1;
 INSERT INTO Ofertas (EstabelecimentoId, Tipo, Titulo, Descricao, FotoUrl, PrecoOriginal, Preco, QuantidadeDisponivel, PesoEstimadoKg, RetiradaInicio, RetiradaFim, Ativa, CriadoEm) VALUES (@e, 'SacolaSurpresa', N'Xepa da feira', N'Mix de frutas, verduras e legumes no fim da feira.', 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=800&q=75&auto=format&fit=crop', 30.00, 9.90, 6, 4.0, @inicio, @fim, 1, @agora);
@@ -145,7 +145,7 @@ IF NOT EXISTS (SELECT 1 FROM Usuarios WHERE Email = 'docesdacasa@xepa.test')
 SET @u = (SELECT Id FROM Usuarios WHERE Email = 'docesdacasa@xepa.test');
 IF NOT EXISTS (SELECT 1 FROM Estabelecimentos WHERE UsuarioId = @u)
     INSERT INTO Estabelecimentos (UsuarioId, Nome, Categoria, LogoUrl, Cep, Logradouro, Numero, Bairro, Cidade, Uf, Latitude, Longitude, StatusCadastro, Ativo, CriadoEm)
-    VALUES (@u, N'Doces da Casa', 'Padaria', 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=160&q=75&auto=format&fit=crop', '13480', N'Rua Alferes Franco', '300', N'Centro', N'Limeira', 'SP', -22.5608334, -47.4015994, 'Aprovado', 1, @agora);
+    VALUES (@u, N'Doces da Casa', 'Padaria', 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=160&q=75&auto=format&fit=crop', '13480000', N'Rua Alferes Franco', '300', N'Centro', N'Limeira', 'SP', -22.5608334, -47.4015994, 'Aprovado', 1, @agora);
 SET @e = (SELECT Id FROM Estabelecimentos WHERE UsuarioId = @u);
 UPDATE Ofertas SET Ativa = 0, AtualizadoEm = @agora WHERE EstabelecimentoId = @e AND Ativa = 1;
 INSERT INTO Ofertas (EstabelecimentoId, Tipo, Titulo, Descricao, FotoUrl, PrecoOriginal, Preco, QuantidadeDisponivel, PesoEstimadoKg, RetiradaInicio, RetiradaFim, Ativa, CriadoEm) VALUES (@e, 'SacolaSurpresa', N'Sobremesas do dia', N'Copos de sobremesa e mousses feitos hoje.', 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=800&q=75&auto=format&fit=crop', 40.00, 14.90, 3, 0.8, @inicio, @fim, 1, @agora);

@@ -36,7 +36,9 @@ def geocodificar(chave: str, endereco: str):
     # Só aceita resultado em Limeira; o resto vira aviso.
     if "Limeira" not in json.dumps(r["address"], ensure_ascii=False):
         return None
-    return r["position"]["lat"], r["position"]["lon"], r["address"].get("postalCode", "").replace("-", "")[:8]
+    cep = r["address"].get("postalCode", "").replace("-", "")
+    # O Azure Maps às vezes devolve só o prefixo ("13480"); sem os 8 dígitos usa o CEP geral de Limeira.
+    return r["position"]["lat"], r["position"]["lon"], cep if len(cep) == 8 and cep.isdigit() else ""
 
 
 def foto(id_, largura=800):

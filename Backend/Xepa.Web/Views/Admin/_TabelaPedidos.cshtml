@@ -1,0 +1,46 @@
+@model IReadOnlyList<PedidoAdminDto>
+@if (Model.Count == 0)
+{
+    <div class="cartao vazio">Nenhum pedido por aqui.</div>
+}
+else
+{
+    <table>
+        <thead>
+            <tr><th scope="col">Pedido</th><th scope="col">Cliente</th><th scope="col">Loja</th><th scope="col">Tipo</th><th scope="col">Total</th><th scope="col">Situação</th><th scope="col">Notas</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Model)
+            {
+                <tr>
+                    <td>
+                        <a asp-controller="Admin" asp-action="Pedido" asp-route-id="@p.Id" class="linha-link">#@p.Id</a>
+                        <div class="mini">@Rotulos.Data(p.CriadoEm)</div>
+                    </td>
+                    <td><a asp-controller="Admin" asp-action="Usuario" asp-route-id="@p.ClienteId" class="linha-link">@p.Cliente</a></td>
+                    <td>
+                        <a asp-controller="Admin" asp-action="Loja" asp-route-id="@p.LojaId" class="linha-link">@p.Loja</a>
+                        <div class="mini">@p.Quantidade× @p.Oferta</div>
+                    </td>
+                    <td>
+                        @Rotulos.Entrega(p.Tipo)
+                        @if (p.Entregador is not null)
+                        {
+                            <div class="mini">com <a asp-controller="Admin" asp-action="Usuario" asp-route-id="@p.EntregadorId">@p.Entregador.Split(' ')[0]</a></div>
+                        }
+                    </td>
+                    <td><strong>@Rotulos.Dinheiro(p.Total)</strong></td>
+                    <td><span class="selo @Rotulos.ClassePedido(p.Status)">@Rotulos.Pedido(p.Status, p.Tipo)</span></td>
+                    <td>
+                        @if (p.NotaLoja is null && p.NotaEntregador is null)
+                        {
+                            <span class="sem-nota">—</span>
+                        }
+                        @if (p.NotaLoja is { } nl) { <div class="mini">Loja @Icones.Estrelas(nl)</div> }
+                        @if (p.NotaEntregador is { } ne) { <div class="mini">Entrega @Icones.Estrelas(ne)</div> }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

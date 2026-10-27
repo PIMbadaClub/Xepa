@@ -1,0 +1,128 @@
+@model PedidoDetalheAdminDto
+@{
+    var r = Model.Resumo;
+    ViewData["Title"] = $"Pedido #{r.Id}";
+}
+<a asp-action="Pedidos" class="voltar">@Icones.Svg("voltar", 16)Pedidos</a>
+<div class="titulo-detalhe">
+    <h1>Pedido #@r.Id</h1>
+    <span class="selo @Rotulos.ClassePedido(r.Status)">@Rotulos.Pedido(r.Status, r.Tipo)</span>
+    <span class="selo inativa">@Rotulos.Entrega(r.Tipo)</span>
+</div>
+<p class="sub">Feito em @Rotulos.Data(r.CriadoEm)</p>
+
+<div class="blocos">
+    <section class="cartao">
+        <h2>@Icones.Svg("pedidos", 18)Itens e valores</h2>
+        <dl class="ficha">
+            <dt>Oferta</dt><dd>@r.Quantidade× @r.Oferta</dd>
+            <dt>Preço unitário</dt><dd>@Rotulos.Dinheiro(Model.PrecoUnitario)</dd>
+            @if (r.Tipo == TipoEntrega.Entrega)
+            {
+                <dt>Taxa de entrega</dt><dd>@Rotulos.Dinheiro(Model.TaxaEntrega)@(Model.DistanciaKm is { } km ? $" · {Rotulos.Km(km)}" : "")</dd>
+            }
+            <dt>Total</dt><dd><span class="preco">@Rotulos.Dinheiro(r.Total)</span></dd>
+            <dt>Código</dt><dd>@Model.CodigoRetirada</dd>
+            @if (Model.Observacao is not null) { <dt>Observação</dt><dd>@Model.Observacao</dd> }
+            <dt>Repasse à loja</dt><dd>@(Model.RepasseId is { } rid ? $"#{rid}" : "ainda não fechado")</dd>
+            @if (r.Tipo == TipoEntrega.Entrega)
+            {
+                <dt>Repasse ao entregador</dt><dd>@(Model.RepasseEntregadorId is { } reid ? $"#{reid}" : "ainda não fechado")</dd>
+            }
+        </dl>
+    </section>
+
+    <section class="cartao">
+        <h2>@Icones.Svg("usuarios", 18)Cliente</h2>
+        <dl class="ficha">
+            <dt>Nome</dt><dd><a asp-action="Usuario" asp-route-id="@r.ClienteId">@r.Cliente</a></dd>
+            <dt>E-mail</dt><dd>@Model.ClienteEmail</dd>
+            <dt>Telefone</dt><dd>@(Model.ClienteTelefone ?? "—")</dd>
+            @if (Model.Endereco is not null) { <dt>Entrega em</dt><dd>@Model.Endereco</dd> }
+        </dl>
+        <h2 style="margin-top:18px">@Icones.Svg("lojas", 18)Loja</h2>
+        <dl class="ficha">
+            <dt>Loja</dt><dd><a asp-action="Loja" asp-route-id="@r.LojaId">@r.Loja</a></dd>
+        </dl>
+        @if (r.Tipo == TipoEntrega.Entrega)
+        {
+            <h2 style="margin-top:18px">@Icones.Svg("entregadores", 18)Entregador</h2>
+            @if (r.EntregadorId is null)
+            {
+                <p class="mini">Nenhum entregador aceitou ainda.</p>
+            }
+            else
+            {
+                <dl class="ficha">
+                    <dt>Nome</dt><dd><a asp-action="Usuario" asp-route-id="@r.EntregadorId">@r.Entregador</a></dd>
+                    <dt>Moto</dt><dd>@(Model.Placa ?? "—")</dd>
+                    <dt>Telefone</dt><dd>@(Model.EntregadorTelefone ?? "—")</dd>
+                </dl>
+            }
+        }
+    </section>
+
+    <section class="cartao">
+        <h2>Linha do tempo</h2>
+        @if (Model.Historico.Count == 0)
+        {
+            <p class="mini">Sem mudanças de status registradas.</p>
+        }
+        else
+        {
+            <ol class="linha-tempo">
+                @foreach (var h in Model.Historico)
+                {
+                    <li><strong>@Rotulos.Pedido(h.Para, r.Tipo)</strong><small>@Rotulos.Data(h.Em)</small></li>
+                }
+            </ol>
+        }
+    </section>
+
+    <section class="cartao">
+        <h2>@Icones.Svg("repasses", 18)Pagamentos</h2>
+        @if (Model.Pagamentos.Count == 0)
+        {
+            <p class="mini">Nenhuma tentativa de pagamento.</p>
+        }
+        @foreach (var g in Model.Pagamentos)
+        {
+            <div class="avaliacao">
+                <strong>@Rotulos.Metodo(g.Metodo) · @Rotulos.Dinheiro(g.Valor)</strong>
+                <span class="selo @(g.Status == StatusPagamento.Aprovado ? "ativa" : g.Status == StatusPagamento.Pendente ? "sacola" : "perigo")">@Rotulos.Pagamento(g.Status)</span>
+                <div class="mini">@g.Provedor · @g.IdExterno · @Rotulos.Data(g.CriadoEm)@(g.PagoEm is { } pago ? $" · pago {Rotulos.Data(pago)}" : "")</div>
+            </div>
+        }
+    </section>
+
+    <section class="cartao">
+        <h2>@Icones.Svg("estrela", 18)Avaliações do cliente</h2>
+        @if (r.NotaLoja is null && r.NotaEntregador is null)
+        {
+            <p class="mini">O cliente ainda não avaliou este pedido.</p>
+        }
+        @if (r.NotaLoja is { } nl)
+        {
+            <div class="avaliacao"><strong>Loja e sacola</strong> @Icones.Estrelas(nl)@if (Model.ComentarioLoja is not null) { <div>“@Model.ComentarioLoja”</div> }</div>
+        }
+        @if (r.NotaEntregador is { } ne)
+        {
+            <div class="avaliacao"><strong>Entrega</strong> @Icones.Estrelas(ne)@if (Model.ComentarioEntregador is not null) { <div>“@Model.ComentarioEntregador”</div> }</div>
+        }
+    </section>
+
+    @if (Model.Denuncias.Count > 0)
+    {
+        <section class="cartao">
+            <h2>@Icones.Svg("denuncias", 18)Denúncias</h2>
+            @foreach (var d in Model.Denuncias)
+            {
+                <div class="avaliacao">
+                    <a asp-action="Denuncias" asp-route-todas="true">@Rotulos.Motivo(d.Motivo)</a>
+                    <span class="selo @(d.Status == StatusDenuncia.Aberta ? "sacola" : d.Status == StatusDenuncia.Procedente ? "perigo" : "inativa")">@Rotulos.Denuncia(d.Status)</span>
+                    <div class="mini">@Rotulos.Data(d.CriadoEm)</div>
+                </div>
+            }
+        </section>
+    }
+</div>

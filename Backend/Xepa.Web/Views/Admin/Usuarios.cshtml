@@ -1,39 +1,58 @@
 @model IReadOnlyList<UsuarioAdminDto>
 @{
     ViewData["Title"] = "Usuários";
+    var tipo = ViewData["Tipo"] as TipoUsuario?;
 }
 <h1>Usuários</h1>
-<p class="sub">Contas suspensas não conseguem entrar no app nem no portal; as sessões abertas caem na hora.</p>
+<p class="sub">Contas suspensas não conseguem entrar no app nem no portal; as sessões abertas caem na hora. Clique no nome para ver e editar.</p>
 
+<nav class="filtros" aria-label="Filtrar por tipo">
+    <a asp-action="Usuarios" asp-route-busca="@ViewData["Busca"]" class="@(tipo is null ? "ativo" : "")">Todos</a>
+    @foreach (var t in Enum.GetValues<TipoUsuario>())
+    {
+        <a asp-action="Usuarios" asp-route-tipo="@t" asp-route-busca="@ViewData["Busca"]" class="@(tipo == t ? "ativo" : "")">@Rotulos.Tipo(t)</a>
+    }
+</nav>
 <form method="get" asp-action="Usuarios" class="busca">
+    @if (tipo is { } tp) { <input type="hidden" name="tipo" value="@tp" /> }
     <label for="busca" class="pular">Buscar</label>
     <input id="busca" name="busca" value="@ViewData["Busca"]" placeholder="Buscar por nome ou e-mail" />
     <button class="botao secundario" type="submit">Buscar</button>
 </form>
 
-<table>
-    <thead>
-        <tr><th scope="col">Nome</th><th scope="col">Tipo</th><th scope="col">Pedidos</th><th scope="col">Desde</th><th scope="col">Situação</th><th scope="col">Ações</th></tr>
-    </thead>
-    <tbody>
-        @foreach (var u in Model)
-        {
-            <tr>
-                <td><strong>@u.Nome</strong><div class="sub" style="margin:0;font-size:13px">@u.Email</div></td>
-                <td>@Rotulos.Tipo(u.Tipo)</td>
-                <td>@u.Pedidos</td>
-                <td>@Rotulos.Data(u.CriadoEm)</td>
-                <td><span class="selo @(u.Bloqueado ? "perigo" : "ativa")">@(u.Bloqueado ? "Suspensa" : "Ativa")</span></td>
-                <td>
-                    @if (u.Tipo != TipoUsuario.Administrador)
-                    {
-                        <form asp-action="AlterarBloqueio" asp-route-id="@u.Id" method="post">
-                            <input type="hidden" name="bloqueado" value="@(u.Bloqueado ? "false" : "true")" />
-                            <button class="botao secundario pequeno" type="submit">@(u.Bloqueado ? "Liberar" : "Suspender")</button>
-                        </form>
-                    }
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+@if (Model.Count == 0)
+{
+    <div class="cartao vazio">Ninguém encontrado.</div>
+}
+else
+{
+    <table>
+        <thead>
+            <tr><th scope="col">Nome</th><th scope="col">Tipo</th><th scope="col">Pedidos</th><th scope="col">Desde</th><th scope="col">Situação</th><th scope="col">Ações</th></tr>
+        </thead>
+        <tbody>
+            @foreach (var u in Model)
+            {
+                <tr>
+                    <td><a asp-action="Usuario" asp-route-id="@u.Id" class="linha-link">@u.Nome</a><div class="mini">@u.Email</div></td>
+                    <td>@Rotulos.Tipo(u.Tipo)</td>
+                    <td>@u.Pedidos</td>
+                    <td>@Rotulos.Data(u.CriadoEm)</td>
+                    <td><span class="selo @(u.Bloqueado ? "perigo" : "ativa")">@(u.Bloqueado ? "Suspensa" : "Ativa")</span></td>
+                    <td>
+                        <div class="acoes">
+                            <a asp-action="Usuario" asp-route-id="@u.Id" class="botao secundario pequeno">Editar</a>
+                            @if (u.Tipo != TipoUsuario.Administrador)
+                            {
+                                <form asp-action="AlterarBloqueio" asp-route-id="@u.Id" method="post">
+                                    <input type="hidden" name="bloqueado" value="@(u.Bloqueado ? "false" : "true")" />
+                                    <button class="botao secundario pequeno" type="submit">@(u.Bloqueado ? "Liberar" : "Suspender")</button>
+                                </form>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}

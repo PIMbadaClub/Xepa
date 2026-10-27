@@ -288,6 +288,13 @@ class OfertaCard extends StatelessWidget {
                               ),
                             ),
                           ),
+                          if (o.avaliacao != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(XepaRaios.pilula)),
+                              child: Text('★ ${formatarDecimal(o.avaliacao!)}',
+                                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: XepaCores.texto)),
+                            ),
                         ],
                       ),
                     ),

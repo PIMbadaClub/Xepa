@@ -4,8 +4,14 @@ using Xepa.Domain.Entities;
 
 namespace Xepa.Application.Administracao;
 
-public record PainelAdminDto(int LojasPendentes, int DenunciasAbertas, int PedidosHoje, decimal VendasHoje,
-    decimal KgSalvos30Dias, decimal RepassesAPagar);
+public record PainelAdminDto(int LojasPendentes, int EntregadoresPendentes, int DenunciasAbertas, int PedidosHoje,
+    decimal VendasHoje, int PedidosEmAndamento, int EntregadoresOnline, decimal KgSalvos30Dias, decimal ComissaoMes,
+    decimal RepassesAPagar, decimal RepassesEntregadoresAPagar, IReadOnlyList<VendaDiaAdminDto> UltimosDias,
+    IReadOnlyList<PedidoAdminDto> UltimosPedidos, IReadOnlyList<LojaDestaqueDto> LojasDestaque);
+
+public record VendaDiaAdminDto(DateOnly Dia, int Pedidos, decimal Vendas);
+
+public record LojaDestaqueDto(int Id, string Nome, int Pedidos, decimal Vendas, double? Nota);
 
 public record LojaAdminDto(int Id, string Nome, CategoriaEstabelecimento Categoria, string? Cnpj, string? Telefone,
     string Responsavel, string Email, string Bairro, string Cidade, bool TemCoordenadas, StatusCadastro Status,
@@ -45,8 +51,40 @@ public class AdminService(IXepaDb db, IServicoMapas mapas)
             .Where(p => p.Status == StatusPedido.Entregue && p.CriadoEm >= inicio30)
             .SumAsync(p => (decimal?)(p.Oferta.PesoEstimadoKg * p.Quantidade), ct) ?? 0;
         var aPagar = await db.Repasses.Where(r => r.PagoEm == null).SumAsync(r => (decimal?)r.ValorLiquido, ct) ?? 0;
+        var aPagarEntregadores = await db.RepassesEntregadores.Where(r => r.PagoEm == null).SumAsync(r => (decimal?)r.Valor, ct) ?? 0;
+        var entregadoresPendentes = await db.Usuarios.CountAsync(u => u.Tipo == TipoUsuario.Entregador && u.CadastroEntregador == StatusCadastro.Pendente, ct);
+        var online = await db.Usuarios.CountAsync(u => u.Tipo == TipoUsuario.Entregador && u.Online, ct);
+        var emAndamento = await db.Pedidos.CountAsync(p => p.Status == StatusPedido.Pendente || p.Status == StatusPedido.Confirmado
+            || p.Status == StatusPedido.EmPreparo || p.Status == StatusPedido.ProntoParaRetirada || p.Status == StatusPedido.SaiuParaEntrega, ct);
 
-        return new PainelAdminDto(pendentes, denuncias, pedidosHoje, vendasHoje, kg, aPagar);
+        var fuso = Indicadores.IndicadoresService.FusoBrasilia;
+        var agoraLocal = TimeZoneInfo.ConvertTime(agora, fuso);
+        var inicioMes = new DateTimeOffset(new DateTime(agoraLocal.Year, agoraLocal.Month, 1), agoraLocal.Offset);
+        var vendasMes = await db.Pedidos.Where(p => p.Status == StatusPedido.Entregue && p.CriadoEm >= inicioMes)
+            .SumAsync(p => (decimal?)(p.PrecoUnitario * p.Quantidade), ct) ?? 0;
+
+        var inicio14 = agora.AddDays(-14);
+        var recentes = await db.Pedidos.AsNoTracking().Where(p => p.CriadoEm >= inicio14 && pagos.Contains(p.Status))
+            .Select(p => new { p.CriadoEm, p.ValorTotal }).ToListAsync(ct);
+        var hojeLocal = DateOnly.FromDateTime(agoraLocal.Date);
+        var dias = Enumerable.Range(0, 14).Reverse().Select(i => hojeLocal.AddDays(-i)).Select(d =>
+        {
+            var doDia = recentes.Where(r => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(r.CriadoEm, fuso).Date) == d).ToList();
+            return new VendaDiaAdminDto(d, doDia.Count, doDia.Sum(r => r.ValorTotal));
+        }).ToList();
+
+        var ultimos = await AdminPedidosService.Projetar(db.Pedidos.AsNoTracking().OrderByDescending(p => p.CriadoEm).Take(8)).ToListAsync(ct);
+        var destaque = await db.Pedidos.AsNoTracking()
+            .Where(p => p.Status == StatusPedido.Entregue && p.CriadoEm >= inicio30)
+            .GroupBy(p => new { p.Oferta.EstabelecimentoId, p.Oferta.Estabelecimento.Nome })
+            .Select(g => new { g.Key.EstabelecimentoId, g.Key.Nome, Pedidos = g.Count(), Vendas = g.Sum(p => p.PrecoUnitario * p.Quantidade),
+                Nota = g.Where(p => p.NotaLoja != null).Average(p => (double?)p.NotaLoja) })
+            .OrderByDescending(g => g.Vendas).Take(5)
+            .ToListAsync(ct);
+
+        return new PainelAdminDto(pendentes, entregadoresPendentes, denuncias, pedidosHoje, vendasHoje, emAndamento, online, kg,
+            Math.Round(vendasMes * Repasse.PercentualComissao, 2), aPagar, aPagarEntregadores, dias, ultimos,
+            destaque.Select(d => new LojaDestaqueDto(d.EstabelecimentoId, d.Nome, d.Pedidos, d.Vendas, d.Nota is { } n ? Math.Round(n, 1) : null)).ToList());
     }
 
     // ---------- Lojas ----------
@@ -135,9 +173,11 @@ public class AdminService(IXepaDb db, IServicoMapas mapas)
 
     // ---------- Usuários ----------
 
-    public async Task<IReadOnlyList<UsuarioAdminDto>> ListarUsuariosAsync(string? busca, CancellationToken ct)
+    public async Task<IReadOnlyList<UsuarioAdminDto>> ListarUsuariosAsync(string? busca, TipoUsuario? tipo, CancellationToken ct)
     {
         var usuarios = db.Usuarios.AsNoTracking();
+        if (tipo is { } t)
+            usuarios = usuarios.Where(u => u.Tipo == t);
         if (!string.IsNullOrWhiteSpace(busca))
         {
             var termo = busca.Trim();

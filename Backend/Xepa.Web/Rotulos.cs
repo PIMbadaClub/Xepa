@@ -55,4 +55,50 @@ public static class Rotulos
         TipoUsuario.Entregador => "Entregador",
         _ => "Administrador"
     };
+
+    /// <summary>Cadastro do entregador (o da loja usa o feminino: "Aprovada").</summary>
+    public static string CadastroEntregador(StatusCadastro s) => s switch
+    {
+        StatusCadastro.Pendente => "Aguardando aprovação",
+        StatusCadastro.Aprovado => "Aprovado",
+        _ => "Rejeitado"
+    };
+
+    public static string Pedido(StatusPedido s, TipoEntrega tipo) => s switch
+    {
+        StatusPedido.AguardandoPagamento => "Aguardando pagamento",
+        StatusPedido.Pendente => "Aguardando aceite",
+        StatusPedido.Confirmado => "Aceito",
+        StatusPedido.EmPreparo => "Em preparo",
+        StatusPedido.ProntoParaRetirada when tipo == TipoEntrega.Entrega => "Pronto para coleta",
+        StatusPedido.ProntoParaRetirada => "Aguardando retirada",
+        StatusPedido.SaiuParaEntrega => "Em rota",
+        StatusPedido.Entregue => "Entregue",
+        _ => "Cancelado"
+    };
+
+    /// <summary>Classe do selo do status: verde entregue, vermelho cancelado, bege em andamento.</summary>
+    public static string ClassePedido(StatusPedido s) => s switch
+    {
+        StatusPedido.Entregue => "ativa",
+        StatusPedido.Cancelado => "perigo",
+        StatusPedido.AguardandoPagamento => "inativa",
+        _ => "sacola"
+    };
+
+    public static string Entrega(TipoEntrega t) => t == TipoEntrega.Entrega ? "Entrega" : "Retirada";
+
+    public static string Metodo(MetodoPagamento m) => m == MetodoPagamento.Pix ? "Pix" : "Cartão";
+
+    public static string Pagamento(StatusPagamento s) => s switch
+    {
+        StatusPagamento.Pendente => "Pendente",
+        StatusPagamento.Aprovado => "Aprovado",
+        StatusPagamento.Recusado => "Recusado",
+        _ => "Estornado"
+    };
+
+    public static string Km(double km) => $"{km.ToString("0.0", Br)} km";
+
+    public static string Nota(double? nota) => nota is { } n ? n.ToString("0.0", Br) : "—";
 }

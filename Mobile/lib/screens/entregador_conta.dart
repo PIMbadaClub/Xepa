@@ -102,6 +102,28 @@ class _GanhosEntregadorState extends State<_GanhosEntregador> {
                   ),
                   const SizedBox(height: 14),
                   _ResumoGanhos(g: g, periodo: _periodo),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _Saldo(
+                          rotulo: 'A receber',
+                          valor: (g['aReceber'] as num? ?? 0).toDouble(),
+                          cor: XepaCores.paoEscuro,
+                          dica: 'Corridas entregues que a XEPA ainda vai transferir',
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _Saldo(
+                          rotulo: 'Já recebido',
+                          valor: (g['recebido'] as num? ?? 0).toDouble(),
+                          cor: XepaCores.verde,
+                          dica: 'Repasses pagos pela XEPA',
+                        ),
+                      ),
+                    ],
+                  ),
                   const _Titulo('Últimos 7 dias'),
                   _GraficoDias(dias: (g['ultimosDias'] as List).cast<Map<String, dynamic>>()),
                   const _Titulo('Corridas feitas'),
@@ -114,7 +136,7 @@ class _GanhosEntregadorState extends State<_GanhosEntregador> {
                     for (final c in (g['corridas'] as List).cast<Map<String, dynamic>>()) _LinhaCorridaFeita(c: c),
                   const SizedBox(height: 14),
                   const Text(
-                    'A taxa de entrega que o cliente paga é 100% sua. Os valores contam as corridas finalizadas com o código do cliente.',
+                    'A taxa de entrega que o cliente paga é 100% sua. Os valores contam as corridas finalizadas com o código do cliente; a XEPA fecha o repasse e transfere o valor.',
                     style: TextStyle(color: XepaCores.textoSecundario, fontSize: 12.5),
                   ),
                 ],
@@ -178,6 +200,37 @@ class _ResumoGanhos extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Saldo com a XEPA: o que falta transferir e o que já caiu na conta.
+class _Saldo extends StatelessWidget {
+  const _Saldo({required this.rotulo, required this.valor, required this.cor, required this.dica});
+
+  final String rotulo;
+  final double valor;
+  final Color cor;
+  final String dica;
+
+  @override
+  Widget build(BuildContext context) => Tooltip(
+        message: dica,
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(XepaRaios.cartao),
+            border: Border.all(color: XepaCores.borda),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(rotulo, style: const TextStyle(color: XepaCores.textoSecundario, fontWeight: FontWeight.w700, fontSize: 12.5)),
+              const SizedBox(height: 2),
+              Text(formatarPreco(valor), style: TextStyle(color: cor, fontWeight: FontWeight.w800, fontSize: 20)),
+            ],
+          ),
+        ),
+      );
 }
 
 class _Numero extends StatelessWidget {

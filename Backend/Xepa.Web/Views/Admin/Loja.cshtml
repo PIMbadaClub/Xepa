@@ -1,0 +1,151 @@
+@model (LojaDetalheAdminDto Loja, EditarLojaAdminForm Form)
+@{
+    var l = Model.Loja;
+    ViewData["Title"] = l.Nome;
+    var rep = l.Reputacao;
+}
+<a asp-action="Lojas" class="voltar">@Icones.Svg("voltar", 16)Lojas</a>
+<div class="titulo-detalhe">
+    <h1>@l.Nome</h1>
+    <span class="selo @(l.Status switch { StatusCadastro.Aprovado => "ativa", StatusCadastro.Pendente => "sacola", _ => "inativa" })">@Rotulos.Cadastro(l.Status)</span>
+    @if (!l.Ativa) { <span class="selo perigo">Suspensa</span> }
+</div>
+<p class="sub">@Rotulos.Categoria(l.Categoria) · cadastrada em @Rotulos.Data(l.CriadoEm) · responsável <a asp-action="Usuario" asp-route-id="@l.ResponsavelId">@l.Responsavel</a> (@l.Email)</p>
+
+<div class="indicadores">
+    <div class="indicador"><span>Ofertas no ar</span><strong>@l.OfertasAtivas</strong></div>
+    <a class="indicador" asp-action="Pedidos" asp-route-lojaId="@l.Id"><span>Pedidos entregues</span><strong>@l.PedidosEntregues</strong><small>ver pedidos da loja</small></a>
+    <div class="indicador"><span>Vendas entregues</span><strong>@Rotulos.Dinheiro(l.Vendas)</strong></div>
+    <a class="indicador" asp-action="Repasses"><span>Repasse em aberto</span><strong>@Rotulos.Dinheiro(l.RepasseAberto)</strong></a>
+    <div class="indicador"><span>Nota dos clientes</span><strong>@Rotulos.Nota(rep.Nota)</strong><small>@Icones.Estrelas(rep.Nota) · @rep.Avaliacoes avaliação(ões)</small></div>
+</div>
+
+<div class="blocos">
+    <section class="cartao form-edicao">
+        <h2>@Icones.Svg("editar", 18)Dados da loja</h2>
+        <form asp-action="Loja" asp-route-id="@l.Id" method="post" novalidate>
+            <div asp-validation-summary="ModelOnly"></div>
+            <div class="grade">
+                <div class="campo">
+                    <label asp-for="Form.Nome"></label>
+                    <input asp-for="Form.Nome" />
+                    <span asp-validation-for="Form.Nome" class="erro"></span>
+                </div>
+                <div class="campo">
+                    <label asp-for="Form.Categoria"></label>
+                    <select asp-for="Form.Categoria">
+                        @foreach (var c in Enum.GetValues<CategoriaEstabelecimento>())
+                        {
+                            <option value="@c" selected="@(Model.Form.Categoria == c)">@Rotulos.Categoria(c)</option>
+                        }
+                    </select>
+                </div>
+                <div class="campo">
+                    <label asp-for="Form.Cnpj"></label>
+                    <input asp-for="Form.Cnpj" inputmode="numeric" />
+                    <span asp-validation-for="Form.Cnpj" class="erro"></span>
+                </div>
+                <div class="campo">
+                    <label asp-for="Form.Telefone"></label>
+                    <input asp-for="Form.Telefone" type="tel" />
+                    <span asp-validation-for="Form.Telefone" class="erro"></span>
+                </div>
+            </div>
+            <div class="campo">
+                <label asp-for="Form.Descricao"></label>
+                <textarea asp-for="Form.Descricao" rows="2"></textarea>
+            </div>
+            <h3 class="secao" style="font-size:15px;margin:10px 0">Endereço de retirada</h3>
+            @if (l.Endereco.Latitude is null) { <p><span class="selo sacola">Sem localização no mapa</span></p> }
+            <div class="grade">
+                <div class="campo">
+                    <label asp-for="Form.Cep"></label>
+                    <input asp-for="Form.Cep" inputmode="numeric" />
+                    <span asp-validation-for="Form.Cep" class="erro"></span>
+                </div>
+                <div class="campo">
+                    <label asp-for="Form.Logradouro"></label>
+                    <input asp-for="Form.Logradouro" />
+                    <span asp-validation-for="Form.Logradouro" class="erro"></span>
+                </div>
+                <div class="campo">
+                    <label asp-for="Form.Numero"></label>
+                    <input asp-for="Form.Numero" />
+                    <span asp-validation-for="Form.Numero" class="erro"></span>
+                </div>
+                <div class="campo">
+                    <label asp-for="Form.Complemento"></label>
+                    <input asp-for="Form.Complemento" />
+                </div>
+                <div class="campo">
+                    <label asp-for="Form.Bairro"></label>
+                    <input asp-for="Form.Bairro" />
+                    <span asp-validation-for="Form.Bairro" class="erro"></span>
+                </div>
+                <div class="campo">
+                    <label asp-for="Form.Cidade"></label>
+                    <input asp-for="Form.Cidade" />
+                    <span asp-validation-for="Form.Cidade" class="erro"></span>
+                </div>
+                <div class="campo">
+                    <label asp-for="Form.Uf"></label>
+                    <input asp-for="Form.Uf" maxlength="2" />
+                    <span asp-validation-for="Form.Uf" class="erro"></span>
+                </div>
+            </div>
+            <p class="mini" style="margin-bottom:12px">Mudou o endereço, a loja é localizada de novo no mapa ao salvar.</p>
+            <button type="submit" class="botao">Salvar alterações</button>
+        </form>
+    </section>
+
+    <section class="cartao">
+        <h2>Situação</h2>
+        <div class="acoes-detalhe" style="margin-top:0">
+            @if (l.Status == StatusCadastro.Pendente)
+            {
+                <form asp-action="AvaliarLoja" asp-route-id="@l.Id" method="post">
+                    <input type="hidden" name="aprovar" value="true" /><input type="hidden" name="voltar" value="Loja" />
+                    <button class="botao pequeno" type="submit">Aprovar loja</button>
+                </form>
+                <form asp-action="AvaliarLoja" asp-route-id="@l.Id" method="post">
+                    <input type="hidden" name="aprovar" value="false" /><input type="hidden" name="voltar" value="Loja" />
+                    <button class="botao secundario pequeno" type="submit">Rejeitar</button>
+                </form>
+            }
+            else if (l.Status == StatusCadastro.Aprovado)
+            {
+                <form asp-action="AlterarLoja" asp-route-id="@l.Id" method="post">
+                    <input type="hidden" name="ativa" value="@(l.Ativa ? "false" : "true")" /><input type="hidden" name="voltar" value="Loja" />
+                    <button class="botao secundario pequeno" type="submit">@(l.Ativa ? "Suspender loja" : "Reativar loja")</button>
+                </form>
+            }
+        </div>
+
+        <h2 style="margin-top:22px">@Icones.Svg("estrela", 18)Avaliações</h2>
+        @if (rep.Avaliacoes == 0)
+        {
+            <p class="mini">Nenhum cliente avaliou esta loja ainda.</p>
+        }
+        else
+        {
+            <div style="display:flex;gap:18px;align-items:center;margin-bottom:12px">
+                <div><div class="nota-grande">@Rotulos.Nota(rep.Nota)</div>@Icones.Estrelas(rep.Nota)</div>
+                <div class="barras-estrelas" style="flex:1">
+                    @for (var i = 0; i < 5; i++)
+                    {
+                        <span>@(5 - i)★</span>
+                        <span class="trilho"><span style="width:@(rep.Estrelas[i] * 100 / rep.Avaliacoes)%"></span></span>
+                        <span class="mini">@rep.Estrelas[i]</span>
+                    }
+                </div>
+            </div>
+            @foreach (var a in rep.Ultimas)
+            {
+                <div class="avaliacao">
+                    @Icones.Estrelas(a.Nota) <span class="mini">@a.Cliente · <a asp-action="Pedido" asp-route-id="@a.PedidoId">#@a.PedidoId</a> · @Rotulos.Data(a.Em)</span>
+                    @if (a.Comentario is not null) { <div>“@a.Comentario”</div> }
+                </div>
+            }
+        }
+    </section>
+</div>

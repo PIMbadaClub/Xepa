@@ -1,31 +1,93 @@
 @model PainelAdminDto
 @{
     ViewData["Title"] = "Painel";
+    var maximo = Math.Max(1, Model.UltimosDias.Max(d => d.Pedidos));
 }
 <h1>Painel da XEPA</h1>
-<p class="sub">O que precisa de atenção hoje e o impacto da plataforma.</p>
+<p class="sub">O que precisa de atenção, o movimento da plataforma e o impacto na comida salva.</p>
 
+<h2 class="secao" style="margin-top:0">Precisa de atenção</h2>
 <div class="indicadores">
     <a class="indicador @(Model.LojasPendentes > 0 ? "alerta" : "")" asp-action="Lojas" asp-route-status="@StatusCadastro.Pendente">
         <span>Lojas aguardando aprovação</span>
         <strong>@Model.LojasPendentes</strong>
     </a>
+    <a class="indicador @(Model.EntregadoresPendentes > 0 ? "alerta" : "")" asp-action="Entregadores" asp-route-status="@StatusCadastro.Pendente">
+        <span>Entregadores aguardando aprovação</span>
+        <strong>@Model.EntregadoresPendentes</strong>
+    </a>
     <a class="indicador @(Model.DenunciasAbertas > 0 ? "alerta" : "")" asp-action="Denuncias">
         <span>Denúncias em análise</span>
         <strong>@Model.DenunciasAbertas</strong>
     </a>
-    <a class="indicador" asp-action="Repasses">
-        <span>Repasses a pagar</span>
-        <strong>@Rotulos.Dinheiro(Model.RepassesAPagar)</strong>
+    <a class="indicador" asp-action="Pedidos">
+        <span>Pedidos em andamento</span>
+        <strong>@Model.PedidosEmAndamento</strong>
+        <small>@Model.EntregadoresOnline entregador(es) online agora</small>
     </a>
+</div>
+
+<h2 class="secao">Movimento</h2>
+<div class="indicadores">
     <div class="indicador">
         <span>Pedidos pagos nas últimas 24 h</span>
         <strong>@Model.PedidosHoje</strong>
         <small>@Rotulos.Dinheiro(Model.VendasHoje) em vendas</small>
+    </div>
+    <div class="indicador destaque">
+        <span>Comissão da XEPA no mês</span>
+        <strong>@Rotulos.Dinheiro(Model.ComissaoMes)</strong>
+        <small>@((Repasse.PercentualComissao * 100).ToString("0", Rotulos.Br))% sobre os produtos entregues</small>
     </div>
     <div class="indicador verde">
         <span>Comida salva em 30 dias</span>
         <strong>@Rotulos.Kg(Model.KgSalvos30Dias)</strong>
         <small>pedidos entregues</small>
     </div>
+    <a class="indicador" asp-action="Repasses">
+        <span>Repasses a pagar</span>
+        <strong>@Rotulos.Dinheiro(Model.RepassesAPagar + Model.RepassesEntregadoresAPagar)</strong>
+        <small>@Rotulos.Dinheiro(Model.RepassesAPagar) às lojas · @Rotulos.Dinheiro(Model.RepassesEntregadoresAPagar) aos entregadores</small>
+    </a>
 </div>
+
+<div class="duas-colunas">
+    <section class="cartao" aria-labelledby="titulo-grafico">
+        <h2 id="titulo-grafico" class="secao" style="margin-top:0">Pedidos pagos nos últimos 14 dias</h2>
+        <div class="grafico" role="img" aria-label="Pedidos por dia">
+            @foreach (var d in Model.UltimosDias)
+            {
+                <div class="barra" title="@d.Dia.ToString("dd/MM", Rotulos.Br): @d.Pedidos pedido(s), @Rotulos.Dinheiro(d.Vendas)">
+                    <small>@(d.Pedidos > 0 ? d.Pedidos : "")</small>
+                    <span style="height:@(Math.Max(3, d.Pedidos * 100 / maximo))%"></span>
+                    <small>@d.Dia.ToString("dd", Rotulos.Br)</small>
+                </div>
+            }
+        </div>
+    </section>
+    <section class="cartao" aria-labelledby="titulo-lojas">
+        <h2 id="titulo-lojas" class="secao" style="margin-top:0">Lojas que mais venderam (30 dias)</h2>
+        @if (Model.LojasDestaque.Count == 0)
+        {
+            <p class="sub">Nenhuma venda entregue nos últimos 30 dias.</p>
+        }
+        else
+        {
+            <ol class="ranking">
+                @foreach (var l in Model.LojasDestaque)
+                {
+                    <li>
+                        <div><a asp-action="Loja" asp-route-id="@l.Id" class="linha-link">@l.Nome</a><div class="mini">@l.Pedidos pedido(s) · @Icones.Estrelas(l.Nota)</div></div>
+                        <strong>@Rotulos.Dinheiro(l.Vendas)</strong>
+                    </li>
+                }
+            </ol>
+        }
+    </section>
+</div>
+
+<div class="cabecalho" style="margin-top:26px">
+    <h2 class="secao" style="margin:0 0 12px">Últimos pedidos</h2>
+    <a asp-action="Pedidos" class="botao secundario pequeno">Ver todos</a>
+</div>
+<partial name="_TabelaPedidos" model="Model.UltimosPedidos" />
