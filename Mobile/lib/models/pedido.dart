@@ -76,6 +76,7 @@ class Pedido {
     this.fotoUrl,
     this.nomeEntregador,
     this.notaEntregador,
+    this.notaLoja,
   });
 
   factory Pedido.fromJson(Map<String, dynamic> j) {
@@ -97,6 +98,7 @@ class Pedido {
       fotoUrl: o['fotoUrl'] as String?,
       nomeEntregador: (j['nomeEntregador'] as String?)?.split(' ').first,
       notaEntregador: j['notaEntregador'] as int?,
+      notaLoja: j['notaLoja'] as int?,
     );
   }
 
@@ -118,6 +120,9 @@ class Pedido {
   /// Primeiro nome do entregador parceiro e a nota (1 a 5) que o cliente deu a ele.
   final String? nomeEntregador;
   final int? notaEntregador;
+
+  /// Nota (1 a 5) que o cliente deu à loja e à sacola.
+  final int? notaLoja;
 }
 
 class Pagamento {

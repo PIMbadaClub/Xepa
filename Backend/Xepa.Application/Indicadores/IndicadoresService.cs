@@ -12,6 +12,11 @@ public record IndicadoresLojaDto(int Dias, int Pedidos, int Unidades, decimal Ve
     decimal KgSalvos, decimal EconomiaClientes, int Cancelados, decimal RepasseAReceber,
     IReadOnlyList<VendaDiaDto> PorDia, IReadOnlyList<OfertaDestaqueDto> MaisVendidas);
 
+public record AvaliacaoLojaDto(int PedidoId, int Nota, string? Comentario, string Cliente, string Oferta, DateTimeOffset Em);
+
+/// <summary>Nota média dada pelos clientes à loja e às sacolas, quantas de cada estrela e as últimas avaliações.</summary>
+public record ReputacaoLojaDto(double? Nota, int Avaliacoes, IReadOnlyList<int> Estrelas, IReadOnlyList<AvaliacaoLojaDto> Ultimas);
+
 /// <summary>Impacto do cliente, mostrado no perfil do app.</summary>
 public record ImpactoClienteDto(int Pedidos, decimal KgSalvos, decimal Economia);
 
@@ -61,6 +66,21 @@ public class IndicadoresService(IXepaDb db)
         return new IndicadoresLojaDto(dias, entregues.Count, entregues.Sum(e => e.Quantidade), vendas,
             entregues.Count == 0 ? 0 : Math.Round(vendas / entregues.Count, 2),
             entregues.Sum(e => e.Kg), entregues.Sum(e => e.Economia), cancelados, aReceber, porDia, maisVendidas);
+    }
+
+    public async Task<ReputacaoLojaDto> ReputacaoLojaAsync(int estabelecimentoId, CancellationToken ct)
+    {
+        var notas = await db.Pedidos.AsNoTracking()
+            .Where(p => p.Oferta.EstabelecimentoId == estabelecimentoId && p.NotaLoja != null)
+            .OrderByDescending(p => p.LojaAvaliadaEm)
+            .Select(p => new { p.Id, Nota = p.NotaLoja!.Value, p.ComentarioLoja, Cliente = p.Cliente.Nome, p.Oferta.Titulo, Em = p.LojaAvaliadaEm!.Value })
+            .ToListAsync(ct);
+
+        return new ReputacaoLojaDto(
+            notas.Count == 0 ? null : Math.Round(notas.Average(n => n.Nota), 1),
+            notas.Count,
+            Enumerable.Range(1, 5).Reverse().Select(e => notas.Count(n => n.Nota == e)).ToList(),
+            notas.Take(8).Select(n => new AvaliacaoLojaDto(n.Id, n.Nota, n.ComentarioLoja, n.Cliente.Split(' ')[0], n.Titulo, n.Em)).ToList());
     }
 
     public async Task<ImpactoClienteDto> DoClienteAsync(int clienteId, CancellationToken ct)

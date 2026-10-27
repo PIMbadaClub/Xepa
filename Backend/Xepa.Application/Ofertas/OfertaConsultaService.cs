@@ -99,7 +99,10 @@ public class OfertaConsultaService(IXepaDb db)
                 LogoUrl = o.Estabelecimento.LogoUrl,
                 Bairro = o.Estabelecimento.Endereco.Bairro,
                 Latitude = o.Estabelecimento.Endereco.Latitude,
-                Longitude = o.Estabelecimento.Endereco.Longitude
+                Longitude = o.Estabelecimento.Endereco.Longitude,
+                Nota = o.Estabelecimento.Ofertas.SelectMany(x => x.Pedidos).Where(p => p.NotaLoja != null)
+                    .Average(p => (double?)p.NotaLoja),
+                Avaliacoes = o.Estabelecimento.Ofertas.SelectMany(x => x.Pedidos).Count(p => p.NotaLoja != null)
             }
         });
     }

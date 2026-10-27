@@ -20,6 +20,7 @@ public class XepaDbContext(DbContextOptions<XepaDbContext> options) : DbContext(
     public DbSet<CodigoRecuperacaoSenha> CodigosRecuperacao => Set<CodigoRecuperacaoSenha>();
     public DbSet<Denuncia> Denuncias => Set<Denuncia>();
     public DbSet<Repasse> Repasses => Set<Repasse>();
+    public DbSet<RepasseEntregador> RepassesEntregadores => Set<RepasseEntregador>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

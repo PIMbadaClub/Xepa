@@ -45,6 +45,7 @@ public class ContaService(IXepaDb db, IHasherSenha hasher, CredenciaisService cr
             Telefone = request.Telefone,
             Tipo = request.Tipo,
             Placa = request.Tipo == TipoUsuario.Entregador ? request.Placa!.Replace("-", "").ToUpperInvariant() : null,
+            CadastroEntregador = request.Tipo == TipoUsuario.Entregador ? StatusCadastro.Pendente : null,
             SenhaHash = ""
         };
         usuario.SenhaHash = hasher.Gerar(usuario, request.Senha);

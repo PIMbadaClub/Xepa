@@ -45,6 +45,9 @@ public class PedidoDto
     public string? NomeEntregador { get; init; }
     public int? NotaEntregador { get; init; }
 
+    /// <summary>Nota (1 a 5) que o cliente deu à loja e à sacola.</summary>
+    public int? NotaLoja { get; init; }
+
     public required PedidoOfertaDto Oferta { get; init; }
     public Endereco? EnderecoEntrega { get; init; }
 }
@@ -52,6 +55,7 @@ public class PedidoDto
 public record PedidoOfertaDto(int Id, string Titulo, string? FotoUrl, int EstabelecimentoId, string Estabelecimento,
     DateTimeOffset RetiradaInicio, DateTimeOffset RetiradaFim);
 
+/// <summary>Nota de 1 a 5 e comentário opcional (usado para a loja e para o entregador).</summary>
 public class AvaliarEntregadorRequest
 {
     [Range(1, 5, ErrorMessage = "A nota vai de 1 a 5.")]

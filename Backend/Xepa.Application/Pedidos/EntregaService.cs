@@ -17,7 +17,7 @@ public record CorridaDto(int PedidoId, StatusPedido Status, decimal Valor, strin
 
 public record GanhosDto(int CorridasHoje, decimal GanhosHoje, double KmHoje, int CorridasSemana, decimal GanhosSemana,
     double KmSemana, int CorridasMes, decimal GanhosMes, double KmMes, int CorridasTotal, decimal GanhosTotal,
-    IReadOnlyList<GanhoDiaDto> UltimosDias, IReadOnlyList<CorridaFeitaDto> Corridas);
+    IReadOnlyList<GanhoDiaDto> UltimosDias, IReadOnlyList<CorridaFeitaDto> Corridas, decimal AReceber, decimal Recebido);
 
 /// <summary>Ganho de um dia (horário de Brasília), para o gráfico dos últimos 7 dias.</summary>
 public record GanhoDiaDto(DateOnly Dia, decimal Valor, int Corridas);
@@ -29,7 +29,8 @@ public record CorridaFeitaDto(int PedidoId, DateTimeOffset EntregueEm, string Lo
 public record AvaliacaoEntregadorDto(int Nota, string? Comentario, string Cliente, DateTimeOffset Em);
 
 /// <summary>Perfil do entregador parceiro: dados da moto, preferências e a reputação dada pelos clientes.</summary>
-public record PerfilEntregadorDto(string Nome, string Email, string? Telefone, string? Placa, string? ModeloMoto, bool Online,
+public record PerfilEntregadorDto(string Nome, string Email, string? Telefone, string? Placa, string? ModeloMoto, StatusCadastro Cadastro,
+    bool Online,
     int RaioCorridasKm, double? Nota, int Avaliacoes, IReadOnlyList<int> Estrelas, int CorridasTotal, DateTimeOffset MembroDesde,
     IReadOnlyList<AvaliacaoEntregadorDto> UltimasAvaliacoes);
 
@@ -213,6 +214,14 @@ public class EntregaService(IXepaDb db, IServicoMapas mapas, INotificadorPedidos
     /// <summary>Liga ou desliga o recebimento de corridas. A corrida em andamento continua com ele.</summary>
     public async Task<bool> DefinirOnlineAsync(int entregadorId, bool online, CancellationToken ct)
     {
+        if (online)
+        {
+            var cadastro = await db.Usuarios.Where(u => u.Id == entregadorId).Select(u => u.CadastroEntregador).FirstOrDefaultAsync(ct);
+            if (cadastro != StatusCadastro.Aprovado)
+                throw new RegraDeNegocioException(cadastro == StatusCadastro.Rejeitado
+                    ? "Seu cadastro de entregador não foi aprovado. Fale com o suporte da XEPA."
+                    : "Seu cadastro está em análise pela equipe da XEPA. Você fica online assim que for aprovado.");
+        }
         await db.Usuarios.Where(u => u.Id == entregadorId).ExecuteUpdateAsync(s => s.SetProperty(u => u.Online, online), ct);
         return online;
     }
@@ -244,6 +253,13 @@ public class EntregaService(IXepaDb db, IServicoMapas mapas, INotificadorPedidos
             .OrderByDescending(e => e.Em)
             .ToList();
 
+        // A receber: corridas sem repasse fechado e repasses fechados ainda não pagos. Recebido: repasses pagos.
+        var semRepasse = await db.Pedidos.Where(p => p.EntregadorId == entregadorId && p.Status == StatusPedido.Entregue
+                                                     && p.RepasseEntregadorId == null)
+            .SumAsync(p => (decimal?)p.TaxaEntrega, ct) ?? 0;
+        var repasses = await db.RepassesEntregadores.Where(r => r.EntregadorId == entregadorId)
+            .Select(r => new { r.Valor, Pago = r.PagoEm != null }).ToListAsync(ct);
+
         var hoje = entregues.Where(e => e.Em >= inicioHoje).ToList();
         var semana = entregues.Where(e => e.Em >= inicioSemana).ToList();
         var mes = entregues.Where(e => e.Em >= inicioMes).ToList();
@@ -263,7 +279,9 @@ public class EntregaService(IXepaDb db, IServicoMapas mapas, INotificadorPedidos
             entregues.Count, entregues.Sum(e => e.TaxaEntrega), dias,
             entregues.Take(30)
                 .Select(e => new CorridaFeitaDto(e.Id, e.Em, e.Loja, e.Bairro, e.TaxaEntrega, Km(e.Km), e.NotaEntregador, e.ComentarioEntregador))
-                .ToList());
+                .ToList(),
+            semRepasse + repasses.Where(r => !r.Pago).Sum(r => r.Valor),
+            repasses.Where(r => r.Pago).Sum(r => r.Valor));
 
         static double Km(double km) => Math.Round(km, 1);
     }
@@ -280,7 +298,8 @@ public class EntregaService(IXepaDb db, IServicoMapas mapas, INotificadorPedidos
             .Select(p => new { Nota = p.NotaEntregador!.Value, p.ComentarioEntregador, Cliente = p.Cliente.Nome, Em = p.EntregadorAvaliadoEm!.Value })
             .ToListAsync(ct);
 
-        return new PerfilEntregadorDto(u.Nome, u.Email, u.Telefone, u.Placa, u.ModeloMoto, u.Online, u.RaioCorridasKm,
+        return new PerfilEntregadorDto(u.Nome, u.Email, u.Telefone, u.Placa, u.ModeloMoto, u.CadastroEntregador ?? StatusCadastro.Pendente,
+            u.Online, u.RaioCorridasKm,
             notas.Count == 0 ? null : Math.Round(notas.Average(n => n.Nota), 2), notas.Count,
             Enumerable.Range(1, 5).Reverse().Select(e => notas.Count(n => n.Nota == e)).ToList(),
             corridas, u.CriadoEm,

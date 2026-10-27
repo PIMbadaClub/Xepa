@@ -43,8 +43,17 @@ public class Pedido : Entidade
     public string? ComentarioEntregador { get; set; }
     public DateTimeOffset? EntregadorAvaliadoEm { get; set; }
 
+    /// <summary>Nota de 1 a 5 que o cliente dá à loja e à sacola depois de receber o pedido.</summary>
+    public int? NotaLoja { get; set; }
+    public string? ComentarioLoja { get; set; }
+    public DateTimeOffset? LojaAvaliadaEm { get; set; }
+
     public int? RepasseId { get; set; }
     public Repasse? Repasse { get; set; }
+
+    /// <summary>Repasse da taxa de entrega ao entregador parceiro.</summary>
+    public int? RepasseEntregadorId { get; set; }
+    public RepasseEntregador? RepasseEntregador { get; set; }
 
     public List<Pagamento> Pagamentos { get; set; } = [];
     public List<RastreioEntrega> Rastreios { get; set; } = [];
@@ -108,6 +117,21 @@ public class Pedido : Entidade
             throw new RegraDeNegocioException("Código de retirada incorreto.");
 
         AvancarStatus(StatusPedido.Entregue);
+    }
+
+    /// <summary>O cliente avalia a loja e a sacola uma vez, depois de receber (retirada ou entrega).</summary>
+    public void AvaliarLoja(int nota, string? comentario)
+    {
+        if (Status != StatusPedido.Entregue)
+            throw new RegraDeNegocioException("Avalie a loja depois de receber o pedido.");
+        if (NotaLoja is not null)
+            throw new RegraDeNegocioException("Você já avaliou este pedido.");
+        if (nota is < 1 or > 5)
+            throw new RegraDeNegocioException("A nota vai de 1 a 5.");
+
+        NotaLoja = nota;
+        ComentarioLoja = string.IsNullOrWhiteSpace(comentario) ? null : comentario.Trim();
+        LojaAvaliadaEm = DateTimeOffset.UtcNow;
     }
 
     /// <summary>O cliente avalia o entregador uma vez, depois de receber a entrega.</summary>

@@ -56,6 +56,7 @@ class Oferta {
     required this.preco,
     required this.restantes,
     required this.avaliacao,
+    this.avaliacoes = 0,
     required this.kgSalvos,
     required this.categoria,
     this.estabelecimentoId,
@@ -79,7 +80,8 @@ class Oferta {
       precoOriginal: (j['precoOriginal'] as num).toDouble(),
       preco: (j['preco'] as num).toDouble(),
       restantes: j['restantes'] as int,
-      avaliacao: null,
+      avaliacao: (loja['nota'] as num?)?.toDouble(),
+      avaliacoes: loja['avaliacoes'] as int? ?? 0,
       kgSalvos: (j['kgSalvos'] as num?)?.toDouble() ?? 0,
       categoria: Categoria.values.byName((loja['categoria'] as String).toLowerCase()),
       estabelecimentoId: loja['id'] as int,
@@ -103,8 +105,9 @@ class Oferta {
   final double preco;
   final int restantes;
 
-  /// Avaliações ainda não existem na API (trabalho futuro).
+  /// Média das notas que os clientes deram à loja e às sacolas (nula sem avaliações).
   final double? avaliacao;
+  final int avaliacoes;
   final double kgSalvos;
   final Categoria categoria;
   final int? estabelecimentoId;

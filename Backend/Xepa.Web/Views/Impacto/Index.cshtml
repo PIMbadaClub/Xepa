@@ -2,6 +2,7 @@
 @{
     ViewData["Title"] = "Impacto e vendas";
     var repasses = ViewData["Repasses"] as IReadOnlyList<RepasseDto> ?? [];
+    var reputacao = ViewData["Reputacao"] as ReputacaoLojaDto;
     var maior = Model.PorDia.Count == 0 ? 0 : Model.PorDia.Max(d => d.Vendas);
 }
 <div class="cabecalho">
@@ -103,3 +104,35 @@
         }
     </section>
 </div>
+
+@if (reputacao is not null)
+{
+    <section class="cartao" style="margin-top:16px" aria-labelledby="titulo-avaliacoes">
+        <h2 id="titulo-avaliacoes" class="secao" style="margin-top:0">O que os clientes acharam</h2>
+        @if (reputacao.Avaliacoes == 0)
+        {
+            <p class="sub">Depois de receber o pedido, o cliente dá de 1 a 5 estrelas para a loja e a sacola. As notas aparecem aqui e no app.</p>
+        }
+        else
+        {
+            <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+                <div><div class="nota-grande">@Rotulos.Nota(reputacao.Nota)</div>@Icones.Estrelas(reputacao.Nota)<div class="mini">@reputacao.Avaliacoes avaliação(ões)</div></div>
+                <div class="barras-estrelas" style="flex:1;min-width:220px">
+                    @for (var i = 0; i < 5; i++)
+                    {
+                        <span>@(5 - i)★</span>
+                        <span class="trilho"><span style="width:@(reputacao.Estrelas[i] * 100 / reputacao.Avaliacoes)%"></span></span>
+                        <span class="mini">@reputacao.Estrelas[i]</span>
+                    }
+                </div>
+            </div>
+            @foreach (var a in reputacao.Ultimas)
+            {
+                <div class="avaliacao">
+                    @Icones.Estrelas(a.Nota) <span class="mini">@a.Cliente · @a.Oferta · @Rotulos.Data(a.Em)</span>
+                    @if (a.Comentario is not null) { <div>“@a.Comentario”</div> }
+                </div>
+            }
+        }
+    </section>
+}

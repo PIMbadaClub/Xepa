@@ -17,6 +17,12 @@ public class Usuario : Entidade
     /// <summary>Conta Google vinculada ("Continuar com Google"): o "sub" do Google, que não muda.</summary>
     public string? GoogleId { get; set; }
 
+    /// <summary>
+    /// Situação do cadastro do entregador parceiro: entra Pendente e só fica online depois de aprovado pela XEPA.
+    /// Nulo para quem não é entregador.
+    /// </summary>
+    public StatusCadastro? CadastroEntregador { get; set; }
+
     /// <summary>Modelo da moto do entregador (ex.: Honda CG 160), só para exibição.</summary>
     public string? ModeloMoto { get; set; }
 

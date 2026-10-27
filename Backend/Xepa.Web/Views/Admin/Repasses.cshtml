@@ -2,77 +2,157 @@
 @{
     ViewData["Title"] = "Repasses";
     var percentual = (Repasse.PercentualComissao * 100).ToString("0", Rotulos.Br);
+    var aba = ViewData["Aba"] as string ?? "lojas";
+    var (pendentesEnt, fechadosEnt) = ((IReadOnlyList<RepasseEntregadorPendenteDto>, IReadOnlyList<RepasseEntregadorDto>))ViewData["Entregadores"]!;
 }
 <h1>Repasses</h1>
-<p class="sub">A XEPA retém @percentual% sobre o valor dos produtos e repassa o restante à loja. As taxas de entrega são dos entregadores parceiros e aparecem só para conferência.</p>
+<p class="sub">Lojas recebem o valor dos produtos menos @percentual% de comissão. Entregadores recebem a taxa de entrega inteira. Feche o repasse, faça a transferência e marque como pago.</p>
 
-<h2 class="secao">A fechar</h2>
-@if (Model.Pendentes.Count == 0)
-{
-    <div class="cartao vazio">Nenhum pedido entregue esperando repasse.</div>
-}
-else
-{
-    <table>
-        <thead>
-            <tr><th scope="col">Loja</th><th scope="col">Pedidos</th><th scope="col">Vendas</th><th scope="col">Comissão (@percentual%)</th><th scope="col">Entregas (entregador)</th><th scope="col">A repassar</th><th scope="col"></th></tr>
-        </thead>
-        <tbody>
-            @foreach (var p in Model.Pendentes)
-            {
-                <tr>
-                    <td><strong>@p.Loja</strong></td>
-                    <td>@p.Pedidos</td>
-                    <td>@Rotulos.Dinheiro(p.ValorVendas)</td>
-                    <td>− @Rotulos.Dinheiro(p.Comissao)</td>
-                    <td class="sub" style="margin:0">@Rotulos.Dinheiro(p.TaxasEntrega)</td>
-                    <td><span class="preco">@Rotulos.Dinheiro(p.ValorLiquido)</span></td>
-                    <td>
-                        <form asp-action="FecharRepasse" asp-route-estabelecimentoId="@p.EstabelecimentoId" method="post">
-                            <button class="botao pequeno" type="submit">Fechar repasse</button>
-                        </form>
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
-}
+<nav class="filtros" aria-label="Quem recebe">
+    <a asp-action="Repasses" class="@(aba == "lojas" ? "ativo" : "")">Lojas (@Model.Pendentes.Count a fechar)</a>
+    <a asp-action="Repasses" asp-route-aba="entregadores" class="@(aba == "entregadores" ? "ativo" : "")">Entregadores (@pendentesEnt.Count a fechar)</a>
+</nav>
 
-<h2 class="secao">Fechados</h2>
-@if (Model.Fechados.Count == 0)
+@if (aba == "lojas")
 {
-    <div class="cartao vazio">Nenhum repasse fechado ainda.</div>
-}
-else
-{
-    <table>
-        <thead>
-            <tr><th scope="col">#</th><th scope="col">Loja</th><th scope="col">Pedidos</th><th scope="col">Vendas</th><th scope="col">Comissão</th><th scope="col">Valor</th><th scope="col">Situação</th></tr>
-        </thead>
-        <tbody>
-            @foreach (var r in Model.Fechados)
-            {
-                <tr>
-                    <td>@r.Id<div class="sub" style="margin:0;font-size:12px">@Rotulos.Data(r.CriadoEm)</div></td>
-                    <td><strong>@r.Loja</strong></td>
-                    <td>@r.Pedidos</td>
-                    <td>@Rotulos.Dinheiro(r.ValorVendas)</td>
-                    <td>@Rotulos.Dinheiro(r.Comissao)</td>
-                    <td><span class="preco">@Rotulos.Dinheiro(r.ValorLiquido)</span></td>
-                    <td>
-                        @if (r.PagoEm is { } pago)
-                        {
-                            <span class="selo ativa">Pago em @Rotulos.Data(pago)</span>
-                        }
-                        else
-                        {
-                            <form asp-action="MarcarPago" asp-route-id="@r.Id" method="post">
-                                <button class="botao secundario pequeno" type="submit">Marcar como pago</button>
+    <h2 class="secao" style="margin-top:8px">A fechar</h2>
+    @if (Model.Pendentes.Count == 0)
+    {
+        <div class="cartao vazio">Nenhum pedido entregue esperando repasse.</div>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr><th scope="col">Loja</th><th scope="col">Pedidos</th><th scope="col">Vendas</th><th scope="col">Comissão (@percentual%)</th><th scope="col">Taxas (do entregador)</th><th scope="col">A repassar</th><th scope="col"></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model.Pendentes)
+                {
+                    <tr>
+                        <td><a asp-action="Loja" asp-route-id="@p.EstabelecimentoId" class="linha-link">@p.Loja</a></td>
+                        <td>@p.Pedidos</td>
+                        <td>@Rotulos.Dinheiro(p.ValorVendas)</td>
+                        <td>− @Rotulos.Dinheiro(p.Comissao)</td>
+                        <td class="mini">@Rotulos.Dinheiro(p.TaxasEntrega)</td>
+                        <td><span class="preco">@Rotulos.Dinheiro(p.ValorLiquido)</span></td>
+                        <td>
+                            <form asp-action="FecharRepasse" asp-route-estabelecimentoId="@p.EstabelecimentoId" method="post">
+                                <button class="botao pequeno" type="submit">Fechar repasse</button>
                             </form>
-                        }
-                    </td>
-                </tr>
-            }
-        </tbody>
-    </table>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <h2 class="secao">Fechados</h2>
+    @if (Model.Fechados.Count == 0)
+    {
+        <div class="cartao vazio">Nenhum repasse fechado ainda.</div>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr><th scope="col">#</th><th scope="col">Loja</th><th scope="col">Pedidos</th><th scope="col">Vendas</th><th scope="col">Comissão</th><th scope="col">Valor</th><th scope="col">Situação</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.Fechados)
+                {
+                    <tr>
+                        <td>@r.Id<div class="mini">@Rotulos.Data(r.CriadoEm)</div></td>
+                        <td><a asp-action="Loja" asp-route-id="@r.EstabelecimentoId" class="linha-link">@r.Loja</a></td>
+                        <td>@r.Pedidos</td>
+                        <td>@Rotulos.Dinheiro(r.ValorVendas)</td>
+                        <td>@Rotulos.Dinheiro(r.Comissao)</td>
+                        <td><span class="preco">@Rotulos.Dinheiro(r.ValorLiquido)</span></td>
+                        <td>
+                            @if (r.PagoEm is { } pago)
+                            {
+                                <span class="selo ativa">Pago em @Rotulos.Data(pago)</span>
+                            }
+                            else
+                            {
+                                <form asp-action="MarcarPago" asp-route-id="@r.Id" method="post">
+                                    <button class="botao secundario pequeno" type="submit">Marcar como pago</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+}
+else
+{
+    <h2 class="secao" style="margin-top:8px">A fechar</h2>
+    @if (pendentesEnt.Count == 0)
+    {
+        <div class="cartao vazio">Nenhuma corrida entregue esperando repasse.</div>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr><th scope="col">Entregador</th><th scope="col">Corridas</th><th scope="col">Km de entrega</th><th scope="col">A repassar</th><th scope="col"></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var p in pendentesEnt)
+                {
+                    <tr>
+                        <td><a asp-action="Usuario" asp-route-id="@p.EntregadorId" class="linha-link">@p.Nome</a><div class="mini">@(p.Placa ?? "sem placa")</div></td>
+                        <td>@p.Corridas</td>
+                        <td>@Rotulos.Km(p.Km)</td>
+                        <td><span class="preco">@Rotulos.Dinheiro(p.Valor)</span></td>
+                        <td>
+                            <form asp-action="FecharRepasseEntregador" asp-route-entregadorId="@p.EntregadorId" method="post">
+                                <button class="botao pequeno" type="submit">Fechar repasse</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <h2 class="secao">Fechados</h2>
+    @if (fechadosEnt.Count == 0)
+    {
+        <div class="cartao vazio">Nenhum repasse de entregador fechado ainda.</div>
+    }
+    else
+    {
+        <table>
+            <thead>
+                <tr><th scope="col">#</th><th scope="col">Entregador</th><th scope="col">Corridas</th><th scope="col">Km</th><th scope="col">Valor</th><th scope="col">Situação</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var r in fechadosEnt)
+                {
+                    <tr>
+                        <td>@r.Id<div class="mini">@Rotulos.Data(r.CriadoEm)</div></td>
+                        <td><a asp-action="Usuario" asp-route-id="@r.EntregadorId" class="linha-link">@r.Nome</a></td>
+                        <td>@r.Corridas</td>
+                        <td>@Rotulos.Km(r.Km)</td>
+                        <td><span class="preco">@Rotulos.Dinheiro(r.Valor)</span></td>
+                        <td>
+                            @if (r.PagoEm is { } pago)
+                            {
+                                <span class="selo ativa">Pago em @Rotulos.Data(pago)</span>
+                            }
+                            else
+                            {
+                                <form asp-action="MarcarPagoEntregador" asp-route-id="@r.Id" method="post">
+                                    <button class="botao secundario pequeno" type="submit">Marcar como pago</button>
+                                </form>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
 }

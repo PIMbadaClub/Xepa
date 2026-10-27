@@ -119,7 +119,7 @@ class _DetalheScreenState extends State<DetalheScreen> {
                             Text(
                               [
                                 o.categoria.singular,
-                                if (o.avaliacao != null) '★ ${formatarDecimal(o.avaliacao!)}',
+                                if (o.avaliacao != null) '★ ${formatarDecimal(o.avaliacao!)} (${o.avaliacoes})',
                                 if (o.distanciaKm != null) formatarDistancia(o.distanciaKm!),
                               ].join(' · '),
                               style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 12.5),

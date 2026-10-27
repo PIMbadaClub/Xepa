@@ -1,0 +1,81 @@
+@model PaginaPedidosAdmin
+@{
+    ViewData["Title"] = "Pedidos";
+    var f = ViewData["Filtro"] as FiltroPedidosAdmin ?? new FiltroPedidosAdmin();
+    object Rota(int pagina) => new
+    {
+        f.Busca, f.Status, f.Tipo, f.LojaId, f.ClienteId, f.EntregadorId,
+        De = f.De?.ToString("yyyy-MM-dd"), Ate = f.Ate?.ToString("yyyy-MM-dd"), Pagina = pagina
+    };
+}
+<h1>Pedidos</h1>
+<p class="sub">Todos os pedidos da plataforma. Clique no número para ver a linha do tempo, o pagamento e o entregador.</p>
+
+<form method="get" asp-action="Pedidos" class="filtros-form cartao" style="padding:16px">
+    <div>
+        <label for="busca">Buscar</label>
+        <input id="busca" name="Busca" value="@f.Busca" placeholder="Nº do pedido, cliente, e-mail ou loja" />
+    </div>
+    <div>
+        <label for="status">Situação</label>
+        <select id="status" name="Status">
+            <option value="">Todas</option>
+            @foreach (var s in Enum.GetValues<StatusPedido>())
+            {
+                <option value="@s" selected="@(f.Status == s)">@Rotulos.Pedido(s, TipoEntrega.Retirada)</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label for="tipo">Tipo</label>
+        <select id="tipo" name="Tipo">
+            <option value="">Todos</option>
+            @foreach (var t in Enum.GetValues<TipoEntrega>())
+            {
+                <option value="@t" selected="@(f.Tipo == t)">@Rotulos.Entrega(t)</option>
+            }
+        </select>
+    </div>
+    <div>
+        <label for="de">De</label>
+        <input id="de" name="De" type="date" value="@f.De?.ToString("yyyy-MM-dd")" />
+    </div>
+    <div>
+        <label for="ate">Até</label>
+        <input id="ate" name="Ate" type="date" value="@f.Ate?.ToString("yyyy-MM-dd")" />
+    </div>
+    <div class="acoes">
+        @if (f.LojaId is { } loja) { <input type="hidden" name="LojaId" value="@loja" /> }
+        @if (f.ClienteId is { } cliente) { <input type="hidden" name="ClienteId" value="@cliente" /> }
+        @if (f.EntregadorId is { } ent) { <input type="hidden" name="EntregadorId" value="@ent" /> }
+        <button class="botao" type="submit">Filtrar</button>
+        <a asp-action="Pedidos" class="botao secundario">Limpar</a>
+    </div>
+</form>
+
+<div class="resumo-lista">
+    <span><strong>@Model.Total</strong> pedido(s) · @Rotulos.Dinheiro(Model.ValorTotal) no total</span>
+    @if (f.LojaId is not null || f.ClienteId is not null || f.EntregadorId is not null)
+    {
+        <span>Filtrando por @(f.LojaId is not null ? "loja" : f.ClienteId is not null ? "cliente" : "entregador") · <a asp-action="Pedidos">ver todos</a></span>
+    }
+</div>
+
+<partial name="_TabelaPedidos" model="Model.Itens" />
+
+@if (Model.Paginas > 1)
+{
+    <nav class="paginacao" aria-label="Páginas">
+        @if (Model.Pagina > 1) { <a asp-action="Pedidos" asp-all-route-data="@Dicionario(Rota(Model.Pagina - 1))">‹ Anterior</a> }
+        <span>@Model.Pagina de @Model.Paginas</span>
+        @if (Model.Pagina < Model.Paginas) { <a asp-action="Pedidos" asp-all-route-data="@Dicionario(Rota(Model.Pagina + 1))">Próxima ›</a> }
+    </nav>
+}
+
+@functions {
+    private static Dictionary<string, string> Dicionario(object rota) =>
+        rota.GetType().GetProperties()
+            .Select(p => (p.Name, Valor: p.GetValue(rota)?.ToString()))
+            .Where(p => !string.IsNullOrEmpty(p.Valor))
+            .ToDictionary(p => p.Name, p => p.Valor!);
+}

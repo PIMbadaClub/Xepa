@@ -29,11 +29,11 @@ else
             {
                 <tr>
                     <td>
-                        <strong>@l.Nome</strong>
-                        <div class="sub" style="margin:0;font-size:13px">@Rotulos.Categoria(l.Categoria) · CNPJ @(l.Cnpj ?? "—")</div>
-                        <div class="sub" style="margin:0;font-size:12px">desde @Rotulos.Data(l.CriadoEm)</div>
+                        <a asp-action="Loja" asp-route-id="@l.Id" class="linha-link">@l.Nome</a>
+                        <div class="mini">@Rotulos.Categoria(l.Categoria) · CNPJ @(l.Cnpj ?? "—")</div>
+                        <div class="mini">desde @Rotulos.Data(l.CriadoEm)</div>
                     </td>
-                    <td>@l.Responsavel<div class="sub" style="margin:0;font-size:13px">@l.Email · @(l.Telefone ?? "sem telefone")</div></td>
+                    <td>@l.Responsavel<div class="mini">@l.Email · @(l.Telefone ?? "sem telefone")</div></td>
                     <td>
                         @l.Bairro, @l.Cidade
                         @if (!l.TemCoordenadas) { <div><span class="selo sacola">Sem coordenadas</span></div> }
@@ -48,6 +48,7 @@ else
                     </td>
                     <td>
                         <div class="acoes">
+                            <a asp-action="Loja" asp-route-id="@l.Id" class="botao secundario pequeno">Editar</a>
                             @if (l.Status == StatusCadastro.Pendente)
                             {
                                 <form asp-action="AvaliarLoja" asp-route-id="@l.Id" method="post">
