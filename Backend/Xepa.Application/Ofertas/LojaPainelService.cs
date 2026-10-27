@@ -66,13 +66,17 @@ public class LojaPainelService(IXepaDb db, IndicadoresService indicadores, IHash
         var daLoja = db.Pedidos.AsNoTracking().Where(p => p.Oferta.EstabelecimentoId == estabelecimentoId);
         var porStatus = await daLoja
             .Where(p => p.Status != StatusPedido.AguardandoPagamento && (p.CriadoEm >= inicioOntem
+                        || p.Historico.Any(h => h.StatusNovo == StatusPedido.Entregue && h.AlteradoEm >= inicioOntem)
                         || p.Status == StatusPedido.Pendente || p.Status == StatusPedido.Confirmado || p.Status == StatusPedido.EmPreparo
                         || p.Status == StatusPedido.ProntoParaRetirada || p.Status == StatusPedido.SaiuParaEntrega))
-            .Select(p => new { p.Status, p.CriadoEm, Vendas = p.PrecoUnitario * p.Quantidade, Kg = (p.Oferta.PesoEstimadoKg ?? 0) * p.Quantidade })
+            // Entregas contam no dia em que foram concluídas (o mesmo critério do quadro de pedidos).
+            .Select(p => new { p.Status, p.CriadoEm,
+                Concluido = p.Historico.Where(h => h.StatusNovo == StatusPedido.Entregue).Max(h => (DateTimeOffset?)h.AlteradoEm) ?? p.CriadoEm,
+                Vendas = p.PrecoUnitario * p.Quantidade, Kg = (p.Oferta.PesoEstimadoKg ?? 0) * p.Quantidade })
             .ToListAsync(ct);
 
-        var entreguesHoje = porStatus.Where(p => p.Status == StatusPedido.Entregue && p.CriadoEm >= inicioHoje).ToList();
-        var vendasOntem = porStatus.Where(p => p.Status == StatusPedido.Entregue && p.CriadoEm >= inicioOntem && p.CriadoEm < inicioHoje)
+        var entreguesHoje = porStatus.Where(p => p.Status == StatusPedido.Entregue && p.Concluido >= inicioHoje).ToList();
+        var vendasOntem = porStatus.Where(p => p.Status == StatusPedido.Entregue && p.Concluido >= inicioOntem && p.Concluido < inicioHoje)
             .Sum(p => p.Vendas);
 
         var ofertas = await db.Ofertas.AsNoTracking()
@@ -157,7 +161,10 @@ public class LojaPainelService(IXepaDb db, IndicadoresService indicadores, IHash
         if (escolhidas.Count == 0)
             throw new RegraDeNegocioException("Não há ofertas de ontem para repetir.");
 
+        var horarios = await db.Estabelecimentos.AsNoTracking().Where(e => e.Id == estabelecimentoId)
+            .SelectMany(e => e.Horarios).ToListAsync(ct);
         var hoje = TimeZoneInfo.ConvertTime(agora, fuso).Date;
+        var repetidas = 0;
         foreach (var (o, lote) in escolhidas.Select(e => (e.Oferta, e.Lote)))
         {
             var inicioLocal = TimeZoneInfo.ConvertTime(o.RetiradaInicio, fuso);
@@ -166,18 +173,24 @@ public class LojaPainelService(IXepaDb db, IndicadoresService indicadores, IHash
             var novoInicio = hoje + inicioLocal.TimeOfDay;
             if (DeBrasilia(novoInicio + duracao) <= agora)
                 novoInicio = novoInicio.AddDays(1);
+            // A janela de ontem pode não caber no horário de hoje (outro dia da semana): corta no fechamento ou pula.
+            if (Funcionamento.Encaixar(horarios, novoInicio, novoInicio + duracao) is not { } janela)
+                continue;
 
             var copia = new Oferta
             {
                 EstabelecimentoId = estabelecimentoId, Tipo = o.Tipo, Titulo = o.Titulo, Descricao = o.Descricao, FotoUrl = o.FotoUrl,
                 PrecoOriginal = o.PrecoOriginal, Preco = o.Preco, QuantidadeDisponivel = Math.Max(1, lote), PesoEstimadoKg = o.PesoEstimadoKg,
-                RetiradaInicio = DeBrasilia(novoInicio), RetiradaFim = DeBrasilia(novoInicio + duracao), Ativa = true
+                RetiradaInicio = DeBrasilia(janela.Inicio), RetiradaFim = DeBrasilia(janela.Fim), Ativa = true
             };
             copia.Validar();
             db.Ofertas.Add(copia);
+            repetidas++;
         }
+        if (repetidas == 0)
+            throw new RegraDeNegocioException("As ofertas de ontem não cabem no horário de funcionamento de hoje.");
         await db.SaveChangesAsync(ct);
-        return escolhidas.Count;
+        return repetidas;
     }
 
     // ---------- Configurações ----------

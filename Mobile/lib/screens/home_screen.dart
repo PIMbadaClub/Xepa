@@ -42,10 +42,16 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  /// Mostra as ofertas sem esperar o GPS; quando a posição chega, recarrega ordenando pela distância.
   Future<void> _iniciar() async {
-    _posicao = await Localizacao.atual();
+    _posicao = Localizacao.ultima;
     _cidade = await CidadeCliente.instance.cidade();
     await _carregar();
+    final posicao = await Localizacao.atual();
+    if (posicao != null && mounted) {
+      _posicao = posicao;
+      await _carregar();
+    }
   }
 
   /// Busca e categoria são filtradas na API; com localização, a lista vem da mais próxima para a mais distante.

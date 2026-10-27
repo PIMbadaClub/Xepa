@@ -124,7 +124,7 @@ class _FormEnderecoState extends State<FormEndereco> {
               const Text('Novo endereço', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
               const SizedBox(height: 4),
               Text(
-                _gps == null ? 'Localização do aparelho indisponível.' : 'Localização do aparelho capturada para a entrega.',
+                'O ponto de entrega vem do endereço digitado. Se você estiver nele, o GPS deixa o ponto mais preciso.',
                 style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 13),
               ),
               const SizedBox(height: 12),

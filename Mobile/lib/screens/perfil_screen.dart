@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../api/api.dart';
 import '../api/cidade.dart';
 import '../api/notificacoes.dart';
 import '../api/suporte.dart';
+import '../api/tempo_real.dart';
 import '../models/auth.dart';
 import 'abertura_screen.dart';
 import '../models/pedido.dart';
@@ -728,10 +731,23 @@ class _ImpactoCliente extends StatefulWidget {
 
 class _ImpactoClienteState extends State<_ImpactoCliente> {
   Map<String, dynamic>? _impacto;
+  StreamSubscription<Map<String, dynamic>>? _avisos;
 
   @override
   void initState() {
     super.initState();
+    _carregar();
+    // O perfil fica montado na aba: um pedido entregue (ou cancelado) muda os números sem recarregar o app.
+    _avisos = TempoReal.instance.pedidoAlterado.listen((_) => _carregar());
+  }
+
+  @override
+  void dispose() {
+    _avisos?.cancel();
+    super.dispose();
+  }
+
+  void _carregar() {
     Api.instance.get<Map<String, dynamic>>('/api/usuarios/me/impacto').then((j) {
       if (mounted) setState(() => _impacto = j);
     }).catchError((_) {});

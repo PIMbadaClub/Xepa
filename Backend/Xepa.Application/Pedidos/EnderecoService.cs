@@ -40,19 +40,31 @@ public class EnderecoService(IXepaDb db, IServicoMapas mapas)
                 Longitude = request.Longitude
             }
         };
-        // Sem GPS, o Azure Maps converte o endereço em coordenadas (necessárias para a entrega).
-        if (endereco.Endereco.Latitude is null || endereco.Endereco.Longitude is null)
-        {
-            var ponto = await mapas.GeocodificarAsync(endereco.Endereco, ct);
-            if (ponto is not null)
-                endereco.Endereco = endereco.Endereco with { Latitude = ponto.Latitude, Longitude = ponto.Longitude };
-        }
+        endereco.Endereco = await LocalizarAsync(endereco.Endereco, ct);
 
         db.Enderecos.Add(endereco);
         await db.SaveChangesAsync(ct);
 
         return new EnderecoDto(endereco.Id, endereco.Apelido, endereco.Principal, endereco.Endereco);
     }
+
+    /// <summary>
+    /// O ponto de entrega vem do endereço digitado (Azure Maps). O GPS do aparelho só refina o ponto quando está
+    /// a até 300 m dele: cadastrar a casa estando no trabalho não pode salvar o ponto do trabalho.
+    /// Sem geocodificação (Azure Maps fora ou ambiente local), fica o GPS, se veio.
+    /// </summary>
+    private async Task<Endereco> LocalizarAsync(Endereco endereco, CancellationToken ct)
+    {
+        var ponto = await mapas.GeocodificarAsync(endereco, ct);
+        if (ponto is null)
+            return endereco;
+
+        var gpsPerto = endereco.Latitude is { } lat && endereco.Longitude is { } lon
+                       && Geo.DistanciaKm(ponto, new Coordenada(lat, lon)) <= RaioGpsKm;
+        return gpsPerto ? endereco : endereco with { Latitude = ponto.Latitude, Longitude = ponto.Longitude };
+    }
+
+    private const double RaioGpsKm = 0.3;
 
     public async Task ExcluirAsync(int usuarioId, int enderecoId, CancellationToken ct)
     {

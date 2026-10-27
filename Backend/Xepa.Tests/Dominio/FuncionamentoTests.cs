@@ -60,6 +60,32 @@ public class FuncionamentoTests
     }
 
     [Fact]
+    public void Retirada_precisa_caber_no_horario_da_loja()
+    {
+        var horarios = new[] { Dia(DayOfWeek.Tuesday, 7, 20) };
+
+        Funcionamento.ValidarRetirada(horarios, TercaDezHoras.AddHours(8), TercaDezHoras.AddHours(10));
+        var depois = Assert.Throws<RegraDeNegocioException>(() =>
+            Funcionamento.ValidarRetirada(horarios, TercaDezHoras.AddHours(1), TercaDezHoras.AddHours(13.5)));
+        Assert.Contains("das 07:00 às 20:00", depois.Message);
+        Assert.Throws<RegraDeNegocioException>(() =>
+            Funcionamento.ValidarRetirada(horarios, TercaDezHoras.AddDays(1), TercaDezHoras.AddDays(1).AddHours(2)));
+        // Loja sem horário informado não é conferida.
+        Funcionamento.ValidarRetirada([], TercaDezHoras.AddHours(12), TercaDezHoras.AddHours(13.5));
+    }
+
+    [Fact]
+    public void Repetir_oferta_corta_a_retirada_no_fechamento()
+    {
+        var horarios = new[] { Dia(DayOfWeek.Tuesday, 7, 20) };
+
+        var janela = Funcionamento.Encaixar(horarios, TercaDezHoras.AddHours(1), TercaDezHoras.AddHours(13.5));
+
+        Assert.Equal((TercaDezHoras.AddHours(1), TercaDezHoras.AddHours(10)), janela);
+        Assert.Null(Funcionamento.Encaixar(horarios, TercaDezHoras.AddHours(11), TercaDezHoras.AddHours(12)));
+    }
+
+    [Fact]
     public void Loja_pausada_some_do_app()
     {
         var loja = new Estabelecimento { Nome = "Padaria", StatusCadastro = StatusCadastro.Aprovado, Endereco = null! };

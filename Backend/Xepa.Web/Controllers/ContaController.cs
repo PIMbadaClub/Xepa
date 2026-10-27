@@ -93,11 +93,23 @@ public class ContaController(CredenciaisService credenciais, CadastroLojaService
 
         await AbrirSessaoAsync(usuario);
 
-        if (Url.IsLocalUrl(form.ReturnUrl))
+        if (Url.IsLocalUrl(form.ReturnUrl) && PodeVoltarPara(usuario.Tipo, form.ReturnUrl))
             return LocalRedirect(form.ReturnUrl);
         return usuario.Tipo == TipoUsuario.Administrador
             ? RedirectToAction(nameof(AdminController.Painel), "Admin")
             : RedirectToAction(nameof(LojaController.Inicio), "Loja");
+    }
+
+    /// <summary>
+    /// O ReturnUrl só vale se o perfil pode abrir a página: o admin que entra pelo endereço principal
+    /// recebe ReturnUrl=/loja e cairia em "Acesso negado". Fora da área do perfil, vai para o início dele.
+    /// </summary>
+    private static bool PodeVoltarPara(TipoUsuario tipo, string url)
+    {
+        var area = url.TrimStart('/').Split('/', '?', '#')[0].ToLowerInvariant();
+        return tipo == TipoUsuario.Administrador
+            ? area == "admin"
+            : area is not ("admin" or "");
     }
 
     /// <summary>"Cadastre sua loja": a loja entra pendente e só aparece no app depois de aprovada (RN10).</summary>

@@ -107,14 +107,26 @@
             .withAutomaticReconnect()
             .build();
 
+        const versao = '@ViewData["Versao"]';
         let recarga;
-        conexao.on('PedidoAlterado', () => {
+        // Recarrega sem interromper quem está digitando um código de retirada (tenta de novo depois).
+        const recarregar = (atraso) => {
             clearTimeout(recarga);
-            // Não interrompe quem está digitando um código de retirada.
-            recarga = setTimeout(() => { if (!document.activeElement?.classList.contains('codigo')) location.reload(); }, 600);
-        });
+            recarga = setTimeout(() => {
+                if (document.activeElement?.classList.contains('codigo')) recarregar(3000);
+                else location.reload();
+            }, atraso);
+        };
+        // Avisos que chegam enquanto a página recarrega ou reconecta se perdem: confere o quadro com a API.
+        const conferir = () => fetch('@Url.Action("VersaoAtual")', { cache: 'no-store' })
+            .then(r => r.ok ? r.json() : null)
+            .then(j => { if (j && j.versao !== versao) recarregar(0); })
+            .catch(() => {});
+
+        conexao.on('PedidoAlterado', () => recarregar(600));
         conexao.onreconnecting(() => marcar('reconectando…', 'inativa'));
-        conexao.onreconnected(() => marcar('ao vivo', 'ativa'));
-        conexao.start().then(() => marcar('ao vivo', 'ativa')).catch(() => marcar('sem tempo real', 'inativa'));
+        conexao.onreconnected(() => { marcar('ao vivo', 'ativa'); conferir(); });
+        conexao.start().then(() => { marcar('ao vivo', 'ativa'); conferir(); }).catch(() => marcar('sem tempo real', 'inativa'));
+        setInterval(conferir, 20000);
     })();
 </script>
