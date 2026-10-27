@@ -101,8 +101,15 @@ public class OfertasController(OfertaGestaoService ofertas) : Controller
     [HttpPost("{id:int}/ativa")]
     public async Task<IActionResult> AlterarAtiva(int id, bool ativa, CancellationToken ct)
     {
-        await ofertas.AlterarAtivaAsync(EstabelecimentoId, id, ativa, ct);
-        TempData["Mensagem"] = ativa ? "Oferta reativada." : "Oferta retirada do ar.";
+        try
+        {
+            await ofertas.AlterarAtivaAsync(EstabelecimentoId, id, ativa, ct);
+            TempData["Mensagem"] = ativa ? "Oferta reativada." : "Oferta retirada do ar.";
+        }
+        catch (RegraDeNegocioException e)
+        {
+            TempData["Erro"] = $"Não deu para reativar: {e.Message} Edite a oferta para ajustar o horário.";
+        }
         return RedirectToAction(nameof(Index));
     }
 
