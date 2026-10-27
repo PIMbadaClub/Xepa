@@ -12,6 +12,7 @@ using Xepa.Application.Notificacoes;
 using Xepa.Application.Ofertas;
 using Xepa.Application.Pagamentos;
 using Xepa.Application.Pedidos;
+using Xepa.Application.Suporte;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xepa.Infrastructure.Integracoes;
 using Xepa.Infrastructure.Data;
@@ -55,11 +56,29 @@ public static class DependencyInjection
         services.AddScoped<LojaPainelService>();
         services.AddScoped<CadastroLojaService>();
         services.AddScoped<NotificacaoService>();
+        services.AddScoped<SuporteService>();
+        services.AddScoped<ExclusaoContaService>();
 
         services.AddSingleton<IHasherSenha, HasherSenha>();
         services.AddScoped<IReservaPedidos, ReservaPedidosSql>();
         services.AddScoped<IConfirmacaoPagamento, ConfirmacaoPagamentoSql>();
+        services.AddScoped<PushService>();
         services.TryAddSingleton<INotificadorPedidos, NotificadorNulo>(); // a API troca pelo SignalR
+        // Todo aviso de pedido também vai por push para o celular do cliente (venha da API ou do portal).
+        var notificador = services.Last(d => d.ServiceType == typeof(INotificadorPedidos));
+        services.Remove(notificador);
+        services.AddSingleton<INotificadorPedidos>(sp => new NotificadorComPush(
+            notificador.ImplementationInstance as INotificadorPedidos
+            ?? (INotificadorPedidos)ActivatorUtilities.CreateInstance(sp, notificador.ImplementationType!),
+            sp.GetRequiredService<IServiceScopeFactory>()));
+
+        // Firebase Cloud Messaging com a conta de serviço; sem ela, o push só vai para o log.
+        var firebase = config["Firebase:ContaServico"];
+        if (!string.IsNullOrWhiteSpace(firebase))
+            services.AddHttpClient<IEnvioPush, EnvioPushFcm>((http, sp) =>
+                new EnvioPushFcm(http, firebase, sp.GetRequiredService<Microsoft.Extensions.Logging.ILogger<EnvioPushFcm>>()));
+        else
+            services.AddSingleton<IEnvioPush, EnvioPushLog>();
 
         // Mercado Pago com credenciais; sem elas, gateway simulado (só fora de produção).
         var mp = config.GetSection(OpcoesMercadoPago.Secao).Get<OpcoesMercadoPago>() ?? new OpcoesMercadoPago();

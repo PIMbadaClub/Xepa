@@ -1,0 +1,49 @@
+@model IReadOnlyList<ConversaResumoDto>
+@{
+    ViewData["Title"] = "Suporte";
+    var status = ViewData["Status"] as StatusConversa?;
+    var naoLidas = Model.Count(c => c.NaoLidas > 0);
+}
+<h1>Suporte</h1>
+<p class="sub">Chat com clientes, entregadores e lojas. Quem escreveu por último e ainda não teve resposta aparece primeiro.</p>
+
+<nav class="filtros" aria-label="Filtrar conversas">
+    <a asp-action="Suporte" asp-route-busca="@ViewData["Busca"]" class="@(status is null ? "ativo" : "")">Todas</a>
+    <a asp-action="Suporte" asp-route-status="@StatusConversa.Aberta" asp-route-busca="@ViewData["Busca"]" class="@(status == StatusConversa.Aberta ? "ativo" : "")">Em atendimento</a>
+    <a asp-action="Suporte" asp-route-status="@StatusConversa.Resolvida" asp-route-busca="@ViewData["Busca"]" class="@(status == StatusConversa.Resolvida ? "ativo" : "")">Resolvidas</a>
+</nav>
+<form method="get" asp-action="Suporte" class="busca">
+    @if (status is { } st) { <input type="hidden" name="status" value="@st" /> }
+    <label for="busca" class="pular">Buscar</label>
+    <input id="busca" name="busca" value="@ViewData["Busca"]" placeholder="Buscar por nome, e-mail ou loja" />
+    <button class="botao secundario" type="submit">Buscar</button>
+</form>
+
+@if (Model.Count == 0)
+{
+    <div class="cartao vazio">Nenhuma conversa por aqui.</div>
+}
+else
+{
+    @if (naoLidas > 0) { <p class="mini" style="margin:0 0 10px"><strong>@naoLidas</strong> conversa(s) esperando resposta.</p> }
+    <ul class="conversas">
+        @foreach (var c in Model)
+        {
+            <li>
+                <a asp-action="Conversa" asp-route-id="@c.Id" class="conversa @(c.NaoLidas > 0 ? "nova" : "")">
+                    <span class="avatar" aria-hidden="true">@c.Usuario[..1].ToUpperInvariant()</span>
+                    <span class="conversa-texto">
+                        <span class="conversa-topo">
+                            <strong>@(c.Loja ?? c.Usuario)</strong>
+                            <span class="selo inativa">@Rotulos.Tipo(c.Tipo)</span>
+                            @if (c.Status == StatusConversa.Resolvida) { <span class="selo ativa">Resolvida</span> }
+                            <small>@Rotulos.Data(c.UltimaMensagemEm)</small>
+                        </span>
+                        <span class="mini">@(c.UltimaDoSuporte ? "Você: " : "")@(c.UltimaMensagem.Length > 110 ? c.UltimaMensagem[..108] + "…" : c.UltimaMensagem)</span>
+                    </span>
+                    @if (c.NaoLidas > 0) { <span class="contador" aria-label="@c.NaoLidas não lidas">@c.NaoLidas</span> }
+                </a>
+            </li>
+        }
+    </ul>
+}

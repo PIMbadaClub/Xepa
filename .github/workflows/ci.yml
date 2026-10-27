@@ -1,4 +1,4 @@
-# CI: compila e testa o backend a cada push e pull request.
+# CI: compila e testa o backend e o app a cada push e pull request, e gera o APK do Android.
 name: CI
 
 on:
@@ -49,3 +49,40 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+
+  # APK de instalação direta (sem Play Store), baixável em Actions > execução > Artifacts.
+  # Endereços da API e do portal vêm das variáveis do repositório; o Firebase (push) é opcional.
+  apk:
+    runs-on: ubuntu-latest
+    needs: mobile
+    defaults:
+      run:
+        working-directory: Mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: >
+          flutter build apk --release
+          --dart-define=API_URL=${{ vars.API_URL || 'https://xepa-api-12b52d.azurewebsites.net' }}
+          --dart-define=PORTAL_URL=${{ vars.PORTAL_URL || 'https://xepa-portal-12b52d.azurewebsites.net' }}
+          --dart-define=FIREBASE_API_KEY=${{ vars.FIREBASE_API_KEY }}
+          --dart-define=FIREBASE_APP_ID=${{ vars.FIREBASE_APP_ID }}
+          --dart-define=FIREBASE_SENDER_ID=${{ vars.FIREBASE_SENDER_ID }}
+          --dart-define=FIREBASE_PROJECT_ID=${{ vars.FIREBASE_PROJECT_ID }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: xepa-android
+          path: Mobile/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30

@@ -29,6 +29,9 @@ public class CadastroLojaForm
     [Required(ErrorMessage = "Crie uma senha."), StringLength(100, MinimumLength = 8, ErrorMessage = "Use ao menos 8 caracteres."), DataType(DataType.Password), Display(Name = "Senha")]
     public string Senha { get; set; } = "";
 
+    [Range(typeof(bool), "true", "true", ErrorMessage = "Para cadastrar a loja, aceite os termos de uso e a política de privacidade.")]
+    public bool AceitouTermos { get; set; }
+
     [Required(ErrorMessage = "Informe o CEP."), RegularExpression(@"^\d{5}-?\d{3}$", ErrorMessage = "CEP inválido."), Display(Name = "CEP")]
     public string Cep { get; set; } = "";
 
@@ -82,6 +85,7 @@ public class CadastroLojaService(IXepaDb db, IHasherSenha hasher, IServicoMapas 
             Email = email,
             Telefone = form.Telefone.Trim(),
             Tipo = TipoUsuario.Estabelecimento,
+            TermosAceitosEm = DateTimeOffset.UtcNow,
             SenhaHash = ""
         };
         usuario.SenhaHash = hasher.Gerar(usuario, form.Senha);

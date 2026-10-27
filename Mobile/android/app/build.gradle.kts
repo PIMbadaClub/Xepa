@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -5,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.xepa"
+    namespace = "br.com.xepa"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -15,8 +17,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.xepa"
+        applicationId = "br.com.xepa"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -29,11 +30,26 @@ android {
         versionName = flutter.versionName
     }
 
+    // Chave de assinatura do APK de release: android/key.properties (fora do Git) ou variáveis do CI.
+    // Sem ela o release sai assinado com a chave de debug, que serve para instalar e testar.
+    val chave = Properties().apply {
+        val arquivo = rootProject.file("key.properties")
+        if (arquivo.exists()) arquivo.inputStream().use { load(it) }
+    }
+    signingConfigs {
+        if (chave.getProperty("storeFile") != null) {
+            create("release") {
+                storeFile = file(chave.getProperty("storeFile"))
+                storePassword = chave.getProperty("storePassword")
+                keyAlias = chave.getProperty("keyAlias")
+                keyPassword = chave.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
 }

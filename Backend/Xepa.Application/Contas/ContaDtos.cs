@@ -25,10 +25,15 @@ public class RegistrarRequest : IValidatableObject
     [Phone, MaxLength(20)]
     public string? Telefone { get; init; }
 
+    /// <summary>Aceite dos termos de uso e da política de privacidade (LGPD); sem ele a conta não é criada.</summary>
+    public bool AceitouTermos { get; init; }
+
     public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (Tipo is not (TipoUsuario.Cliente or TipoUsuario.Entregador))
             yield return new ValidationResult("Pelo app dá para criar conta de cliente ou de entregador.", [nameof(Tipo)]);
+        if (!AceitouTermos)
+            yield return new ValidationResult("Para criar a conta, aceite os termos de uso e a política de privacidade.", [nameof(AceitouTermos)]);
         if (Tipo == TipoUsuario.Entregador && string.IsNullOrWhiteSpace(Placa))
             yield return new ValidationResult("Informe a placa da moto.", [nameof(Placa)]);
         if (Tipo == TipoUsuario.Entregador && string.IsNullOrWhiteSpace(Telefone))

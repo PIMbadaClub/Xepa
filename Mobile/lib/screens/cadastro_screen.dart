@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FilteringTextInputFormatter, LengthLimitingTextInputFormatter, TextInput;
 
@@ -71,6 +72,8 @@ class _CadastroScreenState extends State<CadastroScreen> {
       cnpj: _ehRestaurante ? _digitos(_cnpjCtrl.text) : null,
       placa: _ehEntregador ? _placaCtrl.text.replaceAll('-', '').toUpperCase() : null,
       senha: _senhaCtrl.text,
+      // O formulário só chega aqui com a caixa dos termos marcada.
+      aceitouTermos: true,
     );
 
     try {
@@ -296,9 +299,7 @@ class _CadastroScreenState extends State<CadastroScreen> {
   }
 }
 
-/// Aceite dos Termos de Uso e da Política de Privacidade (LGPD).
-/// Os trechos em destaque ainda não abrem páginas; ligue-os às telas de
-/// termos quando elas existirem.
+/// Aceite dos Termos de Uso e da Política de Privacidade (LGPD); os trechos em destaque abrem as páginas no portal.
 class _CampoTermos extends StatelessWidget {
   const _CampoTermos({
     required this.autovalidateMode,
@@ -353,23 +354,28 @@ class _CampoTermos extends StatelessWidget {
                       );
                     }),
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Padding(
-                      padding: EdgeInsets.only(top: 12, right: 4),
+                      padding: const EdgeInsets.only(top: 12, right: 4),
                       child: Text.rich(
                         TextSpan(
                           text: 'Li e concordo com os ',
                           children: [
-                            TextSpan(text: 'Termos de Uso', style: destaque),
-                            TextSpan(text: ' e a '),
+                            TextSpan(
+                              text: 'Termos de Uso',
+                              style: destaque,
+                              recognizer: TapGestureRecognizer()..onTap = () => abrirPaginaLegal('termos'),
+                            ),
+                            const TextSpan(text: ' e a '),
                             TextSpan(
                               text: 'Política de Privacidade',
                               style: destaque,
+                              recognizer: TapGestureRecognizer()..onTap = () => abrirPaginaLegal('privacidade'),
                             ),
-                            TextSpan(text: '.'),
+                            const TextSpan(text: '.'),
                           ],
                         ),
-                        style: TextStyle(fontSize: 13.5, height: 1.35),
+                        style: const TextStyle(fontSize: 13.5, height: 1.35),
                       ),
                     ),
                   ),
@@ -431,3 +437,6 @@ class _CadastroNoPortal extends StatelessWidget {
     );
   }
 }
+
+/// Abre os termos de uso ou a política de privacidade no navegador.
+void abrirPaginaLegal(String pagina) => launchUrl(paginaLegal(pagina), mode: LaunchMode.externalApplication);

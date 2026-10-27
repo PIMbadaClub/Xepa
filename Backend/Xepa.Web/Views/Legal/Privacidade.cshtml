@@ -1,0 +1,59 @@
+@{
+    ViewData["Title"] = "Política de privacidade";
+}
+<article class="cartao legal">
+    <a href="/" class="marca-legal"><img src="~/img/tomate.svg" asp-append-version="true" alt="" /><img src="~/img/xepa-nome.svg" asp-append-version="true" alt="Xepa" /></a>
+    <h1>Política de privacidade</h1>
+    <p class="sub">Versão de @Xepa.Web.Controllers.LegalController.Versao · Lei Geral de Proteção de Dados (Lei 13.709/2018)</p>
+
+    <p>A XEPA conecta padarias, restaurantes, mercados e feiras de Limeira a pessoas que compram, com desconto, a comida que sobraria no fim do dia. Para isso tratamos alguns dados pessoais. Aqui explicamos quais, por quê, com quem compartilhamos e como você controla tudo isso.</p>
+
+    <h2>1. Quem é o controlador</h2>
+    <p>A XEPA é a controladora dos dados tratados no app e no portal. Para falar com o encarregado de dados (DPO), use o <strong>chat de suporte</strong> no app (Perfil › Ajuda e suporte) ou no portal da loja.</p>
+
+    <h2>2. Quais dados tratamos</h2>
+    <ul>
+        <li><strong>Cadastro:</strong> nome, e-mail, celular e senha (guardada só como hash, nunca em texto). Se você entra com o Google, recebemos nome, e-mail e um identificador da conta Google.</li>
+        <li><strong>Entregadores parceiros:</strong> também placa e modelo da moto e, durante uma corrida, a localização do celular.</li>
+        <li><strong>Lojas:</strong> nome do responsável, CNPJ, telefone e endereço do estabelecimento.</li>
+        <li><strong>Pedidos:</strong> o que foi comprado, valores, forma de pagamento, endereço de entrega e avaliações.</li>
+        <li><strong>Localização:</strong> só quando você permite, para mostrar ofertas perto de você e acompanhar a entrega no mapa.</li>
+        <li><strong>Suporte e denúncias:</strong> as mensagens e fotos que você envia.</li>
+        <li><strong>Notificações:</strong> o identificador do celular para avisos de pedido (push), se você permitir.</li>
+    </ul>
+    <p>Não tratamos dados sensíveis (saúde, religião, biometria etc.) e não guardamos número de cartão: o pagamento é feito no Mercado Pago.</p>
+
+    <h2>3. Para que usamos e com qual base legal</h2>
+    <ul>
+        <li><strong>Executar o pedido</strong> (reservar a sacola, cobrar, avisar a loja, chamar o entregador e entregar): execução de contrato (art. 7º, V).</li>
+        <li><strong>Guardar pedidos e pagamentos</strong> pelo prazo exigido pela legislação fiscal: cumprimento de obrigação legal (art. 7º, II).</li>
+        <li><strong>Segurança, prevenção a fraude e tratamento de denúncias</strong>: legítimo interesse (art. 7º, IX).</li>
+        <li><strong>Localização e notificações push</strong>: consentimento (art. 7º, I), que você pode retirar a qualquer momento nas configurações do celular.</li>
+        <li><strong>Indicadores de impacto</strong> (quilos de comida salvos, CO₂ evitado): só números agregados, sem identificar ninguém.</li>
+    </ul>
+
+    <h2>4. Com quem compartilhamos</h2>
+    <ul>
+        <li><strong>A loja do pedido</strong> vê seu nome, o pedido e, na entrega, o endereço.</li>
+        <li><strong>O entregador parceiro</strong> vê seu primeiro nome, o endereço e o celular para combinar a entrega.</li>
+        <li><strong>Operadores</strong> que nos prestam serviço: Microsoft Azure (hospedagem, banco de dados, e-mail e mapas, com dados no Brasil), Mercado Pago (pagamentos), Google (login com Google e notificações push pelo Firebase).</li>
+    </ul>
+    <p>Não vendemos dados pessoais nem os usamos para publicidade de terceiros.</p>
+
+    <h2>5. Por quanto tempo guardamos</h2>
+    <p>Enquanto a conta existir. Se você excluir a conta, apagamos na hora endereços salvos, favoritos, sessões, conversas do suporte e celulares cadastrados para push, e anonimizamos nome, e-mail, telefone e placa. Os pedidos ficam sem identificar você, pelo prazo de 5 anos exigido pela legislação fiscal. As posições do entregador durante as corridas são usadas só para o acompanhamento do pedido.</p>
+
+    <h2>6. Seus direitos (art. 18)</h2>
+    <p>Você pode, a qualquer momento: confirmar se tratamos seus dados, acessá-los, corrigi-los (em Perfil, no app), pedir a portabilidade, saber com quem compartilhamos, revogar consentimentos e <strong>excluir a conta</strong>, direto no app em <em>Perfil › Privacidade › Excluir minha conta</em>. Para os demais pedidos, use o chat de suporte; respondemos em até 15 dias.</p>
+
+    <h2>7. Segurança</h2>
+    <p>Tráfego sempre criptografado (HTTPS), senhas com hash, sessões que expiram (15 minutos, renováveis por 7 dias), acesso ao banco restrito e permissões por perfil (cliente, entregador, loja e administração).</p>
+
+    <h2>8. Crianças</h2>
+    <p>O app é para maiores de 18 anos.</p>
+
+    <h2>9. Mudanças nesta política</h2>
+    <p>Se mudarmos algo importante, avisamos no app antes de valer. A data da versão fica no topo desta página.</p>
+
+    <p class="mini" style="margin-top:28px">Veja também os <a asp-action="Termos">termos de uso</a>.</p>
+</article>

@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Xepa.Application;
 using Xepa.Application.Administracao;
 using Xepa.Application.Ofertas;
+using Xepa.Application.Suporte;
 using Xepa.Domain;
 using Xepa.Domain.Entities;
 
@@ -24,7 +25,7 @@ public class ConfiguracoesLojaVm
 /// <summary>Início (painel do dia) e configurações do estabelecimento.</summary>
 [Route("loja")]
 [Authorize(Roles = nameof(TipoUsuario.Estabelecimento))]
-public class LojaController(LojaPainelService painel, AdminCadastrosService cadastros, IXepaDb db) : Controller
+public class LojaController(LojaPainelService painel, AdminCadastrosService cadastros, SuporteService suporte, IXepaDb db) : Controller
 {
     private int EstabelecimentoId => int.Parse(User.FindFirst(ContaController.ClaimEstabelecimentoId)!.Value);
     private int UsuarioId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
@@ -55,6 +56,33 @@ public class LojaController(LojaPainelService painel, AdminCadastrosService cada
             ? "Loja pausada: as ofertas saíram do app até você reabrir. Pedidos em andamento continuam."
             : "Loja reaberta: as ofertas no ar voltaram a aparecer no app.";
         return voltar == nameof(Configuracoes) ? RedirectToAction(nameof(Configuracoes), null, null, "funcionamento") : RedirectToAction(nameof(Inicio));
+    }
+
+    // ---------- Suporte ----------
+
+    [HttpGet("suporte")]
+    public async Task<IActionResult> Suporte(CancellationToken ct)
+    {
+        ViewData["Pedidos"] = await suporte.PedidosParaAnexarAsync(UsuarioId, ct);
+        return View(await suporte.ConversaAsync(UsuarioId, null, ct));
+    }
+
+    [HttpGet("suporte/mensagens")]
+    public async Task<IActionResult> MensagensSuporte(int depois, CancellationToken ct) =>
+        Json(ChatSuporte.Itens((await suporte.ConversaAsync(UsuarioId, depois, ct)).Mensagens));
+
+    [HttpPost("suporte/enviar")]
+    public async Task<IActionResult> EnviarSuporte(EnviarMensagemSuporteRequest request, CancellationToken ct)
+    {
+        try
+        {
+            await suporte.EnviarAsync(UsuarioId, request, ct);
+            return NoContent();
+        }
+        catch (RegraDeNegocioException e)
+        {
+            return BadRequest(new { erro = e.Message });
+        }
     }
 
     // ---------- Configurações ----------

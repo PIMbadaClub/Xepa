@@ -1,0 +1,53 @@
+@model ConversaAdminDto
+@{
+    ViewData["Title"] = "Suporte · " + Model.Usuario;
+    string[] prontas =
+    [
+        "Oi! Aqui é da equipe XEPA. Já estou vendo o seu caso, só um instante.",
+        "Pode me mandar o número do pedido? Se preferir, anexe ele pelo clipe na conversa.",
+        "Conversamos com a loja e o valor do pedido foi estornado. Ele volta para o mesmo meio de pagamento em até 7 dias úteis.",
+        "O entregador já está a caminho. Você pode acompanhar a posição dele no mapa do pedido.",
+        "Para trocar a senha, toque em \"Esqueci minha senha\" na tela de entrada e siga o código que chega por e-mail.",
+        "Resolvido por aqui! Posso ajudar em mais alguma coisa?"
+    ];
+}
+<a asp-action="Suporte" class="voltar">@Icones.Svg("voltar", 16) Suporte</a>
+<div class="cabecalho">
+    <div>
+        <h1 style="margin-bottom:2px">@(Model.Loja ?? Model.Usuario)</h1>
+        <p class="sub" style="margin:0">@Rotulos.Tipo(Model.Tipo)@(Model.Loja is null ? "" : " · " + Model.Usuario) · @Model.Email@(Model.Telefone is null ? "" : " · " + Model.Telefone)</p>
+    </div>
+    <div class="acoes">
+        <a asp-action="Usuario" asp-route-id="@Model.UsuarioId" class="botao secundario pequeno">Ver cadastro</a>
+        @if (Model.Status == StatusConversa.Aberta)
+        {
+            <form asp-action="ResolverConversa" asp-route-id="@Model.Id" method="post">
+                <button type="submit" class="botao pequeno">Marcar como resolvida</button>
+            </form>
+        }
+        else
+        {
+            <span class="selo ativa">Resolvida</span>
+        }
+    </div>
+</div>
+
+<div class="chat-tela">
+    <partial name="_Chat" model="new ChatVm(Model.Mensagens, Url.Action(nameof(AdminController.MensagensConversa), new { id = Model.Id })!,
+        Url.Action(nameof(AdminController.ResponderConversa), new { id = Model.Id })!, true, null, prontas)" />
+    <aside class="cartao chat-lado" aria-labelledby="titulo-pedidos">
+        <h2 id="titulo-pedidos" class="secao" style="margin-top:0">Pedidos recentes</h2>
+        @if (Model.PedidosRecentes.Count == 0)
+        {
+            <p class="mini">Nenhum pedido ainda.</p>
+        }
+        @foreach (var p in Model.PedidosRecentes)
+        {
+            <a asp-action="Pedido" asp-route-id="@p.Id" class="chat-pedido">
+                <b>#@p.Id · @p.Loja</b>
+                <span>@p.Oferta · @Rotulos.Dinheiro(p.ValorTotal)</span>
+                <span><span class="selo @Rotulos.ClassePedido(p.Status)">@Rotulos.Pedido(p.Status, p.TipoEntrega)</span> <small class="mini">@Rotulos.Data(p.CriadoEm)</small></span>
+            </a>
+        }
+    </aside>
+</div>

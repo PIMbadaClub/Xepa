@@ -5,6 +5,8 @@ import 'package:flutter/services.dart';
 
 import '../api/favoritos.dart';
 import '../api/notificacoes.dart';
+import '../api/push.dart';
+import '../api/suporte.dart';
 import '../api/tempo_real.dart';
 import '../models/pedido.dart';
 import '../widgets/pedido_ativo.dart';
@@ -14,6 +16,7 @@ import 'mapa_screen.dart';
 import 'notificacoes_screen.dart';
 import 'pedidos_screen.dart';
 import 'perfil_screen.dart';
+import 'suporte_screen.dart';
 
 /// Estrutura do app do cliente. Cada aba tem a própria navegação, como nos apps de delivery:
 /// oferta, checkout, pagamento e pedido abrem dentro da aba e o menu de baixo continua à mão.
@@ -29,6 +32,7 @@ class _HomeShellState extends State<HomeShell> {
 
   int _indice = 0;
   StreamSubscription<Notificacao>? _avisos;
+  StreamSubscription<Map<String, dynamic>>? _toquesPush;
   final _navegadores = List.generate(5, (_) => GlobalKey<NavigatorState>());
   late final _observadores = List.generate(5, (_) => _Observador(() => setState(() {})));
 
@@ -50,6 +54,16 @@ class _HomeShellState extends State<HomeShell> {
     Favoritos.instance.carregar();
     Notificacoes.instance.iniciar();
     PedidosAtivos.instance.iniciar();
+    Suporte.instance.atualizarNaoLidas();
+    // Tocou no push "A equipe XEPA respondeu": abre o chat; aviso de pedido abre a aba Pedidos.
+    _toquesPush = Push.instance.toques.stream.listen((dados) {
+      if (!mounted) return;
+      if (dados['tipo'] == 'suporte') {
+        _atual?.push(MaterialPageRoute(builder: (_) => const SuporteScreen()));
+      } else if (dados['tipo'] == 'pedido') {
+        _selecionar(2);
+      }
+    });
     _avisos = Notificacoes.instance.novas.listen((n) {
       if (mounted) {
         AvisoNoTopo.mostrar(context, n, onTap: () {
@@ -63,6 +77,7 @@ class _HomeShellState extends State<HomeShell> {
   @override
   void dispose() {
     _avisos?.cancel();
+    _toquesPush?.cancel();
     super.dispose();
   }
 

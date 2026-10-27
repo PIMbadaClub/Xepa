@@ -3,6 +3,7 @@ import '../api/modo.dart';
 import '../api/favoritos.dart';
 import '../api/notificacoes.dart';
 import '../api/api.dart';
+import '../api/push.dart';
 import '../api/tempo_real.dart';
 
 /// Tipos de conta escolhidos na tela de cadastro.
@@ -43,6 +44,7 @@ class CadastroDados {
     required this.senha,
     this.cnpj,
     this.placa,
+    this.aceitouTermos = false,
   });
 
   final TipoConta tipo;
@@ -60,6 +62,9 @@ class CadastroDados {
   /// Placa da moto, só para entregador (ex.: ABC1D23).
   final String? placa;
   final String senha;
+
+  /// Marcou "Li e aceito os termos de uso e a política de privacidade" (LGPD).
+  final bool aceitouTermos;
 }
 
 /// Erro de autenticação com mensagem pronta para exibir ao usuário.
@@ -86,6 +91,7 @@ class AuthService {
     if (await Api.instance.tokenAcesso() == null) return null;
     try {
       _usuario = Usuario.fromJson(await Api.instance.get<Map<String, dynamic>>('/api/usuarios/me'));
+      Push.instance.registrar();
       return _usuario;
     } on ApiException {
       await Api.instance.limparSessao();
@@ -132,6 +138,7 @@ class AuthService {
         'senha': dados.senha,
         'telefone': dados.celular,
         'tipo': dados.tipo == TipoConta.entregador ? 'Entregador' : 'Cliente',
+        'aceitouTermos': dados.aceitouTermos,
         if (dados.tipo == TipoConta.entregador) 'placa': dados.placa,
       });
       return await _abrir(sessao);
@@ -173,7 +180,18 @@ class AuthService {
     }
   }
 
+  /// Exclui a conta (LGPD) e limpa a sessão local. A senha é dispensada para conta criada pelo Google.
+  Future<void> excluirConta({String? senha}) async {
+    try {
+      await Api.instance.post<void>('/api/usuarios/me/excluir', {'senha': senha, 'confirmacao': 'EXCLUIR'});
+    } on ApiException catch (e) {
+      throw AuthException(e.mensagem);
+    }
+    await _encerrarLocal();
+  }
+
   Future<void> sair() async {
+    await Push.instance.remover();
     final renovacao = await Api.instance.tokenRenovacao();
     if (renovacao != null) {
       try {
@@ -182,6 +200,10 @@ class AuthService {
         // Mesmo offline o app esquece a sessão local.
       }
     }
+    await _encerrarLocal();
+  }
+
+  Future<void> _encerrarLocal() async {
     Notificacoes.instance.parar();
     PedidosAtivos.instance.parar();
     Favoritos.instance.limpar();
@@ -194,6 +216,8 @@ class AuthService {
 
   Future<Usuario> _abrir(Map<String, dynamic> sessao) async {
     await Api.instance.salvarSessao(sessao);
-    return _usuario = Usuario.fromJson(sessao['usuario'] as Map<String, dynamic>);
+    _usuario = Usuario.fromJson(sessao['usuario'] as Map<String, dynamic>);
+    Push.instance.registrar();
+    return _usuario!;
   }
 }

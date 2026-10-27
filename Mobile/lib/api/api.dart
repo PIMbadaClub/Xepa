@@ -12,6 +12,9 @@ const String apiUrl = String.fromEnvironment(
 /// Endereço do portal do estabelecimento (cadastro de lojas). Troque com --dart-define=PORTAL_URL=...
 const String portalUrl = String.fromEnvironment('PORTAL_URL', defaultValue: 'http://localhost:5148');
 
+/// Termos de uso ('termos') ou política de privacidade ('privacidade'), publicados no portal.
+Uri paginaLegal(String pagina) => Uri.parse('$portalUrl/$pagina');
+
 /// Erro com mensagem pronta para mostrar ao usuário (vem do ProblemDetails da API).
 class ApiException implements Exception {
   ApiException(this.mensagem, {this.status});

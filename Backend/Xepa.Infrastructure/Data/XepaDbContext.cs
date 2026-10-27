@@ -21,6 +21,9 @@ public class XepaDbContext(DbContextOptions<XepaDbContext> options) : DbContext(
     public DbSet<Denuncia> Denuncias => Set<Denuncia>();
     public DbSet<Repasse> Repasses => Set<Repasse>();
     public DbSet<RepasseEntregador> RepassesEntregadores => Set<RepasseEntregador>();
+    public DbSet<ConversaSuporte> ConversasSuporte => Set<ConversaSuporte>();
+    public DbSet<MensagemSuporte> MensagensSuporte => Set<MensagemSuporte>();
+    public DbSet<DispositivoPush> DispositivosPush => Set<DispositivoPush>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -46,6 +49,7 @@ public class XepaDbContext(DbContextOptions<XepaDbContext> options) : DbContext(
         configurationBuilder.Properties<StatusPagamento>().HaveConversion<string>().HaveMaxLength(20);
         configurationBuilder.Properties<MotivoDenuncia>().HaveConversion<string>().HaveMaxLength(30);
         configurationBuilder.Properties<StatusDenuncia>().HaveConversion<string>().HaveMaxLength(20);
+        configurationBuilder.Properties<StatusConversa>().HaveConversion<string>().HaveMaxLength(20);
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)

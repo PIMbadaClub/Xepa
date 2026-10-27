@@ -4,6 +4,7 @@ import '../api/api.dart';
 import '../api/endereco_pagina.dart';
 import '../api/modo.dart';
 import '../api/notificacoes.dart';
+import '../api/retorno_google.dart';
 import '../models/auth.dart';
 import '../theme.dart';
 import '../widgets/xepa_logo.dart';
@@ -53,7 +54,7 @@ class _AberturaScreenState extends State<AberturaScreen> {
 
   Future<void> _iniciar() async {
     await ModoApp.carregar();
-    final parametros = Uri.base.queryParameters;
+    final parametros = await RetornoGoogle.parametrosIniciais();
     final codigoGoogle = parametros['google'];
     final erroGoogle = parametros['google_erro'];
     if (codigoGoogle != null || erroGoogle != null) EnderecoPagina.limparParametros();

@@ -35,6 +35,12 @@ public class Usuario : Entidade
     /// <summary>Até quando o usuário já viu as notificações do app (as mais novas aparecem como não lidas).</summary>
     public DateTimeOffset? NotificacoesLidasAte { get; set; }
 
+    /// <summary>Quando aceitou os termos de uso e a política de privacidade (LGPD). Nulo nas contas antigas.</summary>
+    public DateTimeOffset? TermosAceitosEm { get; set; }
+
+    /// <summary>Conta excluída a pedido do titular (LGPD): os dados pessoais foram apagados e só ficou o histórico de pedidos.</summary>
+    public DateTimeOffset? ExcluidaEm { get; set; }
+
     /// <summary>Preenchido só quando Tipo = Estabelecimento.</summary>
     public Estabelecimento? Estabelecimento { get; set; }
 
