@@ -30,9 +30,12 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     });
 builder.Services.AddAuthorization();
 
-// Todo POST do portal exige o token antifalsificação (CSRF).
+// Todo POST do portal exige o token antifalsificação (CSRF); token vencido volta para a tela com aviso, sem erro 400.
 builder.Services.AddControllersWithViews(o =>
-    o.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute()));
+{
+    o.Filters.Add(new Microsoft.AspNetCore.Mvc.AutoValidateAntiforgeryTokenAttribute());
+    o.Filters.Add<TokenExpirado>();
+});
 builder.Services.AddHealthChecks();
 
 var app = builder.Build();
@@ -46,6 +49,17 @@ if (!app.Environment.IsDevelopment())
 
 // Datas e valores sempre em pt-BR, independentemente da cultura do servidor (o container no Azure é invariante).
 app.UseRequestLocalization(o => o.SetDefaultCulture("pt-BR").AddSupportedCultures("pt-BR").AddSupportedUICultures("pt-BR"));
+// Páginas não ficam no cache do navegador: o "Voltar" busca de novo, com token e sessão atuais.
+app.Use(async (contexto, proximo) =>
+{
+    contexto.Response.OnStarting(() =>
+    {
+        if (contexto.Response.ContentType?.StartsWith("text/html") == true)
+            contexto.Response.Headers.CacheControl = "no-store";
+        return Task.CompletedTask;
+    });
+    await proximo();
+});
 app.UseStaticFiles();
 app.UseRouting();
 app.UseAuthentication();
