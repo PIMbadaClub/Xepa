@@ -509,6 +509,8 @@ class _PerfilEntregadorState extends State<_PerfilEntregador> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 18),
+                  _PedirComida(onTap: () => trocarModoEntregador(context, cliente: true)),
                   const _Titulo('Conta'),
                   Container(
                     decoration: BoxDecoration(
@@ -724,4 +726,41 @@ class _LinhaAvaliacao extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Atalho para o modo cliente: a mesma conta pede comida e acompanha o pedido como qualquer cliente.
+class _PedirComida extends StatelessWidget {
+  const _PedirComida({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: XepaCores.tomateClaro,
+        borderRadius: BorderRadius.circular(XepaRaios.cartao),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(XepaRaios.cartao),
+          child: const Padding(
+            padding: EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(Icons.restaurant_rounded, color: XepaCores.tomateEscuro, size: 28),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Pedir comida', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                      Text('Use a mesma conta como cliente. Você fica offline até voltar a entregar.',
+                          style: TextStyle(color: XepaCores.textoSecundario, fontSize: 12.5)),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded, color: XepaCores.tomateEscuro),
+              ],
+            ),
+          ),
+        ),
+      );
 }

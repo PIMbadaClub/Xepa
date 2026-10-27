@@ -23,6 +23,9 @@ if (jwt.Chave.Length < 32)
     throw new InvalidOperationException("Configure Jwt:Chave com pelo menos 32 caracteres.");
 builder.Services.AddSingleton(jwt);
 builder.Services.AddSingleton<IGeradorToken, GeradorTokenJwt>();
+builder.Services.AddHttpClient();
+builder.Services.AddSingleton(builder.Configuration.GetSection("Google").Get<OpcoesGoogle>() ?? new OpcoesGoogle());
+builder.Services.AddSingleton<LoginGoogle>();
 builder.Services.AddScoped<ContaService>(); // sessões do app; o portal usa cookie e só o CredenciaisService
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

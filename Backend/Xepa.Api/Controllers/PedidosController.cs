@@ -4,13 +4,14 @@ using Xepa.Application;
 using Xepa.Application.Ofertas;
 using Xepa.Application.Pagamentos;
 using Xepa.Application.Pedidos;
+using Xepa.Api.Seguranca;
 using Xepa.Infrastructure.Seguranca;
 
 namespace Xepa.Api.Controllers;
 
 [ApiController]
 [Route("api/pedidos")]
-[Authorize(Roles = "Cliente")]
+[Authorize(Roles = PapeisCliente.Todos)]
 public class PedidosController(PedidoService pedidos, PagamentoService pagamentos, DenunciaService denuncias) : ControllerBase
 {
     /// <summary>Cria o pedido reservando o estoque; fica AguardandoPagamento por até 15 minutos.</summary>
@@ -72,7 +73,7 @@ public class PedidosController(PedidoService pedidos, PagamentoService pagamento
 /// <summary>Lojas favoritas do cliente (RF10).</summary>
 [ApiController]
 [Route("api/favoritos")]
-[Authorize(Roles = "Cliente")]
+[Authorize(Roles = PapeisCliente.Todos)]
 public class FavoritosController(FavoritoService favoritos) : ControllerBase
 {
     [HttpGet]
@@ -99,7 +100,7 @@ public class FavoritosController(FavoritoService favoritos) : ControllerBase
 
 [ApiController]
 [Route("api/enderecos")]
-[Authorize(Roles = "Cliente")]
+[Authorize(Roles = PapeisCliente.Todos)]
 public class EnderecosController(EnderecoService enderecos) : ControllerBase
 {
     [HttpGet]

@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart'
     show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show TextInput;
+import 'package:flutter/services.dart' show FilteringTextInputFormatter, TextInput;
 
+import 'package:url_launcher/url_launcher.dart';
+
+import '../api/endereco_pagina.dart';
 import '../models/auth.dart';
 import '../theme.dart';
 import '../widgets/auth_validadores.dart';
@@ -12,7 +15,10 @@ import 'cadastro_screen.dart';
 import 'abertura_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
+  const LoginScreen({super.key, this.erroInicial});
+
+  /// Mensagem que voltou do login com Google (ex.: cancelado, conta de loja).
+  final String? erroInicial;
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -27,6 +33,12 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _carregando = false;
   String? _erro;
   AutovalidateMode _autovalidar = AutovalidateMode.disabled;
+
+  @override
+  void initState() {
+    super.initState();
+    _erro = widget.erroInicial;
+  }
 
   @override
   void dispose() {
@@ -100,6 +112,20 @@ class _LoginScreenState extends State<LoginScreen> {
       ..showSnackBar(
         SnackBar(content: Text('Entrar com $provedor estará disponível em breve.')),
       );
+  }
+
+  /// Vai para o Google na mesma aba; ele volta para a abertura do app com ?google=código.
+  Future<void> _entrarComGoogle() async {
+    final retorno = EnderecoPagina.base;
+    if (retorno == null) {
+      _loginSocial('Google no celular');
+      return;
+    }
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+    await launchUrl(Uri.parse(AuthService.instance.urlLoginGoogle(retorno)), webOnlyWindowName: '_self');
   }
 
   @override
@@ -176,7 +202,9 @@ class _LoginScreenState extends State<LoginScreen> {
               AuthBotaoSocial(
                 rotulo: 'Continuar com Google',
                 icone: const AuthIconeGoogle(),
-                onPressed: () => _loginSocial('Google'),
+                onPressed: () {
+                  if (!_carregando) _entrarComGoogle();
+                },
               ),
               if (mostrarApple) ...[
                 const SizedBox(height: 12),
@@ -266,7 +294,7 @@ class _LoginHero extends StatelessWidget {
   }
 }
 
-/// Folha de "Esqueci minha senha".
+/// Folha de "Esqueci minha senha": e-mail → código de 6 dígitos + nova senha → já entra no app.
 class _RecuperarSenhaSheet extends StatefulWidget {
   const _RecuperarSenhaSheet({required this.emailInicial});
 
@@ -279,10 +307,15 @@ class _RecuperarSenhaSheet extends StatefulWidget {
 class _RecuperarSenhaSheetState extends State<_RecuperarSenhaSheet> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _emailCtrl;
+  final _codigoCtrl = TextEditingController();
+  final _senhaCtrl = TextEditingController();
+  final _confirmacaoCtrl = TextEditingController();
 
   bool _carregando = false;
-  bool _enviado = false;
+  bool _codigoEnviado = false;
+  bool _ocultarSenha = true;
   String? _erro;
+  String? _aviso;
 
   @override
   void initState() {
@@ -292,33 +325,75 @@ class _RecuperarSenhaSheetState extends State<_RecuperarSenhaSheet> {
 
   @override
   void dispose() {
-    _emailCtrl.dispose();
+    for (final c in [_emailCtrl, _codigoCtrl, _senhaCtrl, _confirmacaoCtrl]) {
+      c.dispose();
+    }
     super.dispose();
   }
 
-  Future<void> _enviar() async {
-    if (!_formKey.currentState!.validate()) return;
-    FocusScope.of(context).unfocus();
+  String get _email => _emailCtrl.text.trim().toLowerCase();
 
+  void _falhar(String mensagem) => setState(() {
+        _erro = mensagem;
+        _carregando = false;
+      });
+
+  Future<void> _enviarCodigo({bool reenvio = false}) async {
+    if (!reenvio && !_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
     setState(() {
       _carregando = true;
       _erro = null;
+      _aviso = null;
     });
-
     try {
-      await AuthService.instance
-          .recuperarSenha(email: _emailCtrl.text.trim().toLowerCase());
+      await AuthService.instance.recuperarSenha(email: _email);
       if (!mounted) return;
       setState(() {
-        _enviado = true;
+        _codigoEnviado = true;
         _carregando = false;
+        if (reenvio) _aviso = 'Se a conta existir, um novo código foi enviado.';
       });
+    } on AuthException catch (e) {
+      if (mounted) _falhar(e.mensagem);
     } catch (_) {
+      if (mounted) _falhar('Não foi possível enviar o código agora. Tente novamente.');
+    }
+  }
+
+  Future<void> _redefinir() async {
+    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _carregando = true;
+      _erro = null;
+      _aviso = null;
+    });
+    try {
+      final usuario = await AuthService.instance.redefinirSenha(
+        email: _email,
+        codigo: _codigoCtrl.text.trim(),
+        novaSenha: _senhaCtrl.text,
+      );
       if (!mounted) return;
-      setState(() {
-        _erro = 'Não foi possível enviar o link agora. Tente novamente.';
-        _carregando = false;
-      });
+      // Loja e administração usam o portal: a senha mudou, mas o app não abre para elas.
+      if (usuario.perfil == PerfilUsuario.estabelecimento || usuario.perfil == PerfilUsuario.administrador) {
+        await AuthService.instance.sair();
+        if (!mounted) return;
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Senha alterada. Use a nova senha para entrar no portal.')),
+        );
+        return;
+      }
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => telaInicialPara(usuario)),
+        (_) => false,
+      );
+    } on AuthException catch (e) {
+      if (mounted) _falhar(e.mensagem);
+    } catch (_) {
+      if (mounted) _falhar('Não foi possível trocar a senha agora. Tente novamente.');
     }
   }
 
@@ -328,89 +403,147 @@ class _RecuperarSenhaSheetState extends State<_RecuperarSenhaSheet> {
 
     return Padding(
       padding: EdgeInsets.fromLTRB(24, 0, 24, 24 + teclado),
-      child: AnimatedSize(
-        duration: const Duration(milliseconds: 200),
-        alignment: Alignment.topCenter,
-        child: _enviado ? _buildConfirmacao() : _buildFormulario(),
-      ),
-    );
-  }
-
-  Widget _buildFormulario() {
-    return Form(
-      key: _formKey,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Recuperar senha',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Digite o e-mail da sua conta e enviaremos um link para criar uma nova senha.',
-            style: TextStyle(color: XepaCores.textoSecundario, height: 1.35),
-          ),
-          const SizedBox(height: 18),
-          if (_erro != null) ...[
-            AuthErroBanner(mensagem: _erro!),
-            const SizedBox(height: 14),
-          ],
-          AuthCampoTexto(
-            controller: _emailCtrl,
-            rotulo: 'E-mail',
-            icone: Icons.mail_outline_rounded,
-            keyboardType: TextInputType.emailAddress,
-            textInputAction: TextInputAction.done,
-            autofillHints: const [AutofillHints.email],
-            validator: AuthValidadores.email,
-            enabled: !_carregando,
-            onFieldSubmitted: (_) => _enviar(),
-          ),
-          const SizedBox(height: 18),
-          AuthBotaoPrimario(
-            rotulo: 'Enviar link',
-            carregando: _carregando,
-            onPressed: _enviar,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildConfirmacao() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 64,
-          height: 64,
-          decoration: const BoxDecoration(
-            color: XepaCores.verdeClaro,
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.mark_email_read_outlined,
-            size: 30,
-            color: XepaCores.verde,
+      child: SingleChildScrollView(
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          alignment: Alignment.topCenter,
+          child: Form(
+            key: _formKey,
+            child: _codigoEnviado ? _buildCodigo() : _buildEmail(),
           ),
         ),
-        const SizedBox(height: 16),
+      ),
+    );
+  }
+
+  List<Widget> _mensagens() => [
+        if (_erro != null) ...[AuthErroBanner(mensagem: _erro!), const SizedBox(height: 14)],
+        if (_aviso != null) ...[
+          Text(_aviso!, style: const TextStyle(color: XepaCores.verdeTexto, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 14),
+        ],
+      ];
+
+  Widget _buildEmail() {
+    return Column(
+      key: const ValueKey('email'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Recuperar senha', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 6),
         const Text(
-          'Confira seu e-mail',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+          'Digite o e-mail da sua conta e enviaremos um código de 6 dígitos para criar uma nova senha.',
+          style: TextStyle(color: XepaCores.textoSecundario, height: 1.35),
+        ),
+        const SizedBox(height: 18),
+        ..._mensagens(),
+        AuthCampoTexto(
+          controller: _emailCtrl,
+          rotulo: 'E-mail',
+          icone: Icons.mail_outline_rounded,
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.done,
+          autofillHints: const [AutofillHints.email],
+          validator: AuthValidadores.email,
+          enabled: !_carregando,
+          onFieldSubmitted: (_) => _enviarCodigo(),
+        ),
+        const SizedBox(height: 18),
+        AuthBotaoPrimario(rotulo: 'Enviar código', carregando: _carregando, onPressed: _enviarCodigo),
+      ],
+    );
+  }
+
+  Widget _buildCodigo() {
+    return Column(
+      key: const ValueKey('codigo'),
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(color: XepaCores.verdeClaro, shape: BoxShape.circle),
+              child: const Icon(Icons.mark_email_read_outlined, color: XepaCores.verde),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text('Confira seu e-mail', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         Text(
-          'Se existir uma conta para ${_emailCtrl.text.trim()}, você receberá o link em instantes. Veja também a caixa de spam.',
-          textAlign: TextAlign.center,
+          'Se existir uma conta para ${_emailCtrl.text.trim()}, o código chega em instantes. Veja também a caixa de spam. Ele vale por 15 minutos.',
           style: const TextStyle(color: XepaCores.textoSecundario, height: 1.4),
         ),
-        const SizedBox(height: 22),
-        AuthBotaoPrimario(
-          rotulo: 'Voltar para o login',
-          onPressed: () => Navigator.of(context).pop(),
+        const SizedBox(height: 18),
+        ..._mensagens(),
+        TextFormField(
+          controller: _codigoCtrl,
+          enabled: !_carregando,
+          autofocus: true,
+          keyboardType: TextInputType.number,
+          maxLength: 6,
+          textAlign: TextAlign.center,
+          autofillHints: const [AutofillHints.oneTimeCode],
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          style: const TextStyle(fontSize: 28, letterSpacing: 12, fontWeight: FontWeight.w800),
+          decoration: const InputDecoration(counterText: '', hintText: '000000', labelText: 'Código do e-mail'),
+          validator: (v) => (v == null || v.length != 6) ? 'O código tem 6 dígitos.' : null,
+        ),
+        const SizedBox(height: 14),
+        AuthCampoTexto(
+          controller: _senhaCtrl,
+          rotulo: 'Nova senha',
+          icone: Icons.lock_outline_rounded,
+          obscureText: _ocultarSenha,
+          autofillHints: const [AutofillHints.newPassword],
+          validator: AuthValidadores.senhaCadastro,
+          enabled: !_carregando,
+          onChanged: (_) => setState(() {}),
+          sufixo: AuthBotaoVisibilidade(
+            oculta: _ocultarSenha,
+            onPressed: () => setState(() => _ocultarSenha = !_ocultarSenha),
+          ),
+        ),
+        const SizedBox(height: 8),
+        MedidorSenha(senha: _senhaCtrl.text),
+        const SizedBox(height: 14),
+        AuthCampoTexto(
+          controller: _confirmacaoCtrl,
+          rotulo: 'Confirmar nova senha',
+          icone: Icons.lock_outline_rounded,
+          obscureText: _ocultarSenha,
+          textInputAction: TextInputAction.done,
+          validator: (v) => AuthValidadores.confirmarSenha(v, _senhaCtrl.text),
+          enabled: !_carregando,
+          onFieldSubmitted: (_) => _redefinir(),
+        ),
+        const SizedBox(height: 18),
+        AuthBotaoPrimario(rotulo: 'Salvar e entrar', carregando: _carregando, onPressed: _redefinir),
+        const SizedBox(height: 6),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            TextButton(
+              onPressed: _carregando ? null : () => _enviarCodigo(reenvio: true),
+              child: const Text('Mandar outro código'),
+            ),
+            TextButton(
+              onPressed: _carregando
+                  ? null
+                  : () => setState(() {
+                        _codigoEnviado = false;
+                        _erro = null;
+                        _aviso = null;
+                      }),
+              child: const Text('Trocar e-mail'),
+            ),
+          ],
         ),
       ],
     );

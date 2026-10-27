@@ -4,6 +4,7 @@ import '../api/api.dart';
 import '../api/cidade.dart';
 import '../api/notificacoes.dart';
 import '../models/auth.dart';
+import 'abertura_screen.dart';
 import '../models/pedido.dart';
 import '../theme.dart';
 import '../widgets/auth_widgets.dart';
@@ -104,6 +105,17 @@ class _PerfilScreenState extends State<PerfilScreen> {
           ),
           const SizedBox(height: 16),
           const _ImpactoCliente(),
+          if (AuthService.instance.usuario?.perfil == PerfilUsuario.entregador) ...[
+            const SizedBox(height: 16),
+            _Grupo(children: [
+              _ItemMenu(
+                icone: Icons.two_wheeler_rounded,
+                titulo: 'Voltar a entregar',
+                cor: XepaCores.verde,
+                onTap: () => trocarModoEntregador(context, cliente: false),
+              ),
+            ]),
+          ],
           const _TituloGrupo('Minha conta'),
           _Grupo(children: [
             _ItemMenu(icone: Icons.person_outline_rounded, titulo: 'Meus dados', onTap: () => _abrir(const EditarDadosScreen())),

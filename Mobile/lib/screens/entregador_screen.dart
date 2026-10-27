@@ -10,6 +10,7 @@ import '../api/api.dart';
 import '../api/localizacao.dart';
 import '../api/tempo_real.dart';
 import '../models/auth.dart';
+import 'abertura_screen.dart';
 import '../theme.dart';
 import '../widgets/mapa_entrega.dart';
 import '../widgets/oferta_widgets.dart';

@@ -72,4 +72,7 @@ public class RenovarRequest
 public record SessaoDto(string TokenAcesso, DateTimeOffset AcessoExpiraEm, string TokenRenovacao,
     DateTimeOffset RenovacaoExpiraEm, UsuarioDto Usuario);
 
+/// <summary>Conta confirmada pelo Google: identificador fixo, e-mail verificado e nome.</summary>
+public record ContaGoogle(string Id, string Email, string Nome);
+
 public record UsuarioDto(int Id, string Nome, string Email, string? Telefone, TipoUsuario Tipo, int? EstabelecimentoId);

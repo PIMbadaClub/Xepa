@@ -14,6 +14,9 @@ public class Usuario : Entidade
     /// <summary>Placa da moto do entregador parceiro (aparece para a loja e o cliente).</summary>
     public string? Placa { get; set; }
 
+    /// <summary>Conta Google vinculada ("Continuar com Google"): o "sub" do Google, que não muda.</summary>
+    public string? GoogleId { get; set; }
+
     /// <summary>Modelo da moto do entregador (ex.: Honda CG 160), só para exibição.</summary>
     public string? ModeloMoto { get; set; }
 

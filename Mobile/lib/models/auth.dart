@@ -1,4 +1,5 @@
 import '../api/cidade.dart';
+import '../api/modo.dart';
 import '../api/favoritos.dart';
 import '../api/notificacoes.dart';
 import '../api/api.dart';
@@ -139,9 +140,37 @@ class AuthService {
     }
   }
 
-  /// Ainda sem endpoint na API: a recuperação de senha entra numa próxima sprint.
+  /// Endereço que começa o "Continuar com Google" (a API leva ao Google e volta ao app com ?google=código).
+  String urlLoginGoogle(String retorno) => '$apiUrl/api/auth/google?retorno=${Uri.encodeQueryComponent(retorno)}';
+
+  /// Troca o código de uso único que voltou do Google pela sessão do app.
+  Future<Usuario> entrarComGoogle(String codigo) async {
+    try {
+      final sessao = await Api.instance.post<Map<String, dynamic>>('/api/auth/google/sessao', {'codigo': codigo});
+      return await _abrir(sessao);
+    } on ApiException catch (e) {
+      throw AuthException(e.mensagem);
+    }
+  }
+
+  /// Pede o código de 6 dígitos por e-mail. A API responde igual exista ou não a conta.
   Future<void> recuperarSenha({required String email}) async {
-    await Future<void>.delayed(const Duration(milliseconds: 400));
+    try {
+      await Api.instance.post<void>('/api/auth/recuperar-senha', {'email': email});
+    } on ApiException catch (e) {
+      throw AuthException(e.status == 429 ? 'Muitas tentativas. Espere um minuto e tente de novo.' : e.mensagem);
+    }
+  }
+
+  /// Troca a senha com o código do e-mail; a API já devolve a sessão aberta.
+  Future<Usuario> redefinirSenha({required String email, required String codigo, required String novaSenha}) async {
+    try {
+      final sessao = await Api.instance.post<Map<String, dynamic>>(
+          '/api/auth/redefinir-senha', {'email': email, 'codigo': codigo, 'novaSenha': novaSenha});
+      return await _abrir(sessao);
+    } on ApiException catch (e) {
+      throw AuthException(e.status == 429 ? 'Muitas tentativas. Espere um minuto e tente de novo.' : e.mensagem);
+    }
   }
 
   Future<void> sair() async {
@@ -157,6 +186,7 @@ class AuthService {
     PedidosAtivos.instance.parar();
     Favoritos.instance.limpar();
     CidadeCliente.instance.limpar();
+    await ModoApp.definir(cliente: false);
     await TempoReal.instance.desconectar();
     await Api.instance.limparSessao();
     _usuario = null;

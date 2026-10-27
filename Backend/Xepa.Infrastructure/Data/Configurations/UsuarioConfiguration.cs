@@ -14,6 +14,8 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuario>
         builder.Property(u => u.Telefone).HasMaxLength(20);
         builder.Property(u => u.Placa).HasMaxLength(8);
         builder.Property(u => u.ModeloMoto).HasMaxLength(60);
+        builder.Property(u => u.GoogleId).HasMaxLength(64);
+        builder.HasIndex(u => u.GoogleId).IsUnique().HasFilter("[GoogleId] IS NOT NULL");
 
         builder.HasIndex(u => u.Email).IsUnique();
     }

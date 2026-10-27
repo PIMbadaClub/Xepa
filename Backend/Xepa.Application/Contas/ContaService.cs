@@ -27,7 +27,8 @@ public class CredenciaisService(IXepaDb db, IHasherSenha hasher)
 }
 
 /// <summary>Cadastro, login e sessões do app (token de acesso de 15 min + token de renovação de 7 dias).</summary>
-public class ContaService(IXepaDb db, IHasherSenha hasher, CredenciaisService credenciais, IGeradorToken geradorToken)
+public class ContaService(IXepaDb db, IHasherSenha hasher, CredenciaisService credenciais, IGeradorToken geradorToken,
+    RecuperacaoSenhaService recuperacao)
 {
     public static readonly TimeSpan ValidadeRenovacao = TimeSpan.FromDays(7);
 
@@ -59,6 +60,36 @@ public class ContaService(IXepaDb db, IHasherSenha hasher, CredenciaisService cr
 
         return await AbrirSessaoAsync(usuario, ct);
     }
+
+    /// <summary>
+    /// "Continuar com Google": entra na conta já vinculada, vincula a conta do mesmo e-mail (o Google confirmou o e-mail)
+    /// ou cria uma conta de cliente nova. Lojas e administração seguem entrando pelo portal.
+    /// </summary>
+    public async Task<SessaoDto> EntrarComGoogleAsync(ContaGoogle google, CancellationToken ct)
+    {
+        var email = CredenciaisService.NormalizarEmail(google.Email);
+        var usuario = await db.Usuarios.Include(u => u.Estabelecimento).FirstOrDefaultAsync(u => u.GoogleId == google.Id, ct)
+                      ?? await db.Usuarios.Include(u => u.Estabelecimento).FirstOrDefaultAsync(u => u.Email == email, ct);
+
+        if (usuario is null)
+        {
+            usuario = new Usuario { Nome = google.Nome.Trim(), Email = email, Tipo = TipoUsuario.Cliente, SenhaHash = "" };
+            // Sem senha própria: a conta entra pelo Google (ou cria uma senha em "Esqueci minha senha").
+            usuario.SenhaHash = hasher.Gerar(usuario, Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
+            db.Usuarios.Add(usuario);
+        }
+        if (usuario.Tipo is TipoUsuario.Estabelecimento or TipoUsuario.Administrador)
+            throw new RegraDeNegocioException("Essa conta é de loja ou da administração: entre pelo portal da XEPA.");
+        if (usuario.Bloqueado)
+            throw new AcessoNegadoException("Esta conta está suspensa. Fale com o suporte da XEPA.");
+
+        usuario.GoogleId ??= google.Id;
+        return await AbrirSessaoAsync(usuario, ct);
+    }
+
+    /// <summary>Nova senha com o código do e-mail; já devolve a sessão aberta no aparelho.</summary>
+    public async Task<SessaoDto> RedefinirSenhaAsync(RedefinirSenhaRequest request, CancellationToken ct) =>
+        await AbrirSessaoAsync(await recuperacao.RedefinirAsync(request, ct), ct);
 
     /// <summary>Troca o token de renovação por uma sessão nova; o token usado é revogado (rotação).</summary>
     public async Task<SessaoDto> RenovarAsync(string tokenRenovacao, CancellationToken ct)

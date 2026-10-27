@@ -17,6 +17,7 @@ public interface IXepaDb
     DbSet<TokenRenovacao> TokensRenovacao { get; }
     DbSet<Denuncia> Denuncias { get; }
     DbSet<Repasse> Repasses { get; }
+    DbSet<CodigoRecuperacaoSenha> CodigosRecuperacao { get; }
 
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 
@@ -78,6 +79,12 @@ public static class Geo
 public interface IArmazenamento
 {
     Task<string> SalvarAsync(Stream conteudo, string extensao, string contentType, CancellationToken ct);
+}
+
+/// <summary>E-mail transacional (código de recuperação de senha): Azure Communication Services ou só o log em desenvolvimento.</summary>
+public interface IEnvioEmail
+{
+    Task EnviarAsync(string para, string nome, string assunto, string html, string texto, CancellationToken ct);
 }
 
 public class NaoEncontradoException(string mensagem) : Exception(mensagem);

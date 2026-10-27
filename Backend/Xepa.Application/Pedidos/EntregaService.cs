@@ -81,7 +81,7 @@ public class EntregaService(IXepaDb db, IServicoMapas mapas, INotificadorPedidos
 
         var pedidos = await db.Pedidos.AsNoTracking()
             .Where(p => p.TipoEntrega == TipoEntrega.Entrega
-                        && ((eu.Online && p.EntregadorId == null && StatusDisponivel.Contains(p.Status))
+                        && ((eu.Online && p.EntregadorId == null && p.ClienteId != entregadorId && StatusDisponivel.Contains(p.Status))
                             || (p.EntregadorId == entregadorId
                                 && (StatusDisponivel.Contains(p.Status) || p.Status == StatusPedido.SaiuParaEntrega))))
             .OrderBy(p => p.CriadoEm)
@@ -149,6 +149,8 @@ public class EntregaService(IXepaDb db, IServicoMapas mapas, INotificadorPedidos
     {
         if (!await db.Usuarios.AnyAsync(u => u.Id == entregadorId && u.Online, ct))
             throw new RegraDeNegocioException("Fique online para aceitar corridas.");
+        if (await db.Pedidos.AnyAsync(p => p.Id == pedidoId && p.ClienteId == entregadorId, ct))
+            throw new RegraDeNegocioException("Esse pedido é seu: outro entregador leva até você.");
         if (await db.Pedidos.AnyAsync(p => p.EntregadorId == entregadorId && StatusDisponivel.Contains(p.Status)
                                            || p.EntregadorId == entregadorId && p.Status == StatusPedido.SaiuParaEntrega, ct))
             throw new RegraDeNegocioException("Termine a corrida atual antes de aceitar outra.");

@@ -24,6 +24,41 @@ namespace Xepa.Infrastructure.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Xepa.Domain.Entities.CodigoRecuperacaoSenha", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CodigoHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("ExpiraEm")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("Tentativas")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset?>("UsadoEm")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId", "UsadoEm");
+
+                    b.ToTable("CodigosRecuperacaoSenha", (string)null);
+                });
+
             modelBuilder.Entity("Xepa.Domain.Entities.Denuncia", b =>
                 {
                     b.Property<int>("Id")
@@ -809,6 +844,10 @@ namespace Xepa.Infrastructure.Data.Migrations
                         .HasMaxLength(254)
                         .HasColumnType("nvarchar(254)");
 
+                    b.Property<string>("GoogleId")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<string>("ModeloMoto")
                         .HasMaxLength(60)
                         .HasColumnType("nvarchar(60)");
@@ -850,7 +889,22 @@ namespace Xepa.Infrastructure.Data.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
+                    b.HasIndex("GoogleId")
+                        .IsUnique()
+                        .HasFilter("[GoogleId] IS NOT NULL");
+
                     b.ToTable("Usuarios");
+                });
+
+            modelBuilder.Entity("Xepa.Domain.Entities.CodigoRecuperacaoSenha", b =>
+                {
+                    b.HasOne("Xepa.Domain.Entities.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("Xepa.Domain.Entities.Denuncia", b =>

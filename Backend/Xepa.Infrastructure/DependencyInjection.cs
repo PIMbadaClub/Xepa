@@ -1,3 +1,4 @@
+using Azure.Communication.Email;
 using Azure.Storage.Blobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -38,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<OfertaConsultaService>();
         services.AddScoped<OfertaGestaoService>();
         services.AddScoped<CredenciaisService>();
+        services.AddScoped<RecuperacaoSenhaService>();
         services.AddScoped<PedidoService>();
         services.AddScoped<PedidoLojaService>();
         services.AddScoped<EntregaService>();
@@ -84,6 +86,12 @@ public static class DependencyInjection
             services.AddHttpClient<IServicoMapas, AzureMaps>(c => c.BaseAddress = new Uri("https://atlas.microsoft.com/"));
         else
             services.AddSingleton<IServicoMapas>(sp => sp.GetRequiredService<MapasEstimados>());
+
+        var email = config["Email:ConnectionString"];
+        if (!string.IsNullOrWhiteSpace(email))
+            services.AddSingleton<IEnvioEmail>(new EnvioEmailAzure(new EmailClient(email), config["Email:Remetente"]!));
+        else
+            services.AddSingleton<IEnvioEmail, EnvioEmailLog>();
 
         var blob = config["Armazenamento:BlobConnectionString"];
         if (!string.IsNullOrWhiteSpace(blob))
