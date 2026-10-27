@@ -236,7 +236,7 @@ class AuthBotaoPrimario extends StatelessWidget {
   }
 }
 
-/// Botão de login social (Google / Apple).
+/// Botão de login social (Google).
 class AuthBotaoSocial extends StatelessWidget {
   const AuthBotaoSocial({
     super.key,
