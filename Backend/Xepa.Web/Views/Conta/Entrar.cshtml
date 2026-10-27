@@ -22,6 +22,7 @@
             <input asp-for="Senha" autocomplete="current-password" />
             <span asp-validation-for="Senha" class="erro"></span>
         </div>
+        <p style="text-align:right;margin:-6px 0 14px"><a asp-action="EsqueciSenha" asp-route-email="@Model.Email">Esqueci minha senha</a></p>
         <button type="submit" class="botao" style="width:100%">Entrar</button>
         <p class="sub" style="text-align:center;margin:16px 0 0">Tem uma loja? <a asp-action="Cadastrar">Cadastre-se na XEPA</a></p>
     </form>

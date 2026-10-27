@@ -24,8 +24,35 @@ public class EntrarForm
     public string? ReturnUrl { get; set; }
 }
 
+public class EsqueciSenhaForm
+{
+    [Required(ErrorMessage = "Informe o e-mail."), EmailAddress(ErrorMessage = "E-mail inválido.")]
+    [Display(Name = "E-mail")]
+    public string Email { get; set; } = "";
+}
+
+public class RedefinirSenhaForm
+{
+    [Required(ErrorMessage = "Informe o e-mail."), EmailAddress(ErrorMessage = "E-mail inválido.")]
+    [Display(Name = "E-mail")]
+    public string Email { get; set; } = "";
+
+    [Required(ErrorMessage = "Informe o código."), RegularExpression(@"^\d{6}$", ErrorMessage = "O código tem 6 dígitos.")]
+    [Display(Name = "Código do e-mail")]
+    public string Codigo { get; set; } = "";
+
+    [Required(ErrorMessage = "Informe a nova senha."), MinLength(8, ErrorMessage = "Mínimo de 8 caracteres.")]
+    [Display(Name = "Nova senha"), DataType(DataType.Password)]
+    public string NovaSenha { get; set; } = "";
+
+    [Compare(nameof(NovaSenha), ErrorMessage = "As senhas não conferem.")]
+    [Display(Name = "Confirmar nova senha"), DataType(DataType.Password)]
+    public string Confirmacao { get; set; } = "";
+}
+
 [Route("conta")]
-public class ContaController(CredenciaisService credenciais, CadastroLojaService cadastro) : Controller
+public class ContaController(CredenciaisService credenciais, CadastroLojaService cadastro, RecuperacaoSenhaService recuperacao)
+    : Controller
 {
     public const string ClaimEstabelecimentoId = "estabelecimento_id";
     public const string ClaimEstabelecimentoNome = "estabelecimento_nome";
@@ -87,6 +114,54 @@ public class ContaController(CredenciaisService credenciais, CadastroLojaService
 
         TempData["Mensagem"] = "Cadastro recebido! Já dá para preparar as ofertas; elas aparecem no app assim que a equipe da XEPA aprovar a loja.";
         return RedirectToAction(nameof(OfertasController.Index), "Ofertas");
+    }
+
+    /// <summary>"Esqueci minha senha": manda o código por e-mail (a mesma resposta exista ou não a conta).</summary>
+    [HttpGet("esqueci-senha"), AllowAnonymous]
+    public IActionResult EsqueciSenha(string? email) => View(new EsqueciSenhaForm { Email = email ?? "" });
+
+    [HttpPost("esqueci-senha"), AllowAnonymous]
+    public async Task<IActionResult> EsqueciSenha(EsqueciSenhaForm form, CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+            return View(form);
+        await recuperacao.SolicitarAsync(form.Email, ct);
+        return RedirectToAction(nameof(RedefinirSenha), new { email = form.Email.Trim() });
+    }
+
+    [HttpGet("redefinir-senha"), AllowAnonymous]
+    public IActionResult RedefinirSenha(string? email) => View(new RedefinirSenhaForm { Email = email ?? "" });
+
+    [HttpPost("redefinir-senha"), AllowAnonymous]
+    public async Task<IActionResult> RedefinirSenha(RedefinirSenhaForm form, CancellationToken ct)
+    {
+        if (!ModelState.IsValid)
+            return View(form);
+        Usuario usuario;
+        try
+        {
+            usuario = await recuperacao.RedefinirAsync(
+                new RedefinirSenhaRequest { Email = form.Email, Codigo = form.Codigo, NovaSenha = form.NovaSenha }, ct);
+        }
+        catch (RegraDeNegocioException e)
+        {
+            ModelState.AddModelError("", e.Message);
+            return View(form);
+        }
+
+        // Conta do app (cliente ou entregador): a senha muda, mas o acesso é pelo app.
+        if (usuario.Tipo is not (TipoUsuario.Estabelecimento or TipoUsuario.Administrador))
+        {
+            ModelState.Clear();
+            ViewData["Concluido"] = "Senha alterada! Entre no app da XEPA com a nova senha.";
+            return View(new RedefinirSenhaForm { Email = form.Email });
+        }
+
+        await AbrirSessaoAsync(usuario);
+        TempData["Mensagem"] = "Senha alterada. Bem-vindo de volta!";
+        return usuario.Tipo == TipoUsuario.Administrador
+            ? RedirectToAction(nameof(AdminController.Painel), "Admin")
+            : RedirectToAction(nameof(PedidosController.Index), "Pedidos");
     }
 
     private Task AbrirSessaoAsync(Usuario usuario)

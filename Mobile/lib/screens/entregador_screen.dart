@@ -10,6 +10,7 @@ import '../api/api.dart';
 import '../api/localizacao.dart';
 import '../api/tempo_real.dart';
 import '../models/auth.dart';
+import 'abertura_screen.dart';
 import '../theme.dart';
 import '../widgets/mapa_entrega.dart';
 import '../widgets/oferta_widgets.dart';
@@ -278,15 +279,20 @@ class _InicioEntregadorState extends State<_InicioEntregador> {
         Positioned.fill(
           child: _config == null ? const ColoredBox(color: XepaCores.bege) : _mapaInicio(_config!, minha, online ? ofertas : []),
         ),
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
-            child: Row(
-              children: [
+        Positioned(
+          top: 0,
+          left: 0,
+          right: 0,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+              child: Row(
+                children: [
                 _PilulaGanhos(ganhos: _ganhos, onTap: widget.onVerGanhos),
                 const Spacer(),
-                _BotaoMapa(icone: Icons.my_location_rounded, dica: 'Minha posição', onTap: _centralizar),
-              ],
+                  _BotaoMapa(icone: Icons.my_location_rounded, dica: 'Minha posição', onTap: _centralizar),
+                ],
+              ),
             ),
           ),
         ),
@@ -448,6 +454,7 @@ class _PilulaGanhos extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Hoje', style: TextStyle(color: Colors.white.withAlpha(170), fontSize: 11, fontWeight: FontWeight.w700)),

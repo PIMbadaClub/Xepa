@@ -1,0 +1,50 @@
+@model RedefinirSenhaForm
+@{
+    ViewData["Title"] = "Criar nova senha";
+    var concluido = ViewData["Concluido"] as string;
+}
+<section class="cartao login" aria-labelledby="titulo-redefinir">
+    <div class="login-topo">
+        <img src="~/img/tomate.svg" asp-append-version="true" alt="" class="tomate-fundo" />
+        <div class="marca" aria-hidden="true"><span class="selo-marca"><img src="~/img/tomate.svg" asp-append-version="true" alt="" /></span><img src="~/img/xepa-nome-branco.svg" alt="Xepa" class="nome" /></div>
+        <h1 id="titulo-redefinir">Criar nova senha</h1>
+        <p>Se existir uma conta com esse e-mail, o código chega em instantes. Confira também o spam.</p>
+    </div>
+    @if (concluido is not null)
+    {
+        <div style="padding:22px 24px 26px">
+            <p class="aviso" role="status">@concluido</p>
+            <a asp-action="Entrar" class="botao" style="display:block;text-align:center">Voltar para o login</a>
+        </div>
+    }
+    else
+    {
+        <form asp-action="RedefinirSenha" method="post" novalidate>
+            <div asp-validation-summary="ModelOnly"></div>
+            <div class="campo">
+                <label asp-for="Email"></label>
+                <input asp-for="Email" autocomplete="username" />
+                <span asp-validation-for="Email" class="erro"></span>
+            </div>
+            <div class="campo">
+                <label asp-for="Codigo"></label>
+                <input asp-for="Codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000"
+                       style="font-size:22px;letter-spacing:8px;text-align:center;font-weight:800" autofocus />
+                <span asp-validation-for="Codigo" class="erro"></span>
+            </div>
+            <div class="campo">
+                <label asp-for="NovaSenha"></label>
+                <input asp-for="NovaSenha" autocomplete="new-password" />
+                <span class="ajuda">Mínimo de 8 caracteres.</span>
+                <span asp-validation-for="NovaSenha" class="erro"></span>
+            </div>
+            <div class="campo">
+                <label asp-for="Confirmacao"></label>
+                <input asp-for="Confirmacao" autocomplete="new-password" />
+                <span asp-validation-for="Confirmacao" class="erro"></span>
+            </div>
+            <button type="submit" class="botao" style="width:100%">Salvar nova senha</button>
+            <p class="sub" style="text-align:center;margin:16px 0 0">Não chegou? <a asp-action="EsqueciSenha" asp-route-email="@Model.Email">Mandar outro código</a></p>
+        </form>
+    }
+</section>

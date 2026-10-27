@@ -1,0 +1,22 @@
+@model EsqueciSenhaForm
+@{
+    ViewData["Title"] = "Esqueci minha senha";
+}
+<section class="cartao login" aria-labelledby="titulo-esqueci">
+    <div class="login-topo">
+        <img src="~/img/tomate.svg" asp-append-version="true" alt="" class="tomate-fundo" />
+        <div class="marca" aria-hidden="true"><span class="selo-marca"><img src="~/img/tomate.svg" asp-append-version="true" alt="" /></span><img src="~/img/xepa-nome-branco.svg" alt="Xepa" class="nome" /></div>
+        <h1 id="titulo-esqueci">Esqueci minha senha</h1>
+        <p>Informe o e-mail da conta. Vamos mandar um código de 6 dígitos para você criar uma nova senha.</p>
+    </div>
+    <form asp-action="EsqueciSenha" method="post" novalidate>
+        <div asp-validation-summary="ModelOnly"></div>
+        <div class="campo">
+            <label asp-for="Email"></label>
+            <input asp-for="Email" autocomplete="username" autofocus />
+            <span asp-validation-for="Email" class="erro"></span>
+        </div>
+        <button type="submit" class="botao" style="width:100%">Enviar código</button>
+        <p class="sub" style="text-align:center;margin:16px 0 0">Lembrou? <a asp-action="Entrar">Voltar para o login</a></p>
+    </form>
+</section>

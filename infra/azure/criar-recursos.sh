@@ -41,16 +41,22 @@ SQL_USUARIO=xepaadmin
 SQL_SENHA='Xp1!$(aleatorio 18)'
 STORAGE=stxepa$SUFIXO
 MAPAS=maps-xepa-$SUFIXO
+EMAIL_SERVICO=xepa-email-$SUFIXO
+COMUNICACAO=xepa-acs-$SUFIXO
 JWT_CHAVE='$(aleatorio 48)'
 EOF
   source "$ENV_FILE"
   echo "Nomes e segredos gravados em $ENV_FILE (não versionar)."
 fi
 
+# Recursos adicionados depois: xepa.env antigo não tem esses nomes.
+EMAIL_SERVICO=${EMAIL_SERVICO:-xepa-email-$SUFIXO}
+COMUNICACAO=${COMUNICACAO:-xepa-acs-$SUFIXO}
+
 echo "Assinatura: $(tsv account show --query name)"
 
 echo "== Provedores de recursos (assinatura nova vem sem eles)"
-for ns in Microsoft.Sql Microsoft.Web Microsoft.Storage Microsoft.Maps; do
+for ns in Microsoft.Sql Microsoft.Web Microsoft.Storage Microsoft.Maps Microsoft.Communication; do
   az provider register -n "$ns" --wait -o none
 done
 
@@ -93,6 +99,26 @@ else
   echo "   Azure Maps não foi criado; a API segue com a estimativa de rota (Haversine)."
 fi
 
+echo "== E-mail (Azure Communication Services, domínio gerenciado pela Azure)"
+# Código de recuperação de senha. Sem o recurso, a API só registra o e-mail no log.
+EMAIL_CONEXAO=""
+EMAIL_REMETENTE=""
+az extension add --name communication -y -o none 2>/dev/null || true
+if (az communication email show -g "$RG" -n "$EMAIL_SERVICO" -o none 2>/dev/null \
+      || az communication email create -g "$RG" -n "$EMAIL_SERVICO" --location global --data-location Brazil -o none) \
+   && (az communication email domain show -g "$RG" --email-service-name "$EMAIL_SERVICO" --domain-name AzureManagedDomain -o none 2>/dev/null \
+      || az communication email domain create -g "$RG" --email-service-name "$EMAIL_SERVICO" --domain-name AzureManagedDomain \
+           --location global --domain-management AzureManaged -o none); then
+  DOMINIO_EMAIL=$(tsv communication email domain show -g "$RG" --email-service-name "$EMAIL_SERVICO" --domain-name AzureManagedDomain --query id)
+  az communication show -g "$RG" -n "$COMUNICACAO" -o none 2>/dev/null \
+    || az communication create -g "$RG" -n "$COMUNICACAO" --location global --data-location Brazil --linked-domains "$DOMINIO_EMAIL" -o none
+  EMAIL_CONEXAO=$(tsv communication list-key -g "$RG" -n "$COMUNICACAO" --query primaryConnectionString)
+  EMAIL_REMETENTE="DoNotReply@$(tsv communication email domain show -g "$RG" --email-service-name "$EMAIL_SERVICO" \
+    --domain-name AzureManagedDomain --query mailFromSenderDomain)"
+else
+  echo "   E-mail não foi criado; a recuperação de senha só aparece no log da API."
+fi
+
 echo "== App Service (B1 Linux)"
 az appservice plan create -g "$RG" -n "$PLANO" -l "$LOCAL" --sku B1 --is-linux -o none
 for app in "$WEBAPP_API" "$WEBAPP_WEB"; do
@@ -118,6 +144,8 @@ az webapp config appsettings set -g "$RG" -n "$WEBAPP_API" -o none --settings \
   "Cors__Origens__1=$URL_APP" \
   "Mapas__AzureMapsChave=$MAPAS_CHAVE" \
   "Armazenamento__BlobConnectionString=$BLOB" \
+  "Email__ConnectionString=$EMAIL_CONEXAO" \
+  "Email__Remetente=$EMAIL_REMETENTE" \
   "MercadoPago__UrlNotificacao=$URL_API/api/pagamentos/webhook"
 # Mercado Pago: com MP_ACCESS_TOKEN no xepa.env a API usa o gateway real (credenciais de teste); sem ele, o simulado.
 if [[ -n "${MP_ACCESS_TOKEN:-}" ]]; then
@@ -127,6 +155,11 @@ if [[ -n "${MP_ACCESS_TOKEN:-}" ]]; then
     "MercadoPago__UrlRetorno=$URL_APP" \
     "MercadoPago__PixSimulado=true"
 fi
+# Login com Google: com GOOGLE_CLIENT_ID e GOOGLE_CLIENT_SECRET no xepa.env (credencial OAuth "Aplicativo da Web",
+# redirecionamento $URL_API/api/auth/google/retorno). Sem eles o botão do app avisa que não está configurado.
+if [[ -n "${GOOGLE_CLIENT_ID:-}" && -n "${GOOGLE_CLIENT_SECRET:-}" ]]; then
+  az webapp config appsettings set -g "$RG" -n "$WEBAPP_API" -o none --settings     "Google__ClientId=$GOOGLE_CLIENT_ID" "Google__ClientSecret=$GOOGLE_CLIENT_SECRET"
+fi
 az webapp config appsettings set -g "$RG" -n "$WEBAPP_WEB" -o none --settings \
   ASPNETCORE_ENVIRONMENT=Staging \
   "ConnectionStrings__Xepa=$CONEXAO" \
@@ -134,7 +167,9 @@ az webapp config appsettings set -g "$RG" -n "$WEBAPP_WEB" -o none --settings \
   "Api__UrlBase=$URL_API/" \
   "Api__UrlPublica=$URL_API" \
   "Mapas__AzureMapsChave=$MAPAS_CHAVE" \
-  "Armazenamento__BlobConnectionString=$BLOB"
+  "Armazenamento__BlobConnectionString=$BLOB" \
+  "Email__ConnectionString=$EMAIL_CONEXAO" \
+  "Email__Remetente=$EMAIL_REMETENTE"
 
 # Valores derivados, lidos pelo publicar.sh. Guardados junto dos segredos, fora do Git.
 cat > "$DIR/xepa.saida.env" <<EOF

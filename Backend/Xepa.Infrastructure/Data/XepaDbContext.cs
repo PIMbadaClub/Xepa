@@ -17,6 +17,7 @@ public class XepaDbContext(DbContextOptions<XepaDbContext> options) : DbContext(
     public DbSet<PedidoHistoricoStatus> PedidosHistoricoStatus => Set<PedidoHistoricoStatus>();
     public DbSet<Entregador> Entregadores => Set<Entregador>();
     public DbSet<TokenRenovacao> TokensRenovacao => Set<TokenRenovacao>();
+    public DbSet<CodigoRecuperacaoSenha> CodigosRecuperacao => Set<CodigoRecuperacaoSenha>();
     public DbSet<Denuncia> Denuncias => Set<Denuncia>();
     public DbSet<Repasse> Repasses => Set<Repasse>();
 
