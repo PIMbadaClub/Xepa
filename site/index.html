@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>XEPA · comida boa que sobrou, com desconto</title>
+  <meta name="description" content="Sacolas surpresa e pratos do dia das lojas de Limeira com desconto. Baixe o app para Android, use pelo navegador ou acesse o portal da loja.">
+  <meta property="og:title" content="XEPA">
+  <meta property="og:description" content="Comida boa que sobrou nas lojas de Limeira, com desconto. Baixe o app ou use pelo navegador.">
+  <meta property="og:image" content="https://pimbadaclub.github.io/Xepa/icone.png">
+  <meta name="theme-color" content="#FFFAF6">
+  <link rel="icon" href="tomate.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --fundo: #FFFAF6;
+      --bege: #F7EDE4;
+      --tomate: #D7261E;
+      --tomate-escuro: #B71F18;
+      --tomate-claro: #FCE7E4;
+      --verde: #1F7A4D;
+      --verde-claro: #E5F3EA;
+      --texto: #241A16;
+      --texto-2: #7B6E66;
+      --borda: #F0E6DF;
+      --cartao: #FFFFFF;
+      --sombra: 0 4px 16px rgba(60, 30, 20, .06);
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--fundo);
+      color: var(--texto);
+      font: 500 16px/1.5 Manrope, system-ui, -apple-system, "Segoe UI", sans-serif;
+    }
+    a { color: inherit; }
+    .pagina { max-width: 960px; margin: 0 auto; padding: 24px 16px 40px; }
+
+    header { display: flex; align-items: center; gap: 10px; }
+    header .tomate { width: 40px; height: 40px; }
+    header .nome { height: 34px; width: auto; }
+
+    .topo { display: grid; gap: 32px; align-items: center; margin-top: 36px; }
+    h1 { font-size: clamp(30px, 6vw, 46px); line-height: 1.1; letter-spacing: -.02em; margin: 0 0 14px; font-weight: 800; }
+    h1 em { font-style: normal; color: var(--tomate); }
+    .lead { font-size: 18px; color: var(--texto-2); margin: 0; max-width: 34em; }
+
+    .acoes { display: grid; gap: 12px; margin-top: 28px; }
+    .acao {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px 18px; border-radius: 18px; text-decoration: none;
+      background: var(--cartao); border: 1px solid var(--borda); box-shadow: var(--sombra);
+      transition: transform .12s ease, border-color .12s ease;
+    }
+    .acao:hover { transform: translateY(-1px); border-color: #E4D6CC; }
+    .acao:focus-visible { outline: 3px solid var(--tomate); outline-offset: 2px; }
+    .acao .icone {
+      flex: none; width: 44px; height: 44px; border-radius: 12px;
+      display: grid; place-items: center; background: var(--bege); color: var(--texto);
+    }
+    .acao .icone svg { width: 24px; height: 24px; }
+    .acao strong { display: block; font-size: 17px; font-weight: 800; }
+    .acao span.sub { display: block; font-size: 14px; color: var(--texto-2); }
+    .acao .seta { margin-left: auto; color: var(--texto-2); flex: none; }
+    .acao.principal { background: var(--tomate); border-color: var(--tomate); color: #fff; }
+    .acao.principal:hover { background: var(--tomate-escuro); border-color: var(--tomate-escuro); }
+    .acao.principal .icone { background: rgba(255,255,255,.18); color: #fff; }
+    .acao.principal span.sub, .acao.principal .seta { color: rgba(255,255,255,.85); }
+
+    .qr {
+      display: none; text-align: center; padding: 24px; border-radius: 24px;
+      background: var(--cartao); border: 1px solid var(--borda); box-shadow: var(--sombra);
+    }
+    .qr img { width: 200px; height: 200px; display: block; margin: 0 auto 14px; }
+    .qr p { margin: 0; color: var(--texto-2); font-size: 14px; }
+    .qr strong { color: var(--texto); }
+
+    h2 { font-size: 20px; font-weight: 800; margin: 0 0 12px; letter-spacing: -.01em; }
+    .blocos { display: grid; gap: 16px; margin-top: 40px; }
+    .bloco { background: var(--bege); border-radius: 20px; padding: 20px; }
+    .bloco ol { margin: 0; padding-left: 20px; }
+    .bloco li { margin: 6px 0; }
+    .bloco p { margin: 0; color: var(--texto-2); }
+    .aviso { margin-top: 12px; font-size: 14px; color: var(--texto-2); }
+
+    footer {
+      margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--borda);
+      display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 14px; color: var(--texto-2);
+    }
+    footer a { text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+    footer .credito { flex-basis: 100%; }
+
+    @media (min-width: 820px) {
+      .pagina { padding-top: 40px; }
+      .topo { grid-template-columns: 1.25fr .75fr; gap: 56px; }
+      .qr { display: block; }
+      .blocos { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="pagina">
+    <header>
+      <img class="tomate" src="tomate.svg" alt="">
+      <img class="nome" src="xepa-nome.svg" alt="Xepa">
+    </header>
+
+    <main>
+      <section class="topo">
+        <div>
+          <h1>Comida boa que sobrou, <em>com desconto.</em></h1>
+          <p class="lead">Padarias, restaurantes, mercados e feiras de Limeira publicam o que sobrou no fim do dia. Você reserva, paga pelo app e retira na loja ou recebe em casa.</p>
+
+          <nav class="acoes" aria-label="Acessar o XEPA">
+            <a class="acao principal" id="apk" href="https://github.com/PIMbadaClub/Xepa/releases/latest/download/xepa-android.apk">
+              <span class="icone" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+              </span>
+              <span><strong>Baixar para Android</strong><span class="sub">Arquivo APK, versão mais recente</span></span>
+              <span class="seta" aria-hidden="true">→</span>
+            </a>
+            <a class="acao" id="web" href="https://stxepa12b52d.z28.web.core.windows.net">
+              <span class="icone" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18"/></svg>
+              </span>
+              <span><strong>Usar no navegador</strong><span class="sub">No iPhone ou no computador, sem instalar</span></span>
+              <span class="seta" aria-hidden="true">→</span>
+            </a>
+            <a class="acao" href="https://xepa-portal-12b52d.azurewebsites.net">
+              <span class="icone" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10v10h16V10"/><path d="M2 10 4 4h16l2 6"/><path d="M2 10a3.3 3.3 0 0 0 6.7 0a3.3 3.3 0 0 0 6.6 0a3.3 3.3 0 0 0 6.7 0"/><path d="M10 20v-5h4v5"/></svg>
+              </span>
+              <span><strong>Portal da loja</strong><span class="sub">Para lojas parceiras e administração</span></span>
+              <span class="seta" aria-hidden="true">→</span>
+            </a>
+          </nav>
+        </div>
+
+        <aside class="qr" aria-label="Abrir no celular">
+          <!-- QR code desta página, gerado com segno -->
+          <img src="qr.svg" alt="QR code para abrir esta página no celular">
+          <p><strong>Abra no celular</strong><br>Aponte a câmera para baixar o app.</p>
+        </aside>
+      </section>
+
+      <section class="blocos">
+        <div class="bloco">
+          <h2>Como instalar no Android</h2>
+          <ol>
+            <li>Toque em <strong>Baixar para Android</strong>.</li>
+            <li>Abra o arquivo baixado.</li>
+            <li>Se o Android pedir, permita <strong>instalar apps desconhecidos</strong>.</li>
+          </ol>
+          <p class="aviso">Já tem o app? Instale a versão nova por cima, sem desinstalar. <a href="https://github.com/PIMbadaClub/Xepa/releases">Ver todas as versões</a></p>
+        </div>
+        <div class="bloco">
+          <h2>Como funciona</h2>
+          <ol>
+            <li>Veja as ofertas perto de você, no mapa ou na lista.</li>
+            <li>Reserve e pague pelo app, com Pix ou cartão.</li>
+            <li>Retire na loja com o código do pedido ou receba em casa.</li>
+          </ol>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <a href="https://xepa-portal-12b52d.azurewebsites.net/termos">Termos de uso</a>
+      <a href="https://xepa-portal-12b52d.azurewebsites.net/privacidade">Política de privacidade</a>
+      <a href="https://github.com/PIMbadaClub/Xepa">Código no GitHub</a>
+      <span class="credito">XEPA · Projeto Integrado Multidisciplinar IV · Análise e Desenvolvimento de Sistemas · UNIP</span>
+    </footer>
+  </div>
+
+  <script>
+    // No iPhone não há APK: o navegador vira a opção principal.
+    if (/iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+      const apk = document.getElementById('apk');
+      const web = document.getElementById('web');
+      apk.classList.remove('principal');
+      web.classList.add('principal');
+      apk.parentNode.insertBefore(web, apk);
+    }
+  </script>
+</body>
+</html>
