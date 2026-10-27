@@ -59,6 +59,47 @@ namespace Xepa.Infrastructure.Data.Migrations
                     b.ToTable("CodigosRecuperacaoSenha", (string)null);
                 });
 
+            modelBuilder.Entity("Xepa.Domain.Entities.ConversaSuporte", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset?>("AtualizadoEm")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("NaoLidasSuporte")
+                        .HasColumnType("int");
+
+                    b.Property<int>("NaoLidasUsuario")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTimeOffset>("UltimaMensagemEm")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UsuarioId")
+                        .IsUnique();
+
+                    b.HasIndex("Status", "UltimaMensagemEm");
+
+                    b.ToTable("ConversasSuporte");
+                });
+
             modelBuilder.Entity("Xepa.Domain.Entities.Denuncia", b =>
                 {
                     b.Property<int>("Id")
@@ -125,6 +166,43 @@ namespace Xepa.Infrastructure.Data.Migrations
                     b.HasIndex("Status", "CriadoEm");
 
                     b.ToTable("Denuncias");
+                });
+
+            modelBuilder.Entity("Xepa.Domain.Entities.DispositivoPush", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset?>("AtualizadoEm")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Plataforma")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Token")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("nvarchar(512)");
+
+                    b.Property<int>("UsuarioId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Token")
+                        .IsUnique();
+
+                    b.HasIndex("UsuarioId");
+
+                    b.ToTable("DispositivosPush");
                 });
 
             modelBuilder.Entity("Xepa.Domain.Entities.EnderecoUsuario", b =>
@@ -414,6 +492,51 @@ namespace Xepa.Infrastructure.Data.Migrations
                         .IsUnique();
 
                     b.ToTable("HorariosFuncionamento", (string)null);
+                });
+
+            modelBuilder.Entity("Xepa.Domain.Entities.MensagemSuporte", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset?>("AtualizadoEm")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("Automatica")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("AutorId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ConversaId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTimeOffset>("CriadoEm")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<bool>("DoSuporte")
+                        .HasColumnType("bit");
+
+                    b.Property<int?>("PedidoId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Texto")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AutorId");
+
+                    b.HasIndex("PedidoId");
+
+                    b.HasIndex("ConversaId", "Id");
+
+                    b.ToTable("MensagensSuporte");
                 });
 
             modelBuilder.Entity("Xepa.Domain.Entities.Oferta", b =>
@@ -931,6 +1054,9 @@ namespace Xepa.Infrastructure.Data.Migrations
                         .HasMaxLength(254)
                         .HasColumnType("nvarchar(254)");
 
+                    b.Property<DateTimeOffset?>("ExcluidaEm")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("GoogleId")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
@@ -966,6 +1092,9 @@ namespace Xepa.Infrastructure.Data.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
+                    b.Property<DateTimeOffset?>("TermosAceitosEm")
+                        .HasColumnType("datetimeoffset");
+
                     b.Property<string>("Tipo")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -989,6 +1118,17 @@ namespace Xepa.Infrastructure.Data.Migrations
                         .WithMany()
                         .HasForeignKey("UsuarioId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Xepa.Domain.Entities.ConversaSuporte", b =>
+                {
+                    b.HasOne("Xepa.Domain.Entities.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.Navigation("Usuario");
@@ -1026,6 +1166,17 @@ namespace Xepa.Infrastructure.Data.Migrations
                     b.Navigation("Pedido");
 
                     b.Navigation("TratadaPor");
+                });
+
+            modelBuilder.Entity("Xepa.Domain.Entities.DispositivoPush", b =>
+                {
+                    b.HasOne("Xepa.Domain.Entities.Usuario", "Usuario")
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("Xepa.Domain.Entities.EnderecoUsuario", b =>
@@ -1095,6 +1246,31 @@ namespace Xepa.Infrastructure.Data.Migrations
                         .HasForeignKey("EstabelecimentoId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("Xepa.Domain.Entities.MensagemSuporte", b =>
+                {
+                    b.HasOne("Xepa.Domain.Entities.Usuario", "Autor")
+                        .WithMany()
+                        .HasForeignKey("AutorId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Xepa.Domain.Entities.ConversaSuporte", "Conversa")
+                        .WithMany("Mensagens")
+                        .HasForeignKey("ConversaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Xepa.Domain.Entities.Pedido", "Pedido")
+                        .WithMany()
+                        .HasForeignKey("PedidoId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Autor");
+
+                    b.Navigation("Conversa");
+
+                    b.Navigation("Pedido");
                 });
 
             modelBuilder.Entity("Xepa.Domain.Entities.Oferta", b =>
@@ -1210,6 +1386,11 @@ namespace Xepa.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("Usuario");
+                });
+
+            modelBuilder.Entity("Xepa.Domain.Entities.ConversaSuporte", b =>
+                {
+                    b.Navigation("Mensagens");
                 });
 
             modelBuilder.Entity("Xepa.Domain.Entities.Estabelecimento", b =>

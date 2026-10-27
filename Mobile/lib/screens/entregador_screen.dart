@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../api/api.dart';
 import '../api/localizacao.dart';
+import '../api/suporte.dart';
 import '../api/tempo_real.dart';
 import '../models/auth.dart';
 import 'abertura_screen.dart';
@@ -17,6 +18,7 @@ import '../widgets/oferta_widgets.dart';
 import '../widgets/xepa_logo.dart';
 import 'login_screen.dart';
 import 'perfil_screen.dart';
+import 'suporte_screen.dart';
 
 part 'entregador_conta.dart';
 

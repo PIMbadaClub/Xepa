@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart'
-    show defaultTargetPlatform, TargetPlatform;
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show FilteringTextInputFormatter, TextInput;
 
 import 'package:url_launcher/url_launcher.dart';
 
 import '../api/endereco_pagina.dart';
+import '../api/retorno_google.dart';
 import '../models/auth.dart';
 import '../theme.dart';
 import '../widgets/auth_validadores.dart';
@@ -34,14 +38,45 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _erro;
   AutovalidateMode _autovalidar = AutovalidateMode.disabled;
 
+  StreamSubscription<Map<String, String>>? _retornoGoogle;
+
   @override
   void initState() {
     super.initState();
     _erro = widget.erroInicial;
+    _retornoGoogle = RetornoGoogle.chegadas.listen(_voltouDoGoogle);
+  }
+
+  /// Android: o navegador devolveu xepa://login?google=código (ou google_erro) com o app aberto.
+  Future<void> _voltouDoGoogle(Map<String, String> parametros) async {
+    final codigo = parametros['google'];
+    if (codigo == null) {
+      setState(() {
+        _carregando = false;
+        _erro = parametros['google_erro'] ?? 'Login com Google cancelado.';
+      });
+      return;
+    }
+    setState(() {
+      _carregando = true;
+      _erro = null;
+    });
+    try {
+      final usuario = await AuthService.instance.entrarComGoogle(codigo);
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(MaterialPageRoute(builder: (_) => telaInicialPara(usuario)), (_) => false);
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _carregando = false;
+        _erro = e.mensagem;
+      });
+    }
   }
 
   @override
   void dispose() {
+    _retornoGoogle?.cancel();
     _emailCtrl.dispose();
     _senhaCtrl.dispose();
     super.dispose();
@@ -125,7 +160,18 @@ class _LoginScreenState extends State<LoginScreen> {
       _carregando = true;
       _erro = null;
     });
-    await launchUrl(Uri.parse(AuthService.instance.urlLoginGoogle(retorno)), webOnlyWindowName: '_self');
+    final abriu = await launchUrl(
+      Uri.parse(AuthService.instance.urlLoginGoogle(retorno)),
+      mode: kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
+      webOnlyWindowName: '_self',
+    );
+    // No celular o app continua aberto atrás do navegador: libera o botão caso a pessoa volte sem entrar.
+    if (!kIsWeb && mounted) {
+      setState(() {
+        _carregando = false;
+        if (!abriu) _erro = 'Não foi possível abrir o navegador.';
+      });
+    }
   }
 
   @override
@@ -214,7 +260,30 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: () => _loginSocial('Apple'),
                 ),
               ],
-              const SizedBox(height: 28),
+              const SizedBox(height: 10),
+              // Conta nova pelo Google não passa pela caixa de aceite do cadastro.
+              Text.rich(
+                TextSpan(
+                  text: 'Ao continuar com o Google você aceita os ',
+                  children: [
+                    TextSpan(
+                      text: 'termos de uso',
+                      style: const TextStyle(color: XepaCores.tomateEscuro, fontWeight: FontWeight.w700),
+                      recognizer: TapGestureRecognizer()..onTap = () => abrirPaginaLegal('termos'),
+                    ),
+                    const TextSpan(text: ' e a '),
+                    TextSpan(
+                      text: 'política de privacidade',
+                      style: const TextStyle(color: XepaCores.tomateEscuro, fontWeight: FontWeight.w700),
+                      recognizer: TapGestureRecognizer()..onTap = () => abrirPaginaLegal('privacidade'),
+                    ),
+                    const TextSpan(text: '.'),
+                  ],
+                ),
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 12, color: XepaCores.textoSecundario, height: 1.4),
+              ),
+              const SizedBox(height: 22),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

@@ -1,4 +1,5 @@
-﻿@{
+﻿@inject Xepa.Application.Suporte.SuporteService Suporte
+@{
     var logado = User.Identity?.IsAuthenticated == true;
     var admin = User.IsInRole(nameof(TipoUsuario.Administrador));
     var loja = User.FindFirst(ContaController.ClaimEstabelecimentoNome)?.Value;
@@ -8,6 +9,12 @@
 
     string Ativo(string c, string? a = null) => controller == c && (a is null || action == a) ? "ativo" : "";
     string? Atual(string c, string? a = null) => controller == c && (a is null || action == a) ? "page" : null;
+
+    // Bolinha do suporte: conversas esperando a equipe (admin) ou respostas que a loja ainda não viu.
+    var suporteNaoLidas = !logado ? 0
+        : admin ? await Suporte.NaoLidasEquipeAsync(Context.RequestAborted)
+        : loja is not null ? await Suporte.NaoLidasAsync(int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value), Context.RequestAborted)
+        : 0;
 }
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -37,6 +44,7 @@
                     <a asp-controller="Admin" asp-action="Entregadores" class="@Ativo("Admin", "Entregadores")" aria-current="@Atual("Admin", "Entregadores")">@Icones.Svg("entregadores")Entregadores</a>
                     <a asp-controller="Admin" asp-action="Usuarios" class="@(controller == "Admin" && action is "Usuarios" or "Usuario" ? "ativo" : "")">@Icones.Svg("usuarios")Usuários</a>
                     <a asp-controller="Admin" asp-action="Denuncias" class="@Ativo("Admin", "Denuncias")" aria-current="@Atual("Admin", "Denuncias")">@Icones.Svg("denuncias")Denúncias</a>
+                    <a asp-controller="Admin" asp-action="Suporte" class="@(controller == "Admin" && action is "Suporte" or "Conversa" ? "ativo" : "")">@Icones.Svg("suporte")<span>Suporte</span>@if (suporteNaoLidas > 0) { <span class="contador">@suporteNaoLidas</span> }</a>
                     <a asp-controller="Admin" asp-action="Repasses" class="@Ativo("Admin", "Repasses")" aria-current="@Atual("Admin", "Repasses")">@Icones.Svg("repasses")Repasses</a>
                 }
                 else
@@ -47,6 +55,7 @@
                     <a asp-controller="Ofertas" asp-action="Index" class="@Ativo("Ofertas")" aria-current="@Atual("Ofertas")">@Icones.Svg("ofertas")Ofertas</a>
                     <a asp-controller="Impacto" asp-action="Index" class="@Ativo("Impacto")" aria-current="@Atual("Impacto")">@Icones.Svg("impacto")Impacto e vendas</a>
                     <a asp-controller="Loja" asp-action="Configuracoes" class="@Ativo("Loja", "Configuracoes")" aria-current="@Atual("Loja", "Configuracoes")">@Icones.Svg("config")Configurações</a>
+                    <a asp-controller="Loja" asp-action="Suporte" class="@Ativo("Loja", "Suporte")" aria-current="@Atual("Loja", "Suporte")">@Icones.Svg("suporte")<span>Ajuda e suporte</span>@if (suporteNaoLidas > 0) { <span class="contador">@suporteNaoLidas</span> }</a>
                 }
                 <img src="~/img/tomate.svg" asp-append-version="true" alt="" class="tomate-escondido" />
                 <form asp-controller="Conta" asp-action="Sair" method="post" class="sair">

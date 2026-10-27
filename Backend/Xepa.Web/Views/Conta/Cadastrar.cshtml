@@ -94,6 +94,14 @@
             </div>
         </div>
 
+        <div class="campo aceite">
+            <label class="caixa">
+                <input asp-for="AceitouTermos" />
+                <span>Li e aceito os <a asp-controller="Legal" asp-action="Termos" target="_blank">termos de uso</a> e a <a asp-controller="Legal" asp-action="Privacidade" target="_blank">política de privacidade</a> da XEPA.</span>
+            </label>
+            <span asp-validation-for="AceitouTermos" class="erro"></span>
+        </div>
+
         <button type="submit" class="botao" style="width:100%">Enviar cadastro</button>
         <p class="sub" style="text-align:center;margin:16px 0 0">Já tem conta? <a asp-action="Entrar">Entrar</a></p>
     </form>

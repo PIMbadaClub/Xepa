@@ -160,6 +160,14 @@ fi
 if [[ -n "${GOOGLE_CLIENT_ID:-}" && -n "${GOOGLE_CLIENT_SECRET:-}" ]]; then
   az webapp config appsettings set -g "$RG" -n "$WEBAPP_API" -o none --settings     "Google__ClientId=$GOOGLE_CLIENT_ID" "Google__ClientSecret=$GOOGLE_CLIENT_SECRET"
 fi
+# Push no Android: FIREBASE_CONTA_SERVICO no xepa.env com o caminho do JSON da conta de serviço do projeto Firebase
+# (Configurações do projeto > Contas de serviço > Gerar nova chave privada; o arquivo fica fora do Git).
+# API e portal mandam push (o portal quando a loja muda o status ou o suporte responde). Sem ele, o push só vai para o log.
+if [[ -n "${FIREBASE_CONTA_SERVICO:-}" && -f "$FIREBASE_CONTA_SERVICO" ]]; then
+  for app in "$WEBAPP_API" "$WEBAPP_WEB"; do
+    az webapp config appsettings set -g "$RG" -n "$app" -o none --settings "Firebase__ContaServico=$(cat "$FIREBASE_CONTA_SERVICO")"
+  done
+fi
 az webapp config appsettings set -g "$RG" -n "$WEBAPP_WEB" -o none --settings \
   ASPNETCORE_ENVIRONMENT=Staging \
   "ConnectionStrings__Xepa=$CONEXAO" \

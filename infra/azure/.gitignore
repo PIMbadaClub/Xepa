@@ -1,2 +1,4 @@
 xepa.env
 xepa.saida.env
+# Conta de serviço do Firebase (push).
+firebase*.json

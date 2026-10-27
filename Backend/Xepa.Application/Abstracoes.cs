@@ -19,6 +19,9 @@ public interface IXepaDb
     DbSet<Repasse> Repasses { get; }
     DbSet<RepasseEntregador> RepassesEntregadores { get; }
     DbSet<CodigoRecuperacaoSenha> CodigosRecuperacao { get; }
+    DbSet<ConversaSuporte> ConversasSuporte { get; }
+    DbSet<MensagemSuporte> MensagensSuporte { get; }
+    DbSet<DispositivoPush> DispositivosPush { get; }
 
     Task<int> SaveChangesAsync(CancellationToken ct = default);
 
@@ -86,6 +89,14 @@ public interface IArmazenamento
 public interface IEnvioEmail
 {
     Task EnviarAsync(string para, string nome, string assunto, string html, string texto, CancellationToken ct);
+}
+
+/// <summary>Notificação push no celular (Firebase Cloud Messaging) ou só o log quando o Firebase não está configurado.</summary>
+public interface IEnvioPush
+{
+    /// <summary>Envia para os aparelhos e devolve os tokens que o Firebase disse não existirem mais (para apagar).</summary>
+    Task<IReadOnlyCollection<string>> EnviarAsync(IReadOnlyCollection<string> tokens, string titulo, string texto,
+        IReadOnlyDictionary<string, string> dados, CancellationToken ct);
 }
 
 public class NaoEncontradoException(string mensagem) : Exception(mensagem);

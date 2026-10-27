@@ -1,0 +1,130 @@
+@model ChatVm
+@* Chat de suporte: desenhado pelo JavaScript a partir do JSON, que também traz as mensagens novas a cada 4 s. *@
+<div class="chat" id="chat" data-novas="@Model.UrlNovas" data-lado="@(Model.LadoEquipe ? "equipe" : "usuario")">
+    <div class="chat-mensagens" id="chat-mensagens" role="log" aria-live="polite" aria-label="Mensagens">
+        <p class="chat-vazio" id="chat-vazio">@(Model.LadoEquipe ? "Sem mensagens." : "Escreva sua dúvida abaixo. A equipe XEPA responde por aqui.")</p>
+    </div>
+    <form class="chat-envio" id="chat-envio" method="post" action="@Model.UrlEnviar">
+        @Html.AntiForgeryToken()
+        @if (Model.RespostasProntas is { Count: > 0 })
+        {
+            <div class="chat-prontas" aria-label="Respostas prontas">
+                @foreach (var r in Model.RespostasProntas)
+                {
+                    <button type="button" class="chip" data-pronta="@r">@(r.Length > 42 ? r[..40] + "…" : r)</button>
+                }
+            </div>
+        }
+        @if (Model.Anexaveis is { Count: > 0 })
+        {
+            <label class="chat-anexo">
+                @Icones.Svg("pedidos", 16)
+                <select name="pedidoId" aria-label="Anexar um pedido">
+                    <option value="">Sem pedido anexado</option>
+                    @foreach (var p in Model.Anexaveis)
+                    {
+                        <option value="@p.Id">Pedido #@p.Id · @p.Oferta · @Rotulos.Dinheiro(p.ValorTotal) · @Rotulos.Data(p.CriadoEm)</option>
+                    }
+                </select>
+            </label>
+        }
+        <div class="chat-linha">
+            <textarea name="texto" rows="2" maxlength="2000" required placeholder="Escreva uma mensagem" aria-label="Mensagem"></textarea>
+            <button type="submit" class="botao">Enviar</button>
+        </div>
+        <p class="erro" id="chat-erro" role="alert" hidden></p>
+    </form>
+</div>
+<script type="application/json" id="chat-inicial">@Json.Serialize(ChatSuporte.Itens(Model.Mensagens))</script>
+<script>
+(() => {
+    const chat = document.getElementById('chat');
+    const lista = document.getElementById('chat-mensagens');
+    const form = document.getElementById('chat-envio');
+    const erro = document.getElementById('chat-erro');
+    const texto = form.querySelector('textarea');
+    const equipe = chat.dataset.lado === 'equipe';
+    let ultimo = 0;
+
+    function el(tag, classe, conteudo) {
+        const e = document.createElement(tag);
+        if (classe) e.className = classe;
+        if (conteudo != null) e.textContent = conteudo;
+        return e;
+    }
+
+    function desenhar(m) {
+        if (m.id <= ultimo) return;
+        ultimo = m.id;
+        document.getElementById('chat-vazio')?.remove();
+        if (m.automatica) {
+            const aviso = el('div', 'chat-auto');
+            aviso.append(el('span', null, m.texto), el('small', null, m.hora));
+            lista.append(aviso);
+            return;
+        }
+        const minha = equipe === m.doSuporte;
+        const balao = el('div', 'chat-balao' + (minha ? ' minha' : ''));
+        if (!minha || equipe) balao.append(el('strong', null, m.autor));
+        if (m.pedido) {
+            const p = m.pedido;
+            const cartao = el(equipe ? 'a' : 'div', 'chat-pedido');
+            if (equipe) cartao.href = '/admin/pedidos/' + p.id;
+            cartao.append(el('b', null, 'Pedido #' + p.id + ' · ' + p.loja), el('span', null, p.oferta + ' · ' + p.valor),
+                el('span', 'selo ' + p.classe, p.status));
+            balao.append(cartao);
+        }
+        balao.append(el('p', null, m.texto), el('small', null, m.hora));
+        lista.append(balao);
+    }
+
+    function rolar() { lista.scrollTop = lista.scrollHeight; }
+
+    async function buscar() {
+        try {
+            const r = await fetch(chat.dataset.novas + '?depois=' + ultimo, { headers: { 'Accept': 'application/json' } });
+            if (!r.ok) return;
+            const novas = await r.json();
+            novas.forEach(desenhar);
+            if (novas.length) rolar();
+        } catch { /* sem rede: tenta de novo no próximo ciclo */ }
+    }
+
+    JSON.parse(document.getElementById('chat-inicial').textContent).forEach(desenhar);
+    rolar();
+    setInterval(() => { if (document.visibilityState === 'visible') buscar(); }, 4000);
+
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        if (!texto.value.trim()) return;
+        erro.hidden = true;
+        const botao = form.querySelector('button[type=submit]');
+        botao.disabled = true;
+        try {
+            const r = await fetch(form.action, { method: 'POST', body: new FormData(form) });
+            if (r.ok) {
+                texto.value = '';
+                const anexo = form.querySelector('select[name=pedidoId]');
+                if (anexo) anexo.value = '';
+                await buscar();
+                rolar();
+            } else {
+                const corpo = await r.json().catch(() => ({}));
+                erro.textContent = corpo.erro || 'Não foi possível enviar. Tente de novo.';
+                erro.hidden = false;
+            }
+        } finally {
+            botao.disabled = false;
+            texto.focus();
+        }
+    });
+    // Enter envia; Shift+Enter quebra a linha.
+    texto.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); form.requestSubmit(); }
+    });
+    form.querySelectorAll('[data-pronta]').forEach(b => b.addEventListener('click', () => {
+        texto.value = b.dataset.pronta;
+        texto.focus();
+    }));
+})();
+</script>

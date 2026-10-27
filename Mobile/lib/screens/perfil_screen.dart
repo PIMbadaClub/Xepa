@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../api/api.dart';
 import '../api/cidade.dart';
 import '../api/notificacoes.dart';
+import '../api/suporte.dart';
 import '../models/auth.dart';
 import 'abertura_screen.dart';
 import '../models/pedido.dart';
@@ -13,7 +14,9 @@ import '../widgets/endereco_form.dart';
 import '../widgets/oferta_widgets.dart';
 import '../widgets/xepa_logo.dart';
 import 'login_screen.dart';
+import 'cadastro_screen.dart' show abrirPaginaLegal;
 import 'notificacoes_screen.dart';
+import 'suporte_screen.dart';
 
 /// Aba Perfil: dados da conta, impacto, endereços, senha, denúncias, ajuda e sair.
 class PerfilScreen extends StatefulWidget {
@@ -24,6 +27,12 @@ class PerfilScreen extends StatefulWidget {
 }
 
 class _PerfilScreenState extends State<PerfilScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Suporte.instance.atualizarNaoLidas();
+  }
+
   Future<void> _sair() async {
     final confirmar = await showDialog<bool>(
       context: context,
@@ -133,9 +142,20 @@ class _PerfilScreenState extends State<PerfilScreen> {
           ]),
           const _TituloGrupo('Ajuda'),
           _Grupo(children: [
+            ValueListenableBuilder<int>(
+              valueListenable: Suporte.instance.naoLidas,
+              builder: (_, naoLidas, __) => _ItemMenu(
+                icone: Icons.support_agent_rounded,
+                titulo: 'Fale com a XEPA',
+                selo: naoLidas > 0 ? '$naoLidas' : null,
+                onTap: () => _abrir(const SuporteScreen()),
+              ),
+            ),
             _ItemMenu(icone: Icons.flag_outlined, titulo: 'Minhas denúncias', onTap: () => _abrir(const MinhasDenunciasScreen())),
             _ItemMenu(icone: Icons.help_outline_rounded, titulo: 'Como funciona a XEPA', onTap: () => _abrir(const AjudaScreen())),
           ]),
+          const _TituloGrupo('Privacidade'),
+          GrupoPrivacidade.grupo(context),
           const SizedBox(height: 16),
           _Grupo(children: [
             _ItemMenu(icone: Icons.logout_rounded, titulo: 'Sair', cor: XepaCores.tomateEscuro, seta: false, onTap: _sair),
@@ -761,6 +781,144 @@ class _ImpactoClienteState extends State<_ImpactoCliente> {
                 numero('$pedidos', pedidos == 1 ? 'resgate' : 'resgates'),
               ],
             ),
+        ],
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Privacidade (LGPD)
+
+/// Termos, política de privacidade e exclusão da conta; usado no perfil do cliente e no do entregador.
+class GrupoPrivacidade {
+  static Widget grupo(BuildContext context) => _Grupo(children: [
+        _ItemMenu(icone: Icons.description_outlined, titulo: 'Termos de uso', onTap: () => abrirPaginaLegal('termos')),
+        _ItemMenu(icone: Icons.privacy_tip_outlined, titulo: 'Política de privacidade', onTap: () => abrirPaginaLegal('privacidade')),
+        _ItemMenu(
+          icone: Icons.delete_outline_rounded,
+          titulo: 'Excluir minha conta',
+          cor: XepaCores.tomateEscuro,
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ExcluirContaScreen())),
+        ),
+      ]);
+}
+
+/// Exclusão da conta pelo próprio titular (LGPD, art. 18): explica o que some e o que fica, pede a senha e EXCLUIR.
+class ExcluirContaScreen extends StatefulWidget {
+  const ExcluirContaScreen({super.key});
+
+  @override
+  State<ExcluirContaScreen> createState() => _ExcluirContaScreenState();
+}
+
+class _ExcluirContaScreenState extends State<ExcluirContaScreen> {
+  final _senha = TextEditingController();
+  final _confirmacao = TextEditingController();
+  bool _excluindo = false;
+  bool _ocultar = true;
+  String? _erro;
+
+  @override
+  void dispose() {
+    _senha.dispose();
+    _confirmacao.dispose();
+    super.dispose();
+  }
+
+  bool get _confirmado => _confirmacao.text.trim().toUpperCase() == 'EXCLUIR';
+
+  Future<void> _excluir() async {
+    setState(() {
+      _excluindo = true;
+      _erro = null;
+    });
+    try {
+      await AuthService.instance.excluirConta(senha: _senha.text.isEmpty ? null : _senha.text);
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+        MaterialPageRoute(
+            builder: (_) => const LoginScreen(erroInicial: 'Sua conta foi excluída. Obrigado por salvar comida com a gente!')),
+        (_) => false,
+      );
+    } on AuthException catch (e) {
+      if (mounted) {
+        setState(() {
+          _erro = e.mensagem;
+          _excluindo = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const estilo = TextStyle(height: 1.45);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Excluir minha conta')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: XepaCores.tomateClaro, borderRadius: BorderRadius.circular(XepaRaios.cartao)),
+            child: const Text(
+              'Excluir a conta não dá para desfazer. Se quiser só dar um tempo, é só sair da conta.',
+              style: TextStyle(fontWeight: FontWeight.w700, color: XepaCores.tomateEscuro, height: 1.4),
+            ),
+          ),
+          const SizedBox(height: 18),
+          const Text('O que apagamos na hora', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          const SizedBox(height: 6),
+          const Text(
+            '• Nome, e-mail, celular e placa da moto\n'
+            '• Endereços salvos e lojas favoritas\n'
+            '• Conversas com o suporte e celulares cadastrados para notificação\n'
+            '• Todas as sessões abertas',
+            style: estilo,
+          ),
+          const SizedBox(height: 14),
+          const Text('O que fica, sem identificar você', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          const SizedBox(height: 6),
+          const Text(
+            'Os pedidos e pagamentos, pelo prazo que a lei fiscal exige, para a loja e a contabilidade da XEPA.',
+            style: estilo,
+          ),
+          const SizedBox(height: 22),
+          TextField(
+            controller: _senha,
+            obscureText: _ocultar,
+            enabled: !_excluindo,
+            decoration: InputDecoration(
+              labelText: 'Sua senha',
+              helperText: 'Entrou só com o Google e nunca criou senha? Deixe em branco.',
+              helperMaxLines: 2,
+              suffixIcon: IconButton(
+                onPressed: () => setState(() => _ocultar = !_ocultar),
+                icon: Icon(_ocultar ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _confirmacao,
+            enabled: !_excluindo,
+            textCapitalization: TextCapitalization.characters,
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(labelText: 'Digite EXCLUIR para confirmar'),
+          ),
+          if (_erro != null) ...[
+            const SizedBox(height: 14),
+            AuthErroBanner(mensagem: _erro!),
+          ],
+          const SizedBox(height: 20),
+          FilledButton(
+            onPressed: _confirmado && !_excluindo ? _excluir : null,
+            style: FilledButton.styleFrom(backgroundColor: XepaCores.tomateEscuro, minimumSize: const Size.fromHeight(52)),
+            child: _excluindo
+                ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
+                : const Text('Excluir minha conta', style: TextStyle(fontWeight: FontWeight.w800)),
+          ),
         ],
       ),
     );

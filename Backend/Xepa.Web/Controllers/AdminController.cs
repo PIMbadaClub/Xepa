@@ -5,6 +5,7 @@ using Xepa.Application;
 using Xepa.Application.Administracao;
 using Xepa.Application.Contas;
 using Xepa.Application.Indicadores;
+using Xepa.Application.Suporte;
 using Xepa.Domain;
 using Xepa.Domain.Entities;
 
@@ -14,7 +15,7 @@ namespace Xepa.Web.Controllers;
 [Route("admin")]
 [Authorize(Roles = nameof(TipoUsuario.Administrador))]
 public class AdminController(AdminService admin, AdminEntregadoresService entregadores, AdminPedidosService pedidos,
-    AdminCadastrosService cadastros, RecuperacaoSenhaService recuperacao) : Controller
+    AdminCadastrosService cadastros, RecuperacaoSenhaService recuperacao, SuporteService suporte) : Controller
 {
     private int AdministradorId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -190,6 +191,53 @@ public class AdminController(AdminService admin, AdminEntregadoresService entreg
                 ? (suspenderLoja ? "Denúncia procedente; loja suspensa." : "Denúncia marcada como procedente.")
                 : "Denúncia marcada como improcedente.",
             nameof(Denuncias));
+
+    // ---------- Suporte ----------
+
+    [HttpGet("suporte")]
+    public async Task<IActionResult> Suporte(StatusConversa? status, string? busca, CancellationToken ct)
+    {
+        ViewData["Status"] = status;
+        ViewData["Busca"] = busca;
+        return View(await suporte.ListarAsync(status, busca, ct));
+    }
+
+    [HttpGet("suporte/{id:int}")]
+    public async Task<IActionResult> Conversa(int id, CancellationToken ct)
+    {
+        try
+        {
+            return View(await suporte.ObterAdminAsync(id, ct));
+        }
+        catch (NaoEncontradoException)
+        {
+            return NotFound();
+        }
+    }
+
+    /// <summary>Mensagens novas da conversa aberta (a tela consulta a cada poucos segundos).</summary>
+    [HttpGet("suporte/{id:int}/mensagens")]
+    public async Task<IActionResult> MensagensConversa(int id, int depois, CancellationToken ct) =>
+        Json(ChatSuporte.Itens(await suporte.NovasAdminAsync(id, depois, ct)));
+
+    [HttpPost("suporte/{id:int}/responder")]
+    public async Task<IActionResult> ResponderConversa(int id, string? texto, CancellationToken ct)
+    {
+        try
+        {
+            await suporte.ResponderAsync(id, AdministradorId, texto ?? "", ct);
+            return NoContent();
+        }
+        catch (RegraDeNegocioException e)
+        {
+            return BadRequest(new { erro = e.Message });
+        }
+    }
+
+    [HttpPost("suporte/{id:int}/resolver")]
+    public Task<IActionResult> ResolverConversa(int id, CancellationToken ct) =>
+        Executar(() => suporte.ResolverAsync(id, ct), "Atendimento encerrado. Se o usuário escrever de novo, a conversa reabre.",
+            nameof(Suporte));
 
     // ---------- Repasses ----------
 

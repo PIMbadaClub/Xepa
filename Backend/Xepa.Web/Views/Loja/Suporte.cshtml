@@ -1,0 +1,29 @@
+@model ConversaSuporteDto
+@{
+    ViewData["Title"] = "Ajuda e suporte";
+    var pedidos = (IReadOnlyList<PedidoAnexoDto>)ViewData["Pedidos"]!;
+    (string Pergunta, string Resposta)[] duvidas =
+    [
+        ("Quando recebo o repasse das vendas?", "A XEPA fecha o repasse dos pedidos entregues e paga na conta cadastrada. Você acompanha o que está a receber em Impacto e vendas."),
+        ("Como pauso a loja nas férias?", "Em Configurações › Pausar a loja. As ofertas somem do app sem apagar nada e os pedidos em andamento continuam."),
+        ("O cliente não veio retirar. E agora?", "Mande uma mensagem aqui com o pedido anexado. A equipe fala com o cliente e decide o estorno ou o cancelamento."),
+        ("Posso mudar o CNPJ ou o e-mail de acesso?", "Esses dados só a equipe da XEPA altera, depois de conferir os documentos. É só pedir por aqui.")
+    ];
+}
+<h1>Ajuda e suporte</h1>
+<p class="sub">Fale com a equipe da XEPA. Atendimento das 8h às 22h@(Model.AtendimentoAgora ? " · estamos online agora" : " · fora do horário agora, respondemos logo cedo").</p>
+
+<div class="chat-tela">
+    <partial name="_Chat" model="new ChatVm(Model.Mensagens, Url.Action(nameof(LojaController.MensagensSuporte))!,
+        Url.Action(nameof(LojaController.EnviarSuporte))!, false, pedidos)" />
+    <aside class="cartao chat-lado" aria-labelledby="titulo-duvidas">
+        <h2 id="titulo-duvidas" class="secao" style="margin-top:0">Dúvidas frequentes</h2>
+        @foreach (var d in duvidas)
+        {
+            <details class="duvida">
+                <summary>@d.Pergunta</summary>
+                <p>@d.Resposta</p>
+            </details>
+        }
+    </aside>
+</div>

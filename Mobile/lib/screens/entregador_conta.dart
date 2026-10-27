@@ -58,6 +58,7 @@ class _GanhosEntregadorState extends State<_GanhosEntregador> {
   void initState() {
     super.initState();
     _carregar();
+    Suporte.instance.atualizarNaoLidas();
   }
 
   @override
@@ -587,6 +588,22 @@ class _PerfilEntregadorState extends State<_PerfilEntregador> {
                           onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AjudaScreen())),
                         ),
                         const Divider(height: 1),
+                        ValueListenableBuilder<int>(
+                          valueListenable: Suporte.instance.naoLidas,
+                          builder: (_, naoLidas, __) => ListTile(
+                            leading: const Icon(Icons.support_agent_rounded),
+                            title: const Text('Fale com a XEPA', style: TextStyle(fontWeight: FontWeight.w700)),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (naoLidas > 0) Badge(label: Text('$naoLidas'), backgroundColor: XepaCores.tomate),
+                                const Icon(Icons.chevron_right_rounded),
+                              ],
+                            ),
+                            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const SuporteScreen())),
+                          ),
+                        ),
+                        const Divider(height: 1),
                         ListTile(
                           leading: const Icon(Icons.logout_rounded, color: XepaCores.tomateEscuro),
                           title: const Text('Sair', style: TextStyle(fontWeight: FontWeight.w700, color: XepaCores.tomateEscuro)),
@@ -595,6 +612,8 @@ class _PerfilEntregadorState extends State<_PerfilEntregador> {
                       ],
                     ),
                   ),
+                  const _Titulo('Privacidade'),
+                  GrupoPrivacidade.grupo(context),
                   const SizedBox(height: 18),
                   const Center(child: XepaMarca(tamanho: 18)),
                 ],

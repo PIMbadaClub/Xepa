@@ -26,6 +26,7 @@ public static class Icones
         ["repetir"] = """<path d="M4 12a8 8 0 0 1 13.7-5.7L20 8.5"/><path d="M20 4v4.5h-4.5"/><path d="M20 12a8 8 0 0 1-13.7 5.7L4 15.5"/><path d="M4 20v-4.5h4.5"/>""",
         ["pausa"] = """<circle cx="12" cy="12" r="8.5"/><path d="M10 9v6M14 9v6"/>""",
         ["mais"] = """<path d="M12 5v14M5 12h14"/>""",
+        ["suporte"] = """<path d="M20.5 12a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1-4.4A8.5 8.5 0 1 1 20.5 12Z"/><path d="M8.5 10.5h7M8.5 13.5h4.5"/>""",
         ["email"] = """<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6 8.5 7 8.5-7"/>""",
     };
 

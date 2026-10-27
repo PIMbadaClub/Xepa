@@ -96,8 +96,13 @@ public class AuthController(ContaService contas) : ControllerBase
         return $"{(local ? Request.Scheme : "https")}://{Request.Host}/api/auth/google/retorno";
     }
 
+    /// <summary>Retorno do app Android: o navegador abre xepa://login e o sistema devolve o código ao app.</summary>
+    public const string RetornoAppAndroid = "xepa://login";
+
     private static bool RetornoPermitido(string retorno, IConfiguration config)
     {
+        if (retorno == RetornoAppAndroid)
+            return true;
         if (!Uri.TryCreate(retorno, UriKind.Absolute, out var uri) || uri.Scheme is not ("https" or "http"))
             return false;
         var origem = uri.GetLeftPart(UriPartial.Authority);
@@ -130,7 +135,7 @@ public class AuthController(ContaService contas) : ControllerBase
 [Route("api/usuarios")]
 [Authorize]
 public class UsuariosController(ContaService contas, IndicadoresService indicadores, NotificacaoService notificacoes,
-    DenunciaService denuncias) : ControllerBase
+    DenunciaService denuncias, PushService push, ExclusaoContaService exclusao) : ControllerBase
 {
     [HttpGet("me")]
     public Task<UsuarioDto> Me(CancellationToken ct) => contas.ObterAsync(User.UsuarioId(), ct);
@@ -159,6 +164,31 @@ public class UsuariosController(ContaService contas, IndicadoresService indicado
     public async Task<IActionResult> MarcarLidas(CancellationToken ct)
     {
         await notificacoes.MarcarLidasAsync(User.UsuarioId(), ct);
+        return NoContent();
+    }
+
+    /// <summary>Registra o celular para receber notificações push (token do Firebase). Chamado a cada entrada no app.</summary>
+    [HttpPost("me/dispositivos")]
+    public async Task<IActionResult> RegistrarDispositivo(RegistrarDispositivoRequest request, CancellationToken ct)
+    {
+        await push.RegistrarAsync(User.UsuarioId(), request, ct);
+        return NoContent();
+    }
+
+    /// <summary>Para de mandar push para este celular (ao sair da conta).</summary>
+    [HttpDelete("me/dispositivos/{token}")]
+    public async Task<IActionResult> RemoverDispositivo(string token, CancellationToken ct)
+    {
+        await push.RemoverAsync(User.UsuarioId(), token, ct);
+        return NoContent();
+    }
+
+    /// <summary>Exclui a conta (LGPD): apaga os dados pessoais e encerra todas as sessões. Não dá para desfazer.</summary>
+    [HttpPost("me/excluir")]
+    [Authorize(Roles = PapeisCliente.Todos)]
+    public async Task<IActionResult> Excluir(ExcluirContaRequest request, CancellationToken ct)
+    {
+        await exclusao.ExcluirAsync(User.UsuarioId(), request, ct);
         return NoContent();
     }
 

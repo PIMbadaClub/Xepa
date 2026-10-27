@@ -46,6 +46,7 @@ public class ContaService(IXepaDb db, IHasherSenha hasher, CredenciaisService cr
             Tipo = request.Tipo,
             Placa = request.Tipo == TipoUsuario.Entregador ? request.Placa!.Replace("-", "").ToUpperInvariant() : null,
             CadastroEntregador = request.Tipo == TipoUsuario.Entregador ? StatusCadastro.Pendente : null,
+            TermosAceitosEm = DateTimeOffset.UtcNow,
             SenhaHash = ""
         };
         usuario.SenhaHash = hasher.Gerar(usuario, request.Senha);
@@ -74,7 +75,11 @@ public class ContaService(IXepaDb db, IHasherSenha hasher, CredenciaisService cr
 
         if (usuario is null)
         {
-            usuario = new Usuario { Nome = google.Nome.Trim(), Email = email, Tipo = TipoUsuario.Cliente, SenhaHash = "" };
+            // O botão do Google avisa que continuar é aceitar os termos e a política de privacidade.
+            usuario = new Usuario
+            {
+                Nome = google.Nome.Trim(), Email = email, Tipo = TipoUsuario.Cliente, SenhaHash = "", TermosAceitosEm = DateTimeOffset.UtcNow
+            };
             // Sem senha própria: a conta entra pelo Google (ou cria uma senha em "Esqueci minha senha").
             usuario.SenhaHash = hasher.Gerar(usuario, Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)));
             db.Usuarios.Add(usuario);
