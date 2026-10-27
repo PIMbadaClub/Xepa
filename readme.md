@@ -1,5 +1,7 @@
 # 🍽️ XEPA - Combate ao Desperdício de Alimentos
 
+**👉 Acesse o XEPA: https://pimbadaclub.github.io/Xepa/** (app para Android, versão no navegador e portal da loja)
+
 O **XEPA** é um aplicativo mobile que conecta restaurantes e consumidores para reduzir o desperdício de comida. Os estabelecimentos disponibilizam refeições excedentes, que seriam descartadas, e os usuários podem adquiri-las com desconto e recebê-las por delivery diretamente pelo app.
 
 A proposta une impacto ambiental e social: menos comida no lixo, mais economia para o consumidor e uma nova fonte de receita para os restaurantes.
