@@ -140,8 +140,14 @@ class _InicioEntregadorState extends State<_InicioEntregador> {
     TempoReal.instance.conectar();
     _avisos = TempoReal.instance.pedidoAlterado.listen((_) => _carregar());
     // A posição muda enquanto o entregador anda: recalcula as distâncias de tempos em tempos.
-    _timer = Timer.periodic(const Duration(seconds: 30), (_) => _carregar());
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      Localizacao.atual(); // atualiza a última posição para a próxima consulta, sem segurar esta
+      _carregar();
+    });
     _carregar();
+    Localizacao.atual().then((p) {
+      if (p != null && mounted) _carregar();
+    });
   }
 
   @override
@@ -152,7 +158,8 @@ class _InicioEntregadorState extends State<_InicioEntregador> {
   }
 
   Future<void> _carregar() async {
-    final gps = await Localizacao.atual();
+    // Não espera o GPS: o pedido de permissão pode ficar sem resposta e travar a tela.
+    final gps = Localizacao.ultima;
     try {
       if (_online == null || _cadastro != 'Aprovado') {
         final perfil = await Api.instance.get<Map<String, dynamic>>('/api/entregador/perfil');
@@ -966,7 +973,8 @@ class _CorridaScreenState extends State<CorridaScreen> {
   }
 
   Future<void> _carregar() async {
-    final gps = await Localizacao.atual();
+    // Não espera o GPS: o pedido de permissão pode ficar sem resposta e travar a tela.
+    final gps = Localizacao.ultima;
     try {
       final lista = await Api.instance.get<List<dynamic>>('/api/entregador/corridas', query: {
         if (gps != null) 'latitude': gps.latitude,

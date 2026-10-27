@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.EntityFrameworkCore;
+using Xepa.Application.Ofertas;
 using Xepa.Application.Pagamentos;
 using Xepa.Domain;
 using Xepa.Domain.Entities;
@@ -25,17 +26,23 @@ public class ConfirmarRetiradaRequest
 /// <summary>Pedidos recebidos pelo estabelecimento: aceitar, recusar, avançar e confirmar a retirada.</summary>
 public class PedidoLojaService(IXepaDb db, PagamentoService pagamentos, INotificadorPedidos notificador)
 {
-    /// <summary>Pedidos pagos ainda em andamento e os concluídos nas últimas 24 horas.</summary>
+    /// <summary>
+    /// Pedidos pagos ainda em andamento e os concluídos hoje (dia de Brasília, pela hora da conclusão),
+    /// o mesmo "hoje" do painel da loja.
+    /// </summary>
     public async Task<IReadOnlyList<PedidoLojaDto>> ListarAsync(int estabelecimentoId, CancellationToken ct)
     {
-        var desde = DateTimeOffset.UtcNow.AddHours(-24);
+        var agoraLocal = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, OfertaGestaoService.FusoBrasilia);
+        var desde = new DateTimeOffset(agoraLocal.Date, agoraLocal.Offset);
         var abertos = new[] { StatusPedido.Pendente, StatusPedido.Confirmado, StatusPedido.EmPreparo,
             StatusPedido.ProntoParaRetirada, StatusPedido.SaiuParaEntrega };
 
         var pedidos = await db.Pedidos.AsNoTracking()
             .Where(p => p.Oferta.EstabelecimentoId == estabelecimentoId
                         && (abertos.Contains(p.Status)
-                            || ((p.Status == StatusPedido.Entregue || p.Status == StatusPedido.Cancelado) && p.CriadoEm >= desde
+                            || ((p.Status == StatusPedido.Entregue || p.Status == StatusPedido.Cancelado)
+                                && p.Historico.Any(h => (h.StatusNovo == StatusPedido.Entregue || h.StatusNovo == StatusPedido.Cancelado)
+                                                        && h.AlteradoEm >= desde)
                                 && p.Historico.Any(h => h.StatusAnterior == StatusPedido.Pendente || h.StatusNovo == StatusPedido.Entregue))))
             .OrderBy(p => p.CriadoEm)
             .Select(p => new

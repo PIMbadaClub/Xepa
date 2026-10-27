@@ -53,4 +53,45 @@ public static class Funcionamento
         }
         return new SituacaoFuncionamento(true, false, "Fechada");
     }
+
+    /// <summary>
+    /// Confere se a janela de retirada (horário de Brasília) cabe num horário de funcionamento do dia:
+    /// o cliente não pode pagar contando com uma retirada depois que a loja fechou. Loja sem horário informado não é conferida.
+    /// </summary>
+    public static void ValidarRetirada(IReadOnlyCollection<HorarioFuncionamento> horarios, DateTime inicioLocal, DateTime fimLocal)
+    {
+        if (horarios.Count == 0)
+            return;
+
+        var doDia = horarios.Where(h => h.DiaSemana == inicioLocal.DayOfWeek).OrderBy(h => h.Abre).ToList();
+        if (doDia.Count == 0)
+            throw new RegraDeNegocioException($"A loja não abre {NomeDiaComArtigo(inicioLocal.DayOfWeek)}: escolha outro dia para a retirada.");
+
+        var inicio = TimeOnly.FromDateTime(inicioLocal);
+        var fim = TimeOnly.FromDateTime(fimLocal);
+        var cabe = fimLocal.Date == inicioLocal.Date && doDia.Any(h => inicio >= h.Abre && fim <= h.Fecha);
+        if (!cabe)
+        {
+            var faixas = string.Join(" e ", doDia.Select(h => $"das {h.Abre:HH\\:mm} às {h.Fecha:HH\\:mm}"));
+            throw new RegraDeNegocioException(
+                $"A retirada precisa ficar dentro do horário da loja {NomeDiaComArtigo(inicioLocal.DayOfWeek)}: {faixas}.");
+        }
+    }
+
+    /// <summary>Encaixa a janela no horário do dia (fim cortado no fechamento); null se não houver como encaixar.</summary>
+    public static (DateTime Inicio, DateTime Fim)? Encaixar(IReadOnlyCollection<HorarioFuncionamento> horarios, DateTime inicioLocal, DateTime fimLocal)
+    {
+        if (horarios.Count == 0)
+            return (inicioLocal, fimLocal);
+        var inicio = TimeOnly.FromDateTime(inicioLocal);
+        var faixa = horarios.Where(h => h.DiaSemana == inicioLocal.DayOfWeek).FirstOrDefault(h => h.Contem(inicio));
+        if (faixa is null)
+            return null;
+        var fechamento = inicioLocal.Date + faixa.Fecha.ToTimeSpan();
+        var fim = fimLocal < fechamento ? fimLocal : fechamento;
+        return fim > inicioLocal ? (inicioLocal, fim) : null;
+    }
+
+    private static string NomeDiaComArtigo(DayOfWeek dia) =>
+        dia is DayOfWeek.Saturday or DayOfWeek.Sunday ? $"no {NomeDia(dia)}" : $"na {NomeDia(dia)}";
 }

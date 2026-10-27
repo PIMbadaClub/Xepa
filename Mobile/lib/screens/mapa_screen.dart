@@ -44,6 +44,10 @@ class _MapaScreenState extends State<MapaScreen> {
       if (mounted) setState(() => _config = c);
     });
     _carregar();
+    // O mapa abre sem esperar o GPS; com a posição, recarrega para marcar "você está aqui" e ordenar por distância.
+    Localizacao.atual().then((p) {
+      if (p != null && mounted) _carregar();
+    });
   }
 
   @override
@@ -53,7 +57,7 @@ class _MapaScreenState extends State<MapaScreen> {
   }
 
   Future<void> _carregar() async {
-    final posicao = await Localizacao.atual();
+    final posicao = Localizacao.ultima;
     final cidade = await CidadeCliente.instance.cidade();
     final casa = await CidadeCliente.instance.ponto();
     try {

@@ -16,8 +16,21 @@ public class PedidosController(ApiXepa api, IConfiguration config) : Controller
     {
         // O navegador pode precisar de outro endereço que o servidor (ex.: docker compose).
         ViewData["UrlApi"] = (config["Api:UrlPublica"] ?? api.UrlBase.ToString()).TrimEnd('/');
-        return View(await api.PedidosDaLojaAsync(ct));
+        var pedidos = await api.PedidosDaLojaAsync(ct);
+        ViewData["Versao"] = Versao(pedidos);
+        return View(pedidos);
     }
+
+    /// <summary>
+    /// Resumo do quadro (pedidos e status). A tela compara com o que mostra ao conectar o tempo real e de tempos
+    /// em tempos: um aviso que chega enquanto a página recarrega se perderia e o quadro ficaria parado.
+    /// </summary>
+    [HttpGet("versao")]
+    public async Task<IActionResult> VersaoAtual(CancellationToken ct) =>
+        Json(new { versao = Versao(await api.PedidosDaLojaAsync(ct)) });
+
+    private static string Versao(IEnumerable<Application.Pedidos.PedidoLojaDto> pedidos) =>
+        string.Join(",", pedidos.OrderBy(p => p.Id).Select(p => $"{p.Id}:{p.Status}"));
 
     /// <summary>Token novo para o SignalR do navegador (o de acesso dura 15 minutos).</summary>
     [HttpGet("token")]

@@ -119,6 +119,10 @@ public class OfertaGestaoService(IXepaDb db, IArmazenamento armazenamento)
         oferta.RetiradaFim = DeBrasilia(form.RetiradaFim);
         oferta.Validar();
 
+        var horarios = await db.Estabelecimentos.AsNoTracking().Where(e => e.Id == oferta.EstabelecimentoId)
+            .SelectMany(e => e.Horarios).ToListAsync(ct);
+        Funcionamento.ValidarRetirada(horarios, form.RetiradaInicio, form.RetiradaFim);
+
         if (foto is not null)
             oferta.FotoUrl = await Fotos.SalvarAsync(armazenamento, foto, ct);
     }
