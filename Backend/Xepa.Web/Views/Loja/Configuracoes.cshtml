@@ -1,0 +1,220 @@
+@model ConfiguracoesLojaVm
+@{
+    ViewData["Title"] = "Configurações";
+    var l = Model.Loja;
+    var nomesDias = new Dictionary<DayOfWeek, string>
+    {
+        [DayOfWeek.Monday] = "Segunda", [DayOfWeek.Tuesday] = "Terça", [DayOfWeek.Wednesday] = "Quarta", [DayOfWeek.Thursday] = "Quinta",
+        [DayOfWeek.Friday] = "Sexta", [DayOfWeek.Saturday] = "Sábado", [DayOfWeek.Sunday] = "Domingo"
+    };
+    var pausada = Model.Pausada;
+}
+<h1>Configurações da loja</h1>
+<p class="sub">O que você muda aqui aparece para os clientes no app da XEPA.</p>
+
+<nav class="filtros config-nav" aria-label="Seções">
+    <a href="#dados">Dados e endereço</a>
+    <a href="#horarios">Horário de funcionamento</a>
+    <a href="#funcionamento">Pausar a loja</a>
+    <a href="#senha">Senha</a>
+</nav>
+
+<section id="dados" class="cartao form-edicao secao-config">
+    <h2>@Icones.Svg("lojas", 18)Dados da loja</h2>
+    <form asp-action="SalvarDados" method="post" enctype="multipart/form-data" novalidate>
+        <div asp-validation-summary="ModelOnly"></div>
+        <div class="logo-linha">
+            <div class="logo-preview" id="logo-preview">
+                @if (Model.LogoUrl is not null)
+                {
+                    <img src="@Model.LogoUrl" alt="" />
+                }
+                else
+                {
+                    <span class="miniatura-vazia"></span>
+                }
+            </div>
+            <div>
+                <label for="logo" class="rotulo-forte">Logotipo</label>
+                <input id="logo" name="logo" type="file" accept="image/jpeg,image/png,image/webp" />
+                <span class="ajuda">JPG, PNG ou WebP, até 5 MB. Aparece no app ao lado do nome da loja.</span>
+            </div>
+        </div>
+        <div class="grade">
+            <div class="campo">
+                <label asp-for="Dados.Nome"></label>
+                <input asp-for="Dados.Nome" />
+                <span asp-validation-for="Dados.Nome" class="erro"></span>
+            </div>
+            <div class="campo">
+                <label asp-for="Dados.Categoria"></label>
+                <select asp-for="Dados.Categoria">
+                    @foreach (var c in Enum.GetValues<CategoriaEstabelecimento>())
+                    {
+                        <option value="@c" selected="@(Model.Dados.Categoria == c)">@Rotulos.Categoria(c)</option>
+                    }
+                </select>
+            </div>
+            <div class="campo">
+                <label asp-for="Dados.Telefone"></label>
+                <input asp-for="Dados.Telefone" type="tel" placeholder="(19) 99999-9999" />
+                <span asp-validation-for="Dados.Telefone" class="erro"></span>
+            </div>
+            <div class="campo">
+                <label>CNPJ</label>
+                <input value="@(l.Cnpj ?? "não informado")" disabled />
+                <span class="ajuda">Para mudar, fale com o suporte da XEPA.</span>
+            </div>
+        </div>
+        <div class="campo">
+            <label asp-for="Dados.Descricao"></label>
+            <textarea asp-for="Dados.Descricao" rows="3" maxlength="500" placeholder="Ex.: Padaria artesanal no centro de Limeira, com pães de fermentação natural."></textarea>
+        </div>
+
+        <h3 id="endereco" class="subsecao">Endereço de retirada</h3>
+        @if (l.Endereco.Latitude is null) { <p><span class="selo sacola">A loja ainda não foi localizada no mapa</span></p> }
+        <div class="grade">
+            <div class="campo">
+                <label asp-for="Dados.Cep"></label>
+                <input asp-for="Dados.Cep" inputmode="numeric" />
+                <span asp-validation-for="Dados.Cep" class="erro"></span>
+            </div>
+            <div class="campo">
+                <label asp-for="Dados.Logradouro"></label>
+                <input asp-for="Dados.Logradouro" />
+                <span asp-validation-for="Dados.Logradouro" class="erro"></span>
+            </div>
+            <div class="campo">
+                <label asp-for="Dados.Numero"></label>
+                <input asp-for="Dados.Numero" />
+                <span asp-validation-for="Dados.Numero" class="erro"></span>
+            </div>
+            <div class="campo">
+                <label asp-for="Dados.Complemento"></label>
+                <input asp-for="Dados.Complemento" />
+            </div>
+            <div class="campo">
+                <label asp-for="Dados.Bairro"></label>
+                <input asp-for="Dados.Bairro" />
+                <span asp-validation-for="Dados.Bairro" class="erro"></span>
+            </div>
+            <div class="campo">
+                <label asp-for="Dados.Cidade"></label>
+                <input asp-for="Dados.Cidade" />
+                <span asp-validation-for="Dados.Cidade" class="erro"></span>
+            </div>
+            <div class="campo">
+                <label asp-for="Dados.Uf"></label>
+                <input asp-for="Dados.Uf" maxlength="2" />
+                <span asp-validation-for="Dados.Uf" class="erro"></span>
+            </div>
+        </div>
+        <p class="mini" style="margin-bottom:12px">Mudou o endereço? A loja é localizada de novo no mapa quando você salvar.</p>
+        <input type="hidden" asp-for="Dados.Cnpj" />
+        <button type="submit" class="botao">Salvar dados</button>
+    </form>
+</section>
+
+<section id="horarios" class="cartao secao-config">
+    <h2>@Icones.Svg("relogio", 18)Horário de funcionamento</h2>
+    <p class="mini" style="font-size:14px">Os clientes veem no app se a loja está aberta agora e até que horas. Ele também sugere a janela de retirada quando você cria uma oferta (as duas últimas horas do dia).</p>
+    <form asp-action="SalvarHorarios" method="post">
+        <table class="horarios">
+            <thead><tr><th scope="col">Dia</th><th scope="col">Abre?</th><th scope="col">Das</th><th scope="col">Às</th></tr></thead>
+            <tbody>
+                @for (var i = 0; i < Model.Horarios.Count; i++)
+                {
+                    var h = Model.Horarios[i];
+                    <tr class="@(h.Aberto ? "" : "dia-fechado")" data-dia="@i">
+                        <td>
+                            <strong>@nomesDias[h.Dia]</strong>
+                            <input type="hidden" name="Horarios[@i].Dia" value="@((int)h.Dia)" />
+                        </td>
+                        <td>
+                            <label class="interruptor">
+                                <input type="checkbox" name="Horarios[@i].Aberto" value="true" checked="@h.Aberto" data-aberto />
+                                <span>@(h.Aberto ? "Aberto" : "Fechado")</span>
+                            </label>
+                        </td>
+                        <td><input type="time" name="Horarios[@i].Abre" value="@h.Abre" aria-label="@nomesDias[h.Dia]: abre às" /></td>
+                        <td><input type="time" name="Horarios[@i].Fecha" value="@h.Fecha" aria-label="@nomesDias[h.Dia]: fecha às" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+        <div class="acoes-detalhe">
+            <button type="button" class="botao secundario pequeno" data-copiar="uteis">Copiar segunda para terça a sexta</button>
+            <button type="button" class="botao secundario pequeno" data-copiar="todos">Mesmo horário todos os dias</button>
+            <button type="submit" class="botao pequeno">Salvar horário</button>
+        </div>
+    </form>
+</section>
+
+<section id="funcionamento" class="cartao secao-config">
+    <h2>@Icones.Svg("pausa", 18)Pausar a loja</h2>
+    <p style="margin-top:0">Vai fechar uns dias (férias, reforma, falta de produto)? Pausar tira <strong>todas as suas ofertas do app</strong> sem apagar nada. Os pedidos que já estavam em andamento continuam normalmente. Quando voltar, é só reabrir.</p>
+    <form asp-action="Pausa" method="post">
+        <input type="hidden" name="voltar" value="Configuracoes" />
+        @if (pausada)
+        {
+            <input type="hidden" name="pausada" value="false" />
+            <p><span class="chip-status pausada">Loja pausada agora</span></p>
+            <button class="botao" type="submit">Reabrir a loja</button>
+        }
+        else
+        {
+            <input type="hidden" name="pausada" value="true" />
+            <button class="botao secundario" type="submit">Pausar a loja</button>
+        }
+    </form>
+</section>
+
+<section id="senha" class="cartao form-edicao secao-config">
+    <h2>@Icones.Svg("editar", 18)Senha de acesso</h2>
+    <p class="mini" style="font-size:14px">Responsável: <strong>@l.Responsavel</strong> · @l.Email</p>
+    <form asp-action="SalvarSenha" method="post" novalidate style="max-width:420px">
+        <div class="campo">
+            <label asp-for="Senha.SenhaAtual"></label>
+            <input asp-for="Senha.SenhaAtual" autocomplete="current-password" />
+            <span asp-validation-for="Senha.SenhaAtual" class="erro"></span>
+        </div>
+        <div class="campo">
+            <label asp-for="Senha.NovaSenha"></label>
+            <input asp-for="Senha.NovaSenha" autocomplete="new-password" />
+            <span asp-validation-for="Senha.NovaSenha" class="erro"></span>
+        </div>
+        <div class="campo">
+            <label asp-for="Senha.Confirmacao"></label>
+            <input asp-for="Senha.Confirmacao" autocomplete="new-password" />
+            <span asp-validation-for="Senha.Confirmacao" class="erro"></span>
+        </div>
+        <button type="submit" class="botao">Trocar senha</button>
+    </form>
+</section>
+
+<script>
+    // Horário: ligar/desligar o dia e copiar o horário de segunda.
+    const linhas = [...document.querySelectorAll('.horarios tbody tr')];
+    function atualizar(tr) {
+        const aberto = tr.querySelector('[data-aberto]').checked;
+        tr.classList.toggle('dia-fechado', !aberto);
+        tr.querySelector('.interruptor span').textContent = aberto ? 'Aberto' : 'Fechado';
+    }
+    linhas.forEach(tr => tr.querySelector('[data-aberto]').addEventListener('change', () => atualizar(tr)));
+    document.querySelectorAll('[data-copiar]').forEach(b => b.addEventListener('click', () => {
+        const [abre, fecha] = [...linhas[0].querySelectorAll('input[type=time]')].map(i => i.value);
+        const alvo = b.dataset.copiar === 'uteis' ? linhas.slice(1, 5) : linhas.slice(1);
+        alvo.forEach(tr => {
+            const [a, f] = tr.querySelectorAll('input[type=time]');
+            a.value = abre; f.value = fecha;
+            tr.querySelector('[data-aberto]').checked = true;
+            atualizar(tr);
+        });
+    }));
+    // Prévia do logotipo escolhido.
+    document.getElementById('logo').addEventListener('change', e => {
+        const arquivo = e.target.files[0];
+        if (!arquivo) return;
+        document.getElementById('logo-preview').innerHTML = '<img alt="" src="' + URL.createObjectURL(arquivo) + '">';
+    });
+</script>

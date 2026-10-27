@@ -52,6 +52,7 @@ public static class DependencyInjection
         services.AddScoped<AdminEntregadoresService>();
         services.AddScoped<AdminPedidosService>();
         services.AddScoped<AdminCadastrosService>();
+        services.AddScoped<LojaPainelService>();
         services.AddScoped<CadastroLojaService>();
         services.AddScoped<NotificacaoService>();
 

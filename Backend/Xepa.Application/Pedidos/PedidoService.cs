@@ -13,6 +13,10 @@ public class PedidoService(IXepaDb db, IReservaPedidos reserva, IServicoMapas ma
     /// </summary>
     public async Task<PedidoDto> CriarAsync(int clienteId, CriarPedidoRequest request, CancellationToken ct)
     {
+        // A procedure confere oferta, loja ativa e estoque; a pausa feita pela própria loja é conferida aqui.
+        if (await db.Ofertas.AnyAsync(o => o.Id == request.OfertaId && o.Estabelecimento.Pausada, ct))
+            throw new RegraDeNegocioException("A loja fechou temporariamente e não está recebendo pedidos agora.");
+
         decimal taxa = 0;
         double? distancia = null;
         if (request.TipoEntrega == TipoEntrega.Entrega)

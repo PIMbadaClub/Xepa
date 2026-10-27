@@ -36,4 +36,14 @@ public class EstabelecimentoResumoDto
     /// <summary>Média das notas que os clientes deram à loja e às sacolas (nula sem avaliações).</summary>
     public double? Nota { get; init; }
     public int Avaliacoes { get; init; }
+
+    /// <summary>"Aberta · fecha às 20:00", "Fechada · abre amanhã às 07:00" (nulo se a loja não cadastrou horário).</summary>
+    public string? Funcionamento { get; set; }
+    public bool? Aberta { get; set; }
+
+    /// <summary>Horário da semana, de domingo a sábado (só no detalhe da oferta).</summary>
+    public IReadOnlyList<HorarioDiaDto>? Horarios { get; set; }
 }
+
+/// <summary>Um dia da semana no horário da loja; Abre e Fecha nulos = fechada nesse dia.</summary>
+public record HorarioDiaDto(string Dia, string? Abre, string? Fecha);

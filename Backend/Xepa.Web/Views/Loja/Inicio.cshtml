@@ -1,0 +1,194 @@
+@model PainelLojaDto
+@{
+    ViewData["Title"] = "Início";
+    var horaLocal = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, OfertaGestaoService.FusoBrasilia).Hour;
+    var saudacao = horaLocal < 12 ? "Bom dia" : horaLocal < 18 ? "Boa tarde" : "Boa noite";
+    var variacao = Model.VendasOntem == 0 ? (decimal?)null : Math.Round((Model.VendasHoje - Model.VendasOntem) / Model.VendasOntem * 100, 0);
+    var maxDia = Math.Max(1m, Model.UltimosDias.Max(d => d.Vendas));
+    var chipStatus = Model.Pausada ? "pausada" : !Model.Funcionamento.TemHorario ? "sem" : Model.Funcionamento.Aberta ? "aberta" : "fechada";
+    var textoStatus = Model.Pausada ? "Pausada · fora do app" : Model.Funcionamento.Texto;
+}
+<div class="saudacao">
+    <div>
+        <h1>@saudacao, @Model.Nome</h1>
+        <p class="sub" style="margin:0">Tudo o que importa hoje na sua loja, num lugar só.</p>
+    </div>
+    <div class="saudacao-acoes">
+        <span class="chip-status @chipStatus">@textoStatus</span>
+        <form asp-action="Pausa" method="post">
+            <input type="hidden" name="pausada" value="@(Model.Pausada ? "false" : "true")" />
+            <button class="botao secundario pequeno" type="submit">@Icones.Svg(Model.Pausada ? "inicio" : "pausa", 16) @(Model.Pausada ? "Reabrir loja" : "Pausar loja")</button>
+        </form>
+    </div>
+</div>
+
+@* Cadastro em análise ou rejeitado: o aviso já aparece no topo de todas as telas (layout). *@
+@if (Model.Status == StatusCadastro.Aprovado && !Model.Ativa)
+{
+    <p class="faixa-pendente">A loja foi suspensa pela equipe da XEPA e não aparece no app. Fale com o suporte.</p>
+}
+else if (Model.Pausada)
+{
+    <p class="faixa-pendente">Loja pausada: suas ofertas não aparecem no app. Os pedidos que já estavam em andamento continuam normalmente.</p>
+}
+
+<h2 class="secao" style="margin-top:6px">Agora</h2>
+<div class="indicadores">
+    <a class="indicador @(Model.AguardandoAceite > 0 ? "alerta" : "")" asp-controller="Pedidos" asp-action="Index">
+        <span>Aguardando você aceitar</span>
+        <strong>@Model.AguardandoAceite</strong>
+        <small>@(Model.AguardandoAceite > 0 ? "o cliente já pagou" : "nenhum pedido novo")</small>
+    </a>
+    <a class="indicador" asp-controller="Pedidos" asp-action="Index">
+        <span>Em preparo</span>
+        <strong>@Model.EmPreparo</strong>
+        <small>aceitos e sendo separados</small>
+    </a>
+    <a class="indicador @(Model.Prontos > 0 ? "verde" : "")" asp-controller="Pedidos" asp-action="Index">
+        <span>Prontos</span>
+        <strong>@Model.Prontos</strong>
+        <small>esperando o cliente ou o entregador</small>
+    </a>
+    <a class="indicador" asp-controller="Pedidos" asp-action="Index">
+        <span>Em rota</span>
+        <strong>@Model.EmRota</strong>
+        <small>com o entregador parceiro</small>
+    </a>
+</div>
+
+<h2 class="secao">Hoje</h2>
+<div class="indicadores">
+    <div class="indicador destaque">
+        <span>Vendas entregues hoje</span>
+        <strong>@Rotulos.Dinheiro(Model.VendasHoje)</strong>
+        <small>
+            @if (variacao is { } v)
+            {
+                <span class="@(v >= 0 ? "sobe" : "desce")">@(v >= 0 ? "▲" : "▼") @Math.Abs(v)%</span> <text>em relação a ontem (@Rotulos.Dinheiro(Model.VendasOntem))</text>
+            }
+            else
+            {
+                <text>@Model.EntreguesHoje pedido(s) entregue(s)</text>
+            }
+        </small>
+    </div>
+    <div class="indicador">
+        <span>Pedidos entregues</span>
+        <strong>@Model.EntreguesHoje</strong>
+        <small>@(Model.CanceladosHoje > 0 ? $"{Model.CanceladosHoje} cancelado(s) hoje" : "nenhum cancelamento")</small>
+    </div>
+    <div class="indicador verde">
+        <span>Comida salva hoje</span>
+        <strong>@Rotulos.Kg(Model.KgHoje)</strong>
+        <small>que não foi para o lixo</small>
+    </div>
+    <a class="indicador" asp-controller="Impacto" asp-action="Index">
+        <span>A receber da XEPA</span>
+        <strong>@Rotulos.Dinheiro(Model.RepasseAReceber)</strong>
+        <small>repasses fechados e não pagos</small>
+    </a>
+</div>
+
+<div class="cabecalho" style="margin-top:26px">
+    <h2 class="secao" style="margin:0 0 12px">Ofertas no ar</h2>
+    <div class="acoes">
+        @if (Model.OfertasParaRepetir > 0)
+        {
+            <form asp-action="RepetirOfertas" method="post">
+                <button class="botao secundario pequeno" type="submit" title="Publica de novo as ofertas que terminaram ontem, com o mesmo preço, lote e horário">
+                    @Icones.Svg("repetir", 16) Repetir @Model.OfertasParaRepetir de ontem
+                </button>
+            </form>
+        }
+        <a asp-controller="Ofertas" asp-action="Nova" class="botao pequeno">@Icones.Svg("mais", 16) Nova oferta</a>
+    </div>
+</div>
+@if (Model.OfertasNoAr.Count == 0)
+{
+    <div class="cartao vazio">
+        Nenhuma oferta no ar agora.
+        @if (Model.OfertasParaRepetir > 0) { <div>Que tal repetir as de ontem com um clique?</div> }
+    </div>
+}
+else
+{
+    <div class="ofertas-painel">
+        @foreach (var o in Model.OfertasNoAr)
+        {
+            var total = o.Restantes + o.Vendidas;
+            <a class="oferta-painel @(o.Urgente ? "urgente" : "")" asp-controller="Ofertas" asp-action="Editar" asp-route-id="@o.Id">
+                @if (o.FotoUrl is not null) { <img src="@o.FotoUrl" alt="" /> } else { <span class="miniatura-vazia"></span> }
+                <div class="oferta-painel-texto">
+                    <strong>@o.Titulo</strong>
+                    <span class="mini">@Rotulos.Dinheiro(o.Preco) · retirada @TimeZoneInfo.ConvertTime(o.Inicio, OfertaGestaoService.FusoBrasilia).ToString("HH:mm")–@TimeZoneInfo.ConvertTime(o.Fim, OfertaGestaoService.FusoBrasilia).ToString("HH:mm")</span>
+                    <span class="trilho-venda" title="@o.Vendidas vendida(s) de @total"><span style="width:@(total == 0 ? 0 : o.Vendidas * 100 / total)%"></span></span>
+                    <span class="mini">@o.Vendidas vendida(s) · @o.Restantes restante(s)</span>
+                    @if (o.Alerta is not null) { <span class="selo @(o.Urgente ? "perigo" : "sacola")">@o.Alerta</span> }
+                </div>
+            </a>
+        }
+    </div>
+}
+
+<div class="duas-colunas">
+    <section class="cartao" aria-labelledby="titulo-semana">
+        <div class="cabecalho">
+            <h2 id="titulo-semana" class="secao" style="margin-top:0">Vendas dos últimos 7 dias</h2>
+            <a asp-controller="Impacto" asp-action="Index" class="mini">ver relatório</a>
+        </div>
+        <div class="grafico" role="img" aria-label="Vendas por dia">
+            @foreach (var d in Model.UltimosDias.TakeLast(7))
+            {
+                <div class="barra" title="@d.Dia.ToString("dd/MM", Rotulos.Br): @Rotulos.Dinheiro(d.Vendas) em @d.Pedidos pedido(s)">
+                    <small>@(d.Vendas > 0 ? d.Vendas.ToString("0", Rotulos.Br) : "")</small>
+                    <span style="height:@(Math.Max(3, (int)(d.Vendas * 100 / maxDia)))%"></span>
+                    <small>@Rotulos.Br.DateTimeFormat.GetAbbreviatedDayName(d.Dia.DayOfWeek)</small>
+                </div>
+            }
+        </div>
+    </section>
+    <section class="cartao" aria-labelledby="titulo-aval">
+        <h2 id="titulo-aval" class="secao" style="margin-top:0">O que os clientes acharam</h2>
+        @if (Model.Reputacao.Avaliacoes == 0)
+        {
+            <p class="sub">Depois de receber o pedido, o cliente dá de 1 a 5 estrelas para a loja e a sacola. As primeiras avaliações aparecem aqui.</p>
+        }
+        else
+        {
+            <div style="display:flex;gap:14px;align-items:center;margin-bottom:8px">
+                <div class="nota-grande">@Rotulos.Nota(Model.Reputacao.Nota)</div>
+                <div>@Icones.Estrelas(Model.Reputacao.Nota)<div class="mini">@Model.Reputacao.Avaliacoes avaliação(ões)</div></div>
+            </div>
+            @foreach (var a in Model.Reputacao.Ultimas.Take(3))
+            {
+                <div class="avaliacao">
+                    @Icones.Estrelas(a.Nota) <span class="mini">@a.Cliente · @a.Oferta</span>
+                    @if (a.Comentario is not null) { <div>“@a.Comentario”</div> }
+                </div>
+            }
+        }
+    </section>
+</div>
+
+@if (Model.Pendencias.Count > 0)
+{
+    <section class="cartao perfil-loja" style="margin-top:16px" aria-labelledby="titulo-perfil">
+        <div class="cabecalho">
+            <h2 id="titulo-perfil" class="secao" style="margin-top:0">Complete o perfil da loja</h2>
+            <strong>@Model.PerfilCompleto%</strong>
+        </div>
+        <span class="trilho-venda grande"><span style="width:@Model.PerfilCompleto%"></span></span>
+        <p class="mini" style="margin:8px 0 6px">Lojas com logotipo, descrição e horário aparecem mais completas no app e passam mais confiança.</p>
+        <ul class="pendencias">
+            @foreach (var p in Model.Pendencias)
+            {
+                <li><a href="@Url.Action("Configuracoes")#@p.Secao">@p.Texto</a></li>
+            }
+        </ul>
+    </section>
+}
+
+<script>
+    // Atualiza o painel a cada minuto enquanto a aba está aberta (sem atrapalhar quem está clicando).
+    setInterval(() => { if (document.visibilityState === 'visible' && !document.querySelector(':focus-visible')) location.reload(); }, 60000);
+</script>

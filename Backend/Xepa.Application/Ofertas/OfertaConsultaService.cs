@@ -16,6 +16,7 @@ public class OfertaConsultaService(IXepaDb db)
         var ofertas = db.Ofertas.Where(o => o.Ativa
                                             && o.Estabelecimento.Ativo
                                             && o.Estabelecimento.StatusCadastro == StatusCadastro.Aprovado
+                                            && !o.Estabelecimento.Pausada
                                             && o.QuantidadeDisponivel > 0
                                             && o.RetiradaFim > agora);
 
@@ -53,12 +54,44 @@ public class OfertaConsultaService(IXepaDb db)
             .Take(filtro.TamanhoPagina)
             .ToListAsync(ct);
 
+        await PreencherFuncionamentoAsync(itens, comHorarios: false, ct);
         return new PaginaDto<OfertaDto>(itens, filtro.Pagina, filtro.TamanhoPagina, total);
     }
 
+    /// <summary>Calcula "aberta agora" no horário de Brasília para as lojas das ofertas (e o horário da semana no detalhe).</summary>
+    private async Task PreencherFuncionamentoAsync(IReadOnlyCollection<OfertaDto> ofertas, bool comHorarios, CancellationToken ct)
+    {
+        var ids = ofertas.Select(o => o.Estabelecimento.Id).Distinct().ToList();
+        if (ids.Count == 0)
+            return;
+        var horarios = (await db.Estabelecimentos.AsNoTracking().Where(e => ids.Contains(e.Id))
+                .Select(e => new { e.Id, e.Horarios }).ToListAsync(ct))
+            .ToDictionary(e => e.Id, e => e.Horarios);
+        var agora = TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, OfertaGestaoService.FusoBrasilia).DateTime;
+
+        foreach (var oferta in ofertas)
+        {
+            var daLoja = horarios.GetValueOrDefault(oferta.Estabelecimento.Id) ?? [];
+            var situacao = Domain.Entities.Funcionamento.Situacao(daLoja, agora);
+            oferta.Estabelecimento.Funcionamento = situacao.TemHorario ? situacao.Texto : null;
+            oferta.Estabelecimento.Aberta = situacao.TemHorario ? situacao.Aberta : null;
+            if (comHorarios && daLoja.Count > 0)
+                oferta.Estabelecimento.Horarios = Enum.GetValues<DayOfWeek>()
+                    .Select(d => daLoja.FirstOrDefault(h => h.DiaSemana == d) is { } h
+                        ? new HorarioDiaDto(Domain.Entities.Funcionamento.NomeDia(d), h.Abre.ToString("HH:mm"), h.Fecha.ToString("HH:mm"))
+                        : new HorarioDiaDto(Domain.Entities.Funcionamento.NomeDia(d), null, null))
+                    .ToList();
+        }
+    }
+
     /// <summary>Detalhe de uma oferta. Latitude e longitude são opcionais, só para trazer a distância.</summary>
-    public Task<OfertaDto?> ObterAsync(int id, double? latitude, double? longitude, CancellationToken ct) =>
-        Projetar(db.Ofertas.Where(o => o.Id == id && o.Ativa), latitude, longitude).FirstOrDefaultAsync(ct);
+    public async Task<OfertaDto?> ObterAsync(int id, double? latitude, double? longitude, CancellationToken ct)
+    {
+        var oferta = await Projetar(db.Ofertas.Where(o => o.Id == id && o.Ativa), latitude, longitude).FirstOrDefaultAsync(ct);
+        if (oferta is not null)
+            await PreencherFuncionamentoAsync([oferta], comHorarios: true, ct);
+        return oferta;
+    }
 
     /// <summary>
     /// Monta o DTO direto no SELECT, com a distância calculada no banco pela fórmula de Haversine.

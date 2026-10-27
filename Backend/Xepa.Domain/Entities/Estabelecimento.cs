@@ -18,10 +18,31 @@ public class Estabelecimento : Entidade
 
     public bool Ativo { get; set; } = true;
 
+    /// <summary>A própria loja fechou temporariamente (férias, reforma): as ofertas somem do app até ela reabrir.</summary>
+    public bool Pausada { get; set; }
+
     public List<Oferta> Ofertas { get; set; } = [];
     public List<Entregador> Entregadores { get; set; } = [];
 
-    public bool VisivelNoApp => Ativo && StatusCadastro == StatusCadastro.Aprovado;
+    /// <summary>Horário de funcionamento por dia da semana (um intervalo por dia; dia sem registro = fechada).</summary>
+    public List<HorarioFuncionamento> Horarios { get; set; } = [];
+
+    public bool VisivelNoApp => Ativo && !Pausada && StatusCadastro == StatusCadastro.Aprovado;
+
+    /// <summary>Troca o horário da semana inteira. Cada dia aparece no máximo uma vez e fecha depois de abrir.</summary>
+    public void DefinirHorarios(IEnumerable<(DayOfWeek Dia, TimeOnly Abre, TimeOnly Fecha)> horarios)
+    {
+        var lista = horarios.ToList();
+        if (lista.GroupBy(h => h.Dia).Any(g => g.Count() > 1))
+            throw new RegraDeNegocioException("Cada dia da semana tem um horário só.");
+        var invalido = lista.FirstOrDefault(h => h.Fecha <= h.Abre);
+        if (invalido != default)
+            throw new RegraDeNegocioException($"Na {Funcionamento.NomeDia(invalido.Dia)}, o horário de fechar precisa ser depois do de abrir.");
+
+        Horarios.RemoveAll(h => true);
+        foreach (var (dia, abre, fecha) in lista.OrderBy(h => h.Dia))
+            Horarios.Add(new HorarioFuncionamento { EstabelecimentoId = Id, DiaSemana = dia, Abre = abre, Fecha = fecha });
+    }
 
     /// <summary>Tira a loja e as ofertas carregadas do ar; no banco, o trigger desativa as demais.</summary>
     public void Desativar()
