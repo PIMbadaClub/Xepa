@@ -9,6 +9,9 @@ public class OfertaConsultaService(IXepaDb db)
     private const double RaioTerraKm = 6371;
     private const double GrausParaRadianos = Math.PI / 180;
 
+    // O banco da Azure foi criado com a collation padrão, que diferencia acentos: "cafe" não achava "café".
+    private const string SemAcento = "Latin1_General_100_CI_AI";
+
     /// <summary>Ofertas disponíveis agora (RN01), com busca, categoria e ordenação por distância.</summary>
     public async Task<PaginaDto<OfertaDto>> ListarAsync(FiltroOfertas filtro, CancellationToken ct)
     {
@@ -23,17 +26,18 @@ public class OfertaConsultaService(IXepaDb db)
         if (!string.IsNullOrWhiteSpace(filtro.Busca))
         {
             var busca = filtro.Busca.Trim();
-            ofertas = ofertas.Where(o => o.Titulo.Contains(busca) || o.Estabelecimento.Nome.Contains(busca));
+            ofertas = ofertas.Where(o => EF.Functions.Collate(o.Titulo, SemAcento).Contains(busca)
+                                         || EF.Functions.Collate(o.Estabelecimento.Nome, SemAcento).Contains(busca));
         }
 
         if (filtro.Categoria is { } categoria)
             ofertas = ofertas.Where(o => o.Estabelecimento.Categoria == categoria);
 
-        // A collation do banco ignora maiúsculas e acentos: "limeira" encontra "Limeira".
+        // Ignora maiúsculas e acentos: "limeira" encontra "Limeira".
         if (!string.IsNullOrWhiteSpace(filtro.Cidade))
         {
             var cidade = filtro.Cidade.Trim();
-            ofertas = ofertas.Where(o => o.Estabelecimento.Endereco.Cidade == cidade);
+            ofertas = ofertas.Where(o => EF.Functions.Collate(o.Estabelecimento.Endereco.Cidade, SemAcento) == cidade);
         }
 
         if (filtro.EstabelecimentoId is { } estabelecimentoId)

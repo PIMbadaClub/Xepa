@@ -21,24 +21,9 @@ public class PedidoService(IXepaDb db, IReservaPedidos reserva, IServicoMapas ma
         double? distancia = null;
         if (request.TipoEntrega == TipoEntrega.Entrega)
         {
-            var endereco = await db.Enderecos.AsNoTracking()
-                               .FirstOrDefaultAsync(e => e.Id == request.EnderecoId && e.UsuarioId == clienteId, ct)
-                           ?? throw new RegraDeNegocioException("Endereço de entrega inválido.");
-            var loja = await db.Ofertas.AsNoTracking()
-                           .Where(o => o.Id == request.OfertaId)
-                           .Select(o => o.Estabelecimento.Endereco)
-                           .FirstOrDefaultAsync(ct)
-                       ?? throw new NaoEncontradoException("Oferta não encontrada.");
-
-            if (endereco.Endereco.Latitude is null || endereco.Endereco.Longitude is null
-                || loja.Latitude is null || loja.Longitude is null)
-                throw new RegraDeNegocioException("Não foi possível localizar o endereço para calcular a entrega.");
-
-            var rota = await mapas.CalcularRotaAsync(
-                new Coordenada(loja.Latitude.Value, loja.Longitude.Value),
-                new Coordenada(endereco.Endereco.Latitude.Value, endereco.Endereco.Longitude.Value), ct);
-            taxa = RegrasEntrega.CalcularTaxa(rota.DistanciaKm);
-            distancia = rota.DistanciaKm;
+            var cotacao = await CotarEntregaAsync(clienteId, request.OfertaId, request.EnderecoId, ct);
+            taxa = cotacao.Taxa;
+            distancia = cotacao.DistanciaKm;
         }
 
         var id = await reserva.CriarAsync(clienteId, request.OfertaId, request.Quantidade, request.TipoEntrega, taxa,
@@ -54,6 +39,28 @@ public class PedidoService(IXepaDb db, IReservaPedidos reserva, IServicoMapas ma
         }
 
         return await ObterDoClienteAsync(clienteId, id, ct);
+    }
+
+    /// <summary>Distância da rota e taxa de entrega (RN07), para o cliente ver o valor antes de pagar.</summary>
+    public async Task<CotacaoEntregaDto> CotarEntregaAsync(int clienteId, int ofertaId, int? enderecoId, CancellationToken ct)
+    {
+        var endereco = await db.Enderecos.AsNoTracking()
+                           .FirstOrDefaultAsync(e => e.Id == enderecoId && e.UsuarioId == clienteId, ct)
+                       ?? throw new RegraDeNegocioException("Endereço de entrega inválido.");
+        var loja = await db.Ofertas.AsNoTracking()
+                       .Where(o => o.Id == ofertaId)
+                       .Select(o => o.Estabelecimento.Endereco)
+                       .FirstOrDefaultAsync(ct)
+                   ?? throw new NaoEncontradoException("Oferta não encontrada.");
+
+        if (endereco.Endereco.Latitude is null || endereco.Endereco.Longitude is null
+            || loja.Latitude is null || loja.Longitude is null)
+            throw new RegraDeNegocioException("Não foi possível localizar o endereço para calcular a entrega.");
+
+        var rota = await mapas.CalcularRotaAsync(
+            new Coordenada(loja.Latitude.Value, loja.Longitude.Value),
+            new Coordenada(endereco.Endereco.Latitude.Value, endereco.Endereco.Longitude.Value), ct);
+        return new CotacaoEntregaDto(rota.DistanciaKm, RegrasEntrega.CalcularTaxa(rota.DistanciaKm));
     }
 
     public async Task<IReadOnlyList<PedidoDto>> ListarDoClienteAsync(int clienteId, CancellationToken ct) =>

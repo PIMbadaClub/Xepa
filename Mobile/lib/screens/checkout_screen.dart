@@ -28,7 +28,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   bool _enviando = false;
   String? _erro;
 
+  // Taxa de entrega cotada na API para o endereço escolhido, antes de gerar o Pix.
+  double? _taxa;
+  double? _distanciaKm;
+  String? _erroTaxa;
+  int _cotacao = 0;
+
   double get _subtotal => widget.oferta.preco * widget.quantidade;
+  double get _total => _subtotal + (_entrega ? _taxa ?? 0 : 0);
 
   @override
   void initState() {
@@ -51,8 +58,42 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
         _enderecos = enderecos;
         _enderecoId ??= enderecos.where((e) => e.principal).firstOrNull?.id ?? enderecos.firstOrNull?.id;
       });
+      _cotarEntrega();
     } on ApiException catch (e) {
       if (mounted) setState(() => _erro = e.mensagem);
+    }
+  }
+
+  void _escolherEntrega(bool entrega) {
+    setState(() => _entrega = entrega);
+    _cotarEntrega();
+  }
+
+  void _escolherEndereco(int? id) {
+    setState(() => _enderecoId = id);
+    _cotarEntrega();
+  }
+
+  /// Só a resposta da última cotação vale: trocar de endereço rápido não mostra a taxa do anterior.
+  Future<void> _cotarEntrega() async {
+    final id = _enderecoId;
+    final cotacao = ++_cotacao;
+    setState(() {
+      _taxa = null;
+      _distanciaKm = null;
+      _erroTaxa = null;
+    });
+    if (!_entrega || id == null) return;
+    try {
+      final r = await Api.instance.get<Map<String, dynamic>>(
+          '/api/pedidos/cotacao-entrega?ofertaId=${widget.oferta.id}&enderecoId=$id');
+      if (!mounted || cotacao != _cotacao) return;
+      setState(() {
+        _taxa = (r['taxa'] as num).toDouble();
+        _distanciaKm = (r['distanciaKm'] as num).toDouble();
+      });
+    } on ApiException catch (e) {
+      if (mounted && cotacao == _cotacao) setState(() => _erroTaxa = e.mensagem);
     }
   }
 
@@ -65,7 +106,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     );
     if (criado != null) {
       CidadeCliente.instance.limpar();
-      setState(() => _enderecoId = criado.id);
+      _enderecoId = criado.id;
       await _carregarEnderecos();
     }
   }
@@ -143,7 +184,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   titulo: 'Retirar na loja',
                   detalhe: 'Grátis',
                   selecionada: !_entrega,
-                  onTap: () => setState(() => _entrega = false),
+                  onTap: () => _escolherEntrega(false),
                 ),
               ),
               const SizedBox(width: 10),
@@ -153,7 +194,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   titulo: 'Receber em casa',
                   detalhe: 'Até 5 km · taxa pela rota',
                   selecionada: _entrega,
-                  onTap: () => setState(() => _entrega = true),
+                  onTap: () => _escolherEntrega(true),
                 ),
               ),
             ],
@@ -165,7 +206,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             else ...[
               RadioGroup<int>(
                 groupValue: _enderecoId,
-                onChanged: (v) => setState(() => _enderecoId = v),
+                onChanged: _escolherEndereco,
                 child: Column(
                   children: [
                     for (final e in _enderecos!)
@@ -180,9 +221,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
               ),
               TextButton.icon(onPressed: _novoEndereco, icon: const Icon(Icons.add), label: const Text('Novo endereço')),
             ],
-            const Text(
-              'A taxa é calculada pela distância da rota (até 5 km) e aparece na próxima tela.',
-              style: TextStyle(color: XepaCores.textoSecundario, fontSize: 13),
+            _TaxaEntrega(
+              taxa: _taxa,
+              distanciaKm: _distanciaKm,
+              erro: _erroTaxa,
+              semEndereco: _enderecoId == null,
             ),
           ],
           const _Titulo('Alguma observação?'),
@@ -211,14 +254,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(_entrega ? 'Subtotal (+ entrega)' : 'Total', style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 12)),
-                  Text(formatarPreco(_subtotal), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+                  Text(_entrega ? 'Total com entrega' : 'Total', style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 12)),
+                  Text(_entrega && _taxa == null ? '—' : formatarPreco(_total), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
                 ],
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: FilledButton(
-                  onPressed: _enviando ? null : _confirmar,
+                  onPressed: _enviando || (_entrega && _taxa == null) ? null : _confirmar,
                   child: _enviando
                       ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                       : const Text('Pagar'),
@@ -304,4 +347,42 @@ class _Cartao extends StatelessWidget {
         ),
         child: child,
       );
+}
+
+/// Valor da entrega para o endereço escolhido, ou o motivo de não dar para entregar.
+class _TaxaEntrega extends StatelessWidget {
+  const _TaxaEntrega({required this.taxa, required this.distanciaKm, required this.erro, required this.semEndereco});
+
+  final double? taxa;
+  final double? distanciaKm;
+  final String? erro;
+  final bool semEndereco;
+
+  @override
+  Widget build(BuildContext context) {
+    final Widget conteudo;
+    if (semEndereco) {
+      conteudo = const Text('Cadastre um endereço para ver a taxa de entrega.',
+          style: TextStyle(color: XepaCores.textoSecundario, fontSize: 13));
+    } else if (erro != null) {
+      conteudo = Text(erro!, style: const TextStyle(color: XepaCores.tomateEscuro, fontWeight: FontWeight.w600, fontSize: 13));
+    } else if (taxa == null) {
+      conteudo = const Row(children: [
+        SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
+        SizedBox(width: 8),
+        Text('Calculando a taxa de entrega...', style: TextStyle(color: XepaCores.textoSecundario, fontSize: 13)),
+      ]);
+    } else {
+      conteudo = Row(children: [
+        const Icon(Icons.delivery_dining_rounded, size: 18, color: XepaCores.textoSecundario),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text('Taxa de entrega (${distanciaKm!.toStringAsFixed(1).replaceAll('.', ',')} km)',
+              style: const TextStyle(color: XepaCores.textoSecundario, fontSize: 13)),
+        ),
+        Text(formatarPreco(taxa!), style: const TextStyle(fontWeight: FontWeight.w800)),
+      ]);
+    }
+    return Padding(padding: const EdgeInsets.only(top: 4), child: conteudo);
+  }
 }

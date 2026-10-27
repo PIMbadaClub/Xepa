@@ -32,6 +32,8 @@ class Favoritos {
       } else {
         await Api.instance.put<void>('/api/favoritos/$estabelecimentoId');
       }
+      // Avisa de novo com a API já gravada: quem recarrega a lista (aba Favoritos) não pode ler antes do PUT terminar.
+      ids.value = {...ids.value};
     } on ApiException {
       ids.value = antes;
       rethrow;

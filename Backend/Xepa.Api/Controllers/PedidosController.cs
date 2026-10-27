@@ -22,6 +22,11 @@ public class PedidosController(PedidoService pedidos, PagamentoService pagamento
         return CreatedAtAction(nameof(Obter), new { id = pedido.Id }, pedido);
     }
 
+    /// <summary>Taxa de entrega até o endereço, antes de criar o pedido.</summary>
+    [HttpGet("cotacao-entrega")]
+    public Task<CotacaoEntregaDto> CotarEntrega(int ofertaId, int enderecoId, CancellationToken ct) =>
+        pedidos.CotarEntregaAsync(User.UsuarioId(), ofertaId, enderecoId, ct);
+
     [HttpGet]
     public Task<IReadOnlyList<PedidoDto>> Listar(CancellationToken ct) => pedidos.ListarDoClienteAsync(User.UsuarioId(), ct);
 
