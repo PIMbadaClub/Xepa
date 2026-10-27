@@ -53,16 +53,20 @@ class _FavoritosScreenState extends State<FavoritosScreen> {
     super.dispose();
   }
 
+  int _consulta = 0;
+
+  /// Só a última consulta vale: duas seguidas podem voltar fora de ordem.
   Future<void> _carregar() async {
+    final consulta = ++_consulta;
     try {
       final lista = await Api.instance.get<List<dynamic>>('/api/favoritos');
-      if (!mounted) return;
+      if (!mounted || consulta != _consulta) return;
       setState(() {
         _lojas = lista.map((j) => LojaFavorita.fromJson(j as Map<String, dynamic>)).toList();
         _erro = null;
       });
     } on ApiException catch (e) {
-      if (mounted) setState(() => _erro = e.mensagem);
+      if (mounted && consulta == _consulta) setState(() => _erro = e.mensagem);
     }
   }
 

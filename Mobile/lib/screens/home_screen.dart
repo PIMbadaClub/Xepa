@@ -317,6 +317,7 @@ class _CampoBusca extends StatelessWidget {
     );
     return TextField(
       onChanged: onChanged,
+      onSubmitted: onChanged,
       textInputAction: TextInputAction.search,
       decoration: InputDecoration(
         hintText: 'Buscar padarias, mercados...',

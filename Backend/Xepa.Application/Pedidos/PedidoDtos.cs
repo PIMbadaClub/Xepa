@@ -107,3 +107,5 @@ public record EnderecoDto(int Id, string Apelido, bool Principal, Endereco Ender
 public record RastreioDto(StatusPedido Status, Coordenada? Loja, Coordenada? Destino, Coordenada? Entregador,
     DateTimeOffset? AtualizadoEm, IReadOnlyList<Coordenada>? Rota = null, string? NomeEntregador = null,
     string? PlacaEntregador = null);
+
+public record CotacaoEntregaDto(double DistanciaKm, decimal Taxa);

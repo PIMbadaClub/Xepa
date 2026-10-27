@@ -345,11 +345,13 @@ class _Funcionamento extends StatelessWidget {
   final Oferta oferta;
 
   void _abrirHorarios(BuildContext context) {
+    // Criada uma vez só: dentro do builder, cada redesenho da folha (o hover do mouse, por exemplo) refazia a chamada e piscava.
+    final detalhe = Api.instance.get<Map<String, dynamic>>('/api/ofertas/${oferta.id}');
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       builder: (_) => FutureBuilder<Map<String, dynamic>>(
-        future: Api.instance.get<Map<String, dynamic>>('/api/ofertas/${oferta.id}'),
+        future: detalhe,
         builder: (context, snap) {
           final horarios = ((snap.data?['estabelecimento'] as Map<String, dynamic>?)?['horarios'] as List?)
               ?.cast<Map<String, dynamic>>();

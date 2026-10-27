@@ -86,10 +86,16 @@ class _MapaScreenState extends State<MapaScreen> {
   void _selecionar(int indice, {bool rolarCartoes = true}) {
     final ofertas = _ofertas;
     if (ofertas == null || indice >= ofertas.length) return;
+    final anterior = _selecionada;
     setState(() => _selecionada = indice);
     _mapa.move(_ponto(ofertas[indice]), _mapa.camera.zoom < 14 ? 15 : _mapa.camera.zoom);
     if (rolarCartoes && _paginas.hasClients) {
-      _paginas.animateToPage(indice, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      // Animar até um cartão distante passava por todos os do meio, e cada um movia o mapa: pula direto.
+      if ((indice - anterior).abs() == 1) {
+        _paginas.animateToPage(indice, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
+      } else {
+        _paginas.jumpToPage(indice);
+      }
     }
   }
 
