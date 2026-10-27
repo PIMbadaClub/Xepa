@@ -59,7 +59,15 @@ public class ContaController(CredenciaisService credenciais, CadastroLojaService
     public const string ClaimEstabelecimentoStatus = "estabelecimento_status";
 
     [HttpGet("entrar"), AllowAnonymous]
-    public IActionResult Entrar(string? returnUrl) => View(new EntrarForm { ReturnUrl = returnUrl });
+    public IActionResult Entrar(string? returnUrl)
+    {
+        // Já entrou: vai para a tela inicial em vez de mostrar o login dentro do portal.
+        if (User.Identity?.IsAuthenticated == true)
+            return User.IsInRole(nameof(TipoUsuario.Administrador))
+                ? RedirectToAction(nameof(AdminController.Painel), "Admin")
+                : RedirectToAction(nameof(LojaController.Inicio), "Loja");
+        return View(new EntrarForm { ReturnUrl = returnUrl });
+    }
 
     [HttpPost("entrar"), AllowAnonymous]
     public async Task<IActionResult> Entrar(EntrarForm form, CancellationToken ct)

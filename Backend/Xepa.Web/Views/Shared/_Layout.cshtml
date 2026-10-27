@@ -85,7 +85,13 @@
     }
     else
     {
-        <main id="conteudo" class="centro">@RenderBody()</main>
+        <main id="conteudo" class="centro">
+            @if (TempData["Erro"] is string erroPublico)
+            {
+                <div class="validation-summary-errors aviso-topo" role="alert"><ul><li>@erroPublico</li></ul></div>
+            }
+            @RenderBody()
+        </main>
     }
 </body>
 </html>

@@ -374,3 +374,4 @@ a.chat-pedido:hover { border-color: var(--tomate); }
 .aceite .caixa { align-items: flex-start; line-height: 1.45; }
 .aceite .caixa input { margin-top: 3px; }
 @media (max-width: 600px) { .legal { padding: 22px 18px; margin: 0; } }
+.aviso-topo { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 5; max-width: calc(100% - 32px); }
