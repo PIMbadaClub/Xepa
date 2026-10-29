@@ -74,14 +74,25 @@ public class MapasEstimados : IServicoMapas
 
 /// <summary>
 /// A cada minuto cancela pedidos sem pagamento há mais de 15 minutos (RN03, sp_ExpirarPedidosNaoPagos).
+/// Só roda enquanto a API recebe requisições: o banco serverless da Azure pausa quando fica ocioso,
+/// e consultar a cada minuto o manteria ligado o tempo todo, esgotando a cota grátis do mês.
 /// </summary>
 public class ExpiradorPedidos(IServiceScopeFactory scopes, ILogger<ExpiradorPedidos> log) : BackgroundService
 {
+    /// <summary>Além dos 15 minutos do RN03, para expirar o último pedido criado antes de parar.</summary>
+    static readonly TimeSpan JanelaAtividade = TimeSpan.FromMinutes(30);
+    static long ultimaAtividade = DateTime.UtcNow.Ticks;
+
+    /// <summary>Chamado pelo pipeline da API a cada requisição de usuário (não pelo health check).</summary>
+    public static void RegistrarAtividade() => Interlocked.Exchange(ref ultimaAtividade, DateTime.UtcNow.Ticks);
+
     protected override async Task ExecuteAsync(CancellationToken ct)
     {
         using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
         while (await timer.WaitForNextTickAsync(ct))
         {
+            if (DateTime.UtcNow - new DateTime(Interlocked.Read(ref ultimaAtividade)) > JanelaAtividade)
+                continue;
             try
             {
                 using var scope = scopes.CreateScope();

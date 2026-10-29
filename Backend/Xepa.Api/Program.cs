@@ -93,6 +93,14 @@ else
     app.UseHttpsRedirection();
 }
 
+// O Always On da Azure chama "/" e o monitoramento chama /health: nenhum dos dois conta como uso.
+app.Use((ctx, proximo) =>
+{
+    if (ctx.Request.Path != "/" && !ctx.Request.Path.StartsWithSegments("/health"))
+        ExpiradorPedidos.RegistrarAtividade();
+    return proximo(ctx);
+});
+
 app.UseStaticFiles();
 app.UseCors();
 app.UseRateLimiter();
